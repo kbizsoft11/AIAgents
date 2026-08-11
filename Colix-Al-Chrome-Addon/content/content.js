@@ -1,12 +1,12 @@
 // content/content.js
-// ColixLabs - Content Script with Shortcut Menu
+// Colix - Content Script with Shortcut Menu
 (function () {
   'use strict';
 
   if (window.__textBlitzLoaded) return;
   window.__textBlitzLoaded = true;
 
-  // console.log('ColixLabs: Content script loaded on', window.location.hostname);
+  // console.log('Colix: Content script loaded on', window.location.hostname);
 
   let shortcuts = [];
 
@@ -392,7 +392,7 @@
   function loadShortcuts() {
     chrome.storage.local.get({ shortcuts: [] }, function (result) {
       shortcuts = result.shortcuts || [];
-      // console.log('ColixLabs: Loaded', shortcuts.length, 'shortcuts');
+      // console.log('Colix: Loaded', shortcuts.length, 'shortcuts');
     });
   }
 
@@ -526,7 +526,7 @@
 
     menu.innerHTML = `
       <div class="tb-header">
-        <span class="tb-logo">ColixLabs</span>
+        <span class="tb-logo">Colix</span>
         <div class="tb-search-wrap">
           <input type="text" id="tb-search" placeholder="Filter shortcuts..." autocomplete="off" spellcheck="false">
         </div>
@@ -798,7 +798,7 @@
       menuState.justOpened = false;
     }, 60);
 
-    // console.log('ColixLabs: Menu opened');
+    // console.log('Colix: Menu opened');
   }
 
   // =============================================
@@ -817,7 +817,7 @@
       try { menuState.triggerElement.focus({ preventScroll: true }); } catch (e) { }
     }
 
-    // console.log('ColixLabs: Menu closed');
+    // console.log('Colix: Menu closed');
   }
 
   // =============================================
@@ -829,7 +829,7 @@
 
     if (!el) { closeMenu(); return; }
 
-    // console.log('ColixLabs: Selected', shortcut.trigger);
+    // console.log('Colix: Selected', shortcut.trigger);
 
     menuState.lockInput = true;
     closeMenu();
@@ -1143,7 +1143,7 @@
   // INIT
   // =============================================
   loadShortcuts();
-  // console.log('ColixLabs: Ready ✓');
+  // console.log('Colix: Ready ✓');
 
   // =============================================
   // TOKEN REPLACEMENT
@@ -1554,7 +1554,7 @@
         <button class="tb-sb-home" id="tb-sb-home" type="button" title="Open Dashboard">
           <img src=${logo} style="width: 40px;">
         </button>
-        <span class="tb-sb-title">ColixLabs</span>
+        <span class="tb-sb-title">Colix</span>
         <button class="tb-sb-close" id="tb-sb-close" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1907,7 +1907,7 @@
 
     const fab = document.createElement('div');
     fab.id = 'tb-fab';
-    fab.title = 'ColixLabs Shortcuts';
+    fab.title = 'Colix Shortcuts';
     const iconUrl = chrome.runtime.getURL('icons/icon128.png');
 
     // Close button
@@ -1920,7 +1920,7 @@
       dismissFab();
     });
 
-    fab.innerHTML = `<img src="${iconUrl}" alt="ColixLabs">`;
+    fab.innerHTML = `<img src="${iconUrl}" alt="Colix">`;
     fab.appendChild(closeBtn);
 
     fab.addEventListener('click', () => {
