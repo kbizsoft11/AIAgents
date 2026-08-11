@@ -1,0 +1,6 @@
+flask
+flask-cors
+apify-client
+gspread
+google-auth
+requests
