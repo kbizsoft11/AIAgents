@@ -1,0 +1,17 @@
+{
+  "name": "colix-al-chrome-addon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "javascript-obfuscator ./src --output ./dist --config obfuscator.config.js && html-minifier-terser src/dashboard/dashboard.html -o dist/dashboard/dashboard.html --collapse-whitespace --remove-comments && html-minifier-terser src/dashboard/blocked.html -o dist/dashboard/blocked.html --collapse-whitespace --remove-comments && cleancss -o dist/dashboard/dashboard.css src/dashboard/dashboard.css && cp src/manifest.json dist/manifest.json && cp -r src/icons dist/icons"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "html-minifier-terser": "^7.2.0",
+    "javascript-obfuscator": "^5.5.0"
+  }
+}
