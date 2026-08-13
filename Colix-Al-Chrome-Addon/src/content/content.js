@@ -1384,15 +1384,18 @@
       }
       .tb-sb-title { font-size: 18px; font-family: monospace; font-weight: 700; color: #1a1a2e; }
       .tb-sb-home {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: #000;
-        display: flex;
-        align-items: center;
-        margin-right: 4px;
-        overflow: hidden;
-        border-radius: 100%;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #000;
+          display: flex;
+          align-items: center;
+          margin-right: 4px;
+          overflow: hidden;
+          border-radius: 100%;
+          width: 40px;
+          height: 40px;
+          padding: 0;
       }
       .tb-sb-home:hover { color: #555; }
       .tb-sb-home svg { width: 18px; height: 18px; }
@@ -1519,7 +1522,7 @@
     if (sidebarEl) return;
     injectSidebarStyles();
 
-    const logo = chrome.runtime.getURL('icons/icon128.png');
+    const logo = chrome.runtime.getURL('icons/logo.png');
     sidebarEl = document.createElement('div');
     sidebarEl.id = 'tb-sidebar';
     
@@ -1552,7 +1555,7 @@
       ${linkedInButtonHTML}
       <div class="tb-sb-header">
         <button class="tb-sb-home" id="tb-sb-home" type="button" title="Open Dashboard">
-          <img src=${logo} style="width: 40px;">
+          <img src=${logo} style="width: 100%; height: 100%;">
         </button>
         <span class="tb-sb-title">Colix</span>
         <button class="tb-sb-close" id="tb-sb-close" type="button">
@@ -1908,7 +1911,7 @@
     const fab = document.createElement('div');
     fab.id = 'tb-fab';
     fab.title = 'Colix Shortcuts';
-    const iconUrl = chrome.runtime.getURL('icons/icon128.png');
+    const iconUrl = chrome.runtime.getURL('icons/logo.png');
 
     // Close button
     const closeBtn = document.createElement('span');

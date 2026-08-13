@@ -44,7 +44,6 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "dashboard/paypal-checkout.html",
                 "icons/*"
             ],
             "matches": [
