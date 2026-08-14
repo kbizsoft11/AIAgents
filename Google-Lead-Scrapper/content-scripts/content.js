@@ -1,0 +1,1 @@
+var body=document.querySelector("body"),div=document.createElement("div");div.id="kbiz-popup-main-container",body.insertBefore(div,body.firstChild);
