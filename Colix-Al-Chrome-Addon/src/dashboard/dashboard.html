@@ -4,38 +4,182 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Colix — Dashboard</title>
+  <title>ColixAI — Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <script src="./auth-check.js"></script>
 </head>
 
 <body>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <img src="../icons/logo.png" alt="Colix" style="width: 40px; border-radius: 50%;">
-      <h1 class="logo">Colix</h1>
+  <header class="app-topbar" aria-label="Main navigation">
+    <div class="topbar-left-group">
+      <div class="brand-wrap">
+        <div class="brand-name">ColixAI</div>
+      </div>
+
+      <nav class="topbar-nav" aria-label="Primary navigation">
+        <a href="#" class="topbar-link">Docs</a>
+        <a href="#" class="topbar-link">Community</a>
+        <a href="#" class="topbar-link">Marketplace</a>
+      </nav>
     </div>
 
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-item active" data-section="shortcuts">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 6h16M4 12h16M4 18h7"></path>
+    <div class="topbar-right-group">
+      <button class="topbar-premium-btn" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 2l2.4 6.3L20 9.5l-5 4.3 1.8 6.2L12 0.5 7.2 20l1.8-6.2-5-4.3 5.6-1.2L12 2z"></path>
         </svg>
-        My Shortcuts
-      </a>
-      <a href="#" class="nav-item" data-section="help">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        Pro
+      </button>
+
+      <div class="topbar-search" role="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20L16.65 16.65"></path>
         </svg>
-        How to Use
-      </a>
-    </nav>
+        <span>Search...</span>
+        <kbd>Ctrl+/</kbd>
+      </div>
+
+      <div class="topbar-icon-group" aria-label="Quick actions">
+        <button class="topbar-icon-btn" type="button" aria-label="Menu layout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 7h7V4H4v3zm9 0h7V4h-7v3zm-9 7h7v-3H4v3zm9 0h7v-3h-7v3zM4 18h7v-3H4v3zm9 0h7v-3h-7v3z"></path>
+          </svg>
+        </button>
+        <button class="topbar-icon-btn" type="button" aria-label="Notifications">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 01-3.46 0"></path>
+          </svg>
+          <span class="notification-dot"></span>
+        </button>
+
+        <div class="profile-dropdown-wrapper">
+          <button class="topbar-icon-btn profile-btn" type="button" aria-label="Profile" aria-expanded="false" aria-haspopup="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c1.5-3 4.5-4.5 8-4.5s6.5 1.5 8 4.5"></path>
+            </svg>
+          </button>
+
+          <div class="profile-dropdown" id="profileDropdown" role="menu" aria-label="Profile menu">
+            <button class="profile-menu-item" type="button" role="menuitem">
+              <span class="profile-menu-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="8" r="4"></circle>
+                  <path d="M4 20c1.5-3 4.5-4.5 8-4.5s6.5 1.5 8 4.5"></path>
+                </svg>
+              </span>
+              <span>Profile</span>
+            </button>
+
+            <button class="profile-menu-item" type="button" role="menuitem">
+              <span class="profile-menu-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 18h18"></path>
+                  <path d="M7 15V9"></path>
+                  <path d="M12 15V5"></path>
+                  <path d="M17 15v-7"></path>
+                </svg>
+              </span>
+              <span>Usage</span>
+            </button>
+
+            <button class="profile-menu-item" type="button" role="menuitem">
+              <span class="profile-menu-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="M19 6l-1 14H6L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                </svg>
+              </span>
+              <span>Trash</span>
+            </button>
+
+            <button class="profile-menu-item danger" type="button" role="menuitem">
+              <span class="profile-menu-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 21h6"></path>
+                  <path d="M10 17l-1-8"></path>
+                  <path d="M14 17l1-8"></path>
+                  <path d="M5 7h14"></path>
+                  <path d="M8 7l1-3h6l1 3"></path>
+                </svg>
+              </span>
+              <span>Signout</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace-shell">
+    <!-- Mobile top bar (hidden on desktop) -->
+    <header class="mobile-topbar">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false"
+        aria-controls="sidebar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div class="mobile-topbar-brand">
+        <img src="../icons/icon128.png" alt="" style="width: 24px; border-radius: 50%;">
+        <span>ColixAI</span>
+      </div>
+      <div class="mobile-topbar-spacer"></div>
+    </header>
+
+    <!-- Sidebar backdrop (mobile only) -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+    <!-- Floating actions (replaces the old .sidebar-header) -->
+<div class="sidebar-float-actions">
+  <button id="floatSnippetBtn" class="float-fab float-fab-snippet" type="button"
+          aria-label="New snippet" data-tooltip="New Snippet">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+  <button id="floatFolderBtn" class="float-fab float-fab-folder" type="button"
+          aria-label="New folder" data-tooltip="New Folder">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      <line x1="12" y1="11" x2="12" y2="17"></line>
+      <line x1="9" y1="14" x2="15" y2="14"></line>
+    </svg>
+  </button>
+</div>
+
+<!-- Keep the mobile close button, now a direct child of the sidebar -->
+<button id="sidebarCloseBtn" class="sidebar-close-btn" aria-label="Close sidebar">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+</button>
+
+    <!-- Sidebar Tree with Drag & Drop -->
+    <div class="sidebar-tree-section">
+      <div id="sidebar-tree"></div>
+    </div>
 
     <div class="sidebar-footer">
       <!-- Shortcut Limit -->
@@ -48,7 +192,13 @@
 
       <!-- Go Premium CTA -->
       <div class="premium-cta">
-        <div class="premium-cta-icon">👑</div>
+        <div class="premium-cta-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+            <path d="M3 20h18"></path>
+          </svg>
+        </div>
         <p class="premium-cta-text">Unlock <strong>unlimited</strong> shortcuts and premium features.</p>
         <button class="premium-cta-btn" id="upgradeBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -62,14 +212,90 @@
       </div>
 
       <div class="premium-cta-member">
-        <div class="premium-cta-member-icon">👑</div>
+        <div class="premium-cta-member-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+            <path d="M3 20h18"></path>
+          </svg>
+        </div>
         <p class="premium-cta-member-text">You are already a Premium member. Enjoy all the premium features!</p>
       </div>
     </div>
-  </aside>
+    </aside>
 
-  <!-- Main Content -->
-  <main class="main">
+    <!-- Main Content -->
+    <main class="main">
+
+    <!-- Editor View (Hidden by default, shown when editing) -->
+    <section class="section editor-view" id="editorView">
+      <div class="editor-container">
+        <!-- Editor Header -->
+        <div class="editor-header">
+          <button class="btn btn-ghost editor-back-btn" id="editorBackBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+          </button>
+          <div class="editor-header-actions">
+            <button class="btn btn-secondary" id="editorCancelBtn">Cancel</button>
+            <button class="btn btn-primary" id="editorSaveBtn">Save</button>
+          </div>
+        </div>
+
+        <!-- Editor Content -->
+        <div class="editor-content">
+          <!-- Label Input -->
+          <div class="editor-field">
+            <label class="editor-label" for="editorLabelInput">Label (describes the snippet)</label>
+            <input type="text" class="editor-input" id="editorLabelInput" placeholder="Demo - Plain text">
+          </div>
+
+          <!-- Shortcut Input -->
+          <div class="editor-field">
+            <label class="editor-label" for="editorShortcutInput">Shortcut (typed to insert)</label>
+            <div class="editor-shortcut-group">
+              <input type="text" class="editor-input editor-shortcut-input" id="editorShortcutInput" placeholder="/sig">
+              <button class="btn btn-secondary" id="editorTryItBtn">Try it</button>
+            </div>
+          </div>
+
+          <!-- Expansion Text Area -->
+          <div class="editor-field">
+            <label class="editor-label" for="editorTextArea">Expansion Text</label>
+            <textarea class="editor-textarea" id="editorTextArea"
+              placeholder="Type the text that will replace the shortcut..."></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Try It Modal -->
+    <div class="try-it-overlay" id="tryItOverlay" style="display: none;">
+      <div class="try-it-modal" role="dialog" aria-modal="true" aria-labelledby="tryItHeading">
+        <div class="try-it-header">
+          <h3 id="tryItHeading">Try It Out</h3>
+          <button class="btn-close" id="closeTryItBtn" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="try-it-content">
+          <div class="try-it-info">
+            <p class="try-it-label">Trigger: <code id="tryItTrigger"></code></p>
+            <p class="try-it-preview-label">Preview:</p>
+            <div class="try-it-preview" id="tryItPreview"></div>
+          </div>
+        </div>
+        <div class="try-it-footer">
+          <button class="btn btn-secondary" id="closeTryItBtnFooter">Close</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Shortcuts Section -->
     <section class="section" id="sectionShortcuts">
@@ -87,7 +313,7 @@
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
-            Delete All
+            <span class="btn-label">Delete All</span>
           </button>
           <div class="search-container">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -95,6 +321,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
+            <label for="searchInput" class="sr-only">Search shortcuts</label>
             <input type="text" class="search-input" id="searchInput" placeholder="Search shortcuts..."
               autocomplete="off">
           </div>
@@ -103,17 +330,17 @@
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            New Shortcut
+            <span class="btn-label">New Shortcut</span>
           </button>
         </div>
       </div>
 
       <!-- Add/Edit Form Modal -->
       <div class="form-overlay" id="formOverlay" style="display: none;">
-        <div class="form-modal">
+        <div class="form-modal" role="dialog" aria-modal="true" aria-labelledby="formTitle">
           <div class="form-modal-header">
             <h3 class="form-title" id="formTitle">Add New Shortcut</h3>
-            <button class="btn-close" id="closeFormBtn">
+            <button class="btn-close" id="closeFormBtn" aria-label="Close">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -138,9 +365,11 @@
               <label class="form-label" for="expansionInput">Expanded Text</label>
               <div class="textarea-wrapper">
                 <div class="form-textarea rich-editor" id="expansionInput" contenteditable="true"
-                  data-placeholder="Type the full text that should replace your shortcut..." spellcheck="true"></div>
+                  data-placeholder="Type the full text that should replace your shortcut..." spellcheck="true"
+                  role="textbox" aria-multiline="true" aria-label="Expanded text"></div>
                 <div id="format-container">
-                  <button class="profile-token-btn" id="profileTokenBtn" type="button" title="Insert profile tokens">
+                  <button class="profile-token-btn" id="profileTokenBtn" type="button" title="Insert profile tokens"
+                    aria-label="Insert profile tokens" aria-haspopup="true" aria-expanded="false">
                     <img id="profileAvatar" class="profile-avatar" src="" alt="" style="display: none;">
                     <div id="profileAvatarFallback" class="profile-avatar-fallback">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -151,43 +380,53 @@
                     </div>
                   </button>
                   <div class="form-texteditor">
-                    <div class="text-format-toolbar">
-                      <button class="fmt-btn" id="fmtBold" type="button" title="Bold">
+                    <div class="text-format-toolbar" role="toolbar" aria-label="Text formatting">
+                      <button class="fmt-btn" id="fmtBold" type="button" title="Bold" aria-label="Bold">
                         <b>B</b>
                       </button>
-                      <button class="fmt-btn" id="fmtItalic" type="button" title="Italic">
+                      <button class="fmt-btn" id="fmtItalic" type="button" title="Italic" aria-label="Italic">
                         <i>I</i>
                       </button>
-                      <button class="fmt-btn" id="fmtUnderline" type="button" title="Underline">
+                      <button class="fmt-btn" id="fmtUnderline" type="button" title="Underline" aria-label="Underline">
                         <u>U</u>
                       </button>
-                      <button class="fmt-btn fmt-btn-emoji" id="fmtEmoji" type="button" title="Emoji">😊</button>
+                      <button class="fmt-btn fmt-btn-emoji" id="fmtEmoji" type="button" title="Emoji"
+                        aria-label="Insert emoji">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
-                  <div class="profile-dropdown" id="profileDropdown" style="display: none;">
-                    <div class="profile-dropdown-item" data-token="{{first_name}}">
+                  <div class="profile-dropdown" id="profileDropdown" style="display: none;" role="menu">
+                    <div class="profile-dropdown-item" data-token="{{first_name}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">First Name</span>
                         <span class="profile-dropdown-item-preview" id="previewFirstName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{first_name}}</code>
                     </div>
-                    <div class="profile-dropdown-item" data-token="{{last_name}}">
+                    <div class="profile-dropdown-item" data-token="{{last_name}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Last Name</span>
                         <span class="profile-dropdown-item-preview" id="previewLastName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{last_name}}</code>
                     </div>
-                    <div class="profile-dropdown-item" data-token="{{first_name}} {{last_name}}">
+                    <div class="profile-dropdown-item" data-token="{{first_name}} {{last_name}}" role="menuitem"
+                      tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Full name</span>
                         <span class="profile-dropdown-item-preview" id="previewFullName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{full_name}}</code>
                     </div>
-                    <div class="profile-dropdown-item" data-token="{{email}}">
+                    <div class="profile-dropdown-item" data-token="{{email}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Email</span>
                         <span class="profile-dropdown-item-preview" id="previewEmail"></span>
@@ -196,14 +435,14 @@
                     </div>
                   </div>
 
-                  <div class="emoji-picker" id="emojiPicker"></div>
+                  <div class="emoji-picker" id="emojiPicker" role="menu" aria-label="Emoji picker"></div>
                 </div>
               </div>
               <span class="form-hint">Supports multi-line text. Press <code>Ctrl+Enter</code> to save. Click the profile
                 icon to insert tokens.</span>
             </div>
 
-            <div class="form-error" id="formError" style="display: none;"></div>
+            <div class="form-error" id="formError" style="display: none;" role="alert"></div>
           </div>
 
           <div class="form-modal-footer">
@@ -215,7 +454,7 @@
 
       <!-- Bulk Delete Modal -->
       <div class="form-overlay" id="bulkDeleteOverlay" style="display: none;">
-        <div class="confirm-modal">
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="bulkDeleteTitle">
           <div class="confirm-icon">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="1.5"
               stroke-linecap="round" stroke-linejoin="round">
@@ -224,7 +463,7 @@
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
           </div>
-          <h3 class="confirm-title">Delete All Shortcuts?</h3>
+          <h3 class="confirm-title" id="bulkDeleteTitle">Delete All Shortcuts?</h3>
           <p class="confirm-message">
             This will permanently delete <strong id="bulkDeleteCount">0</strong> shortcut(s).
             This action cannot be undone.
@@ -244,8 +483,8 @@
 
       <!-- Premium Upgrade Modal -->
       <div class="form-overlay" id="premiumOverlay" style="display: none;">
-        <div class="premium-modal">
-          <button class="btn-close premium-close" id="closePremiumBtn">
+        <div class="premium-modal" role="dialog" aria-modal="true" aria-labelledby="premiumTitle">
+          <button class="btn-close premium-close" id="closePremiumBtn" aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -255,15 +494,15 @@
           <!-- Premium Header -->
           <div class="premium-header">
             <!-- <div class="premium-badge">👑</div> -->
-            <h2 class="premium-title">Upgrade to Premium</h2>
-            <p class="premium-subtitle">Unlock the full power of Colix</p>
+            <h2 class="premium-title" id="premiumTitle">Upgrade to Premium</h2>
+            <p class="premium-subtitle">Unlock the full power of ColixAI</p>
           </div>
 
           <!-- Billing Toggle -->
           <div class="billing-toggle">
             <span class="billing-option" id="billingMonthlyLabel">Monthly</span>
             <label class="toggle-switch">
-              <input type="checkbox" id="billingToggle">
+              <input type="checkbox" id="billingToggle" aria-label="Toggle yearly billing">
               <span class="toggle-slider"></span>
             </label>
             <span class="billing-option" id="billingYearlyLabel">
@@ -281,9 +520,6 @@
                 <span class="pricing-price" id="pricingPrice">5.99</span>
                 <span class="pricing-period" id="pricingPeriod">/month</span>
               </div>
-              <!-- <div class="pricing-original" id="pricingOriginal" style="display: none;">
-                <span class="pricing-strikethrough" id="pricingStrikethrough"></span>
-              </div> -->
             </div>
 
             <div class="pricing-features">
@@ -294,30 +530,6 @@
                 </svg>
                 <span>Unlimited shortcut creation</span>
               </div>
-              <!-- <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Cloud sync across devices</span>
-              </div> -->
-              <!-- <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Rich text & HTML templates</span>
-              </div> -->
-              <!-- <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Dynamic variables (date, time, clipboard)</span>
-              </div> -->
-              <!-- <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Team sharing & collaboration</span>
-              </div> -->
               <div class="pricing-feature">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -325,12 +537,6 @@
                 </svg>
                 <span>Priority support</span>
               </div>
-              <!-- <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Import & export shortcuts</span>
-              </div> -->
             </div>
 
             <button class="pricing-cta" id="premiumBuyBtn">
@@ -343,7 +549,7 @@
           <!-- Free Plan Comparison -->
           <div class="free-comparison">
             <span class="free-comparison-label">Currently on Free Plan</span>
-            <span class="free-comparison-detail">5 shortcuts • Basic features</span>
+            <span class="free-comparison-detail" id="free-plan-limit-display">5 shortcuts • Basic features</span>
           </div>
         </div>
       </div>
@@ -352,86 +558,210 @@
       <div class="magicaa-notification-bar">
         <div class="magicaa-notification-content">
           <span class="magicaa-notification-text">
-            Maximum of <strong>5 Shortcuts</strong> can be added in the Trial Version.
+            Maximum of <strong id="shortcut-limit-display">5 Shortcuts</strong> can be added in the Trial Version.
             <a href="#" id="magicaa-upgrade-link">Upgrade Now</a>
             to unlock unlimited shortcuts.
           </span>
         </div>
       </div>
 
-      <!-- Shortcuts Grid -->
-      <div class="shortcuts-grid" id="shortcutsList">
+      <!-- Welcome View (Default when no folder or all shortcuts view) -->
+      <div id="welcomeView" class="view-container">
+        <div class="view-main">
+          <h1 class="welcome-title">Welcome to ColixAI</h1>
+          <p class="welcome-subtitle">
+            Type a shortcut trigger below (or try typing <code>-ty</code> or <code>/sig</code>). It will instantly
+            expand into text!
+          </p>
 
-        <div class="magicaa-shortcut-loader">
-          <div class="magicaa-loader-title"></div>
-          <div class="magicaa-loader-line"></div>
-          <div class="magicaa-loader-line magicaa-loader-line-short"></div>
+          <div class="playground-card">
+            <label for="welcomePlayground" class="sr-only">Test Area</label>
+            <textarea id="welcomePlayground" class="welcome-playground"
+              placeholder="Type here to test your shortcuts live... (e.g. -ty)"></textarea>
+          </div>
 
-          <div class="magicaa-loader-footer">
-            <div class="magicaa-loader-small"></div>
-            <div class="magicaa-loader-small"></div>
+          <p class="welcome-info-text">
+            Your shortcuts insert snippets
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+              style="vertical-align: middle; display: inline-block;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            and will work on any website. You can also right-click on text boxes to select a snippet from the context
+            menu.
+          </p>
+
+          <div class="welcome-quick-actions">
+            <span class="quick-actions-label">Quick Actions:</span>
+            <button class="btn btn-primary" id="welcomeNewSnippetBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              New snippet
+            </button>
+            <button class="btn btn-secondary" id="welcomeNewFolderBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+                <line x1="9" y1="14" x2="15" y2="14"></line>
+              </svg>
+              + New folder
+            </button>
           </div>
         </div>
 
-        <div class="magicaa-shortcut-loader">
-          <div class="magicaa-loader-title"></div>
-          <div class="magicaa-loader-line"></div>
-          <div class="magicaa-loader-line magicaa-loader-line-short"></div>
-
-          <div class="magicaa-loader-footer">
-            <div class="magicaa-loader-small"></div>
-            <div class="magicaa-loader-small"></div>
+        <!-- Right Side Panel: Want to learn more? -->
+        <aside class="view-sidebar">
+          <div class="sidebar-card">
+            <h3 class="sidebar-card-title">Want to learn more?</h3>
+            <ul class="sidebar-links-list">
+              <li>
+                <a href="#" class="sidebar-link" id="linkDocs">
+                  <div class="sidebar-link-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>ColixAI Documentation</strong>
+                    <span>Guides and references</span>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="sidebar-link" id="linkFaq">
+                  <div class="sidebar-link-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>ColixAI FAQ</strong>
+                    <span>Frequently asked questions</span>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="sidebar-link" id="linkCommunity">
+                  <div class="sidebar-link-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>Community Forums</strong>
+                    <span>Ask questions and suggest features</span>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="#" class="sidebar-link" id="linkSupport">
+                  <div class="sidebar-link-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <strong>Email the team</strong>
+                    <span>support@kbizsoft.com</span>
+                  </div>
+                </a>
+              </li>
+            </ul>
+            <div class="sidebar-mascot">
+              <img src="../icons/icon128.png" alt="ColixAI Mascot" class="mascot-img">
+            </div>
           </div>
-        </div>
-
-        <div class="magicaa-shortcut-loader">
-          <div class="magicaa-loader-title"></div>
-          <div class="magicaa-loader-line"></div>
-          <div class="magicaa-loader-line magicaa-loader-line-short"></div>
-
-          <div class="magicaa-loader-footer">
-            <div class="magicaa-loader-small"></div>
-            <div class="magicaa-loader-small"></div>
-          </div>
-        </div>
-
-        <div class="magicaa-shortcut-loader">
-          <div class="magicaa-loader-title"></div>
-          <div class="magicaa-loader-line"></div>
-          <div class="magicaa-loader-line magicaa-loader-line-short"></div>
-
-          <div class="magicaa-loader-footer">
-            <div class="magicaa-loader-small"></div>
-            <div class="magicaa-loader-small"></div>
-          </div>
-        </div>
-
+        </aside>
       </div>
 
-      <!-- Empty State -->
-      <div class="empty-state" id="emptyState" style="display: none;">
-        <div class="empty-illustration">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
+      <!-- Folder Detail View (Shown when a folder is selected) -->
+      <div id="folderView" class="view-container" style="display: none;">
+        <div class="view-main">
+          <!-- Folder Header -->
+          <div class="folder-header-card">
+            <div class="folder-header-top">
+              <div class="folder-title-wrapper">
+                <span class="folder-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </span>
+                <input type="text" class="folder-title-input" id="folderViewTitle" value="Folder Name">
+              </div>
+              <div class="folder-header-actions">
+                <button class="btn btn-primary" id="folderNewSnippetBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  New Snippet
+                </button>
+              </div>
+            </div>
+
+            <!-- Editable Description Box -->
+            <div class="folder-description-box">
+              <textarea id="folderViewDescription" class="folder-description-textarea"
+                placeholder="These are some sample snippets to get you started. You can edit these snippets or create new ones."></textarea>
+            </div>
+          </div>
+
+          <!-- Folder Snippets Grid -->
+          <div class="shortcuts-grid" id="folderItemsList"></div>
+
+          <!-- Empty Folder State -->
+          <div class="empty-state" id="folderEmptyState" style="display: none;">
+            <div class="empty-illustration">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3>This folder is empty</h3>
+            <p>Add snippets or forms to keep your shortcuts organized.</p>
+            <button class="btn btn-primary" id="folderEmptyAddBtn">+ Create Snippet in Folder</button>
+          </div>
         </div>
-        <h3>No shortcuts yet</h3>
-        <p>Create your first text shortcut and start typing faster.</p>
-        <button class="btn btn-primary" id="emptyAddBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Create First Shortcut
-        </button>
+
+        <!-- Right Side Panel: Folder Options -->
+        <aside class="view-sidebar">
+          <div class="sidebar-card">
+            <h3 class="sidebar-card-title">Folder options</h3>
+
+            <div class="folder-option-group">
+              <label class="folder-option-label">Snippets trigger</label>
+              <select class="folder-option-select" id="folderOptionTrigger">
+                <option value="word_break">Started by word break</option>
+                <option value="anywhere">Trigger anywhere</option>
+              </select>
+            </div>
+
+            <hr class="sidebar-divider">
+
+            <button class="sidebar-action-btn danger" id="folderDeleteBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Delete folder...</span>
+            </button>
+          </div>
+        </aside>
       </div>
 
-      <!-- No Results -->
+      <!-- Shortcuts Grid Loader / Search No Results -->
       <div class="empty-state" id="noResults" style="display: none;">
         <div class="empty-illustration">
           <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1"
@@ -446,10 +776,81 @@
 
     </section>
 
+    <!-- Forms Section -->
+    <section class="section" id="sectionForms" style="display: none;">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h2 class="page-title">My Forms</h2>
+          <span class="badge" id="formCount">0</span>
+        </div>
+        <div class="top-bar-right">
+          <button class="btn btn-primary" id="addFormBtn">+ New Form</button>
+        </div>
+      </div>
+
+      <div class="magicaa-notification-bar">
+        <div class="magicaa-notification-content">
+          <span class="magicaa-notification-text">
+            Maximum of <strong id="form-limit-display">5 Forms</strong> can be added in the Trial Version.
+            <a href="#" id="magicaa-forms-upgrade-link">Upgrade Now</a>
+            to unlock unlimited forms.
+          </span>
+        </div>
+      </div>
+
+      <div class="form-overlay" id="formBuilderOverlay" style="display: none;">
+        <div class="form-modal" role="dialog" aria-modal="true" aria-labelledby="formBuilderTitle">
+          <div class="form-modal-header">
+            <h3 class="form-title" id="formBuilderTitle">Create Form Shortcut</h3>
+            <button class="btn-close" id="closeFormBuilderBtn" aria-label="Close">&times;</button>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Choose a Form Template</label>
+              <div id="formTemplateCards" class="form-template-cards"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="formTriggerInput">Form Trigger</label>
+                <input type="text" class="form-input" id="formTriggerInput" placeholder="e.g., /contact">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="formLabelInput">Label <span class="optional">(optional)</span></label>
+                <input type="text" class="form-input" id="formLabelInput" placeholder="e.g., Client Contact">
+              </div>
+            </div>
+            <div class="form-hint" id="formFieldsPreview"></div>
+            <div class="form-error" id="formBuilderError" style="display: none;" role="alert"></div>
+          </div>
+          <div class="form-modal-footer">
+            <button class="btn btn-secondary" id="cancelFormBuilderBtn">Cancel</button>
+            <button class="btn btn-primary" id="saveFormBtn">Save Form</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="shortcuts-grid" id="formsList"></div>
+      <div class="empty-state" id="formsEmptyState" style="display: none;">
+        <div class="empty-illustration">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h3>No forms yet</h3>
+        <p>Create a reusable form that can be filled while you type on a rich-text editor.</p>
+        <button class="btn btn-primary" id="emptyAddFormBtn">Create First Form</button>
+      </div>
+    </section>
+
     <!-- Help Section -->
     <section class="section" id="sectionHelp" style="display: none;">
       <div class="top-bar">
-        <h2 class="page-title">How to Use Colix</h2>
+        <h2 class="page-title">How to Use ColixAI</h2>
       </div>
 
       <div class="help-content">
@@ -469,7 +870,15 @@
           <p>Your shortcut is instantly replaced with the full text. No extra keys needed!</p>
         </div>
         <div class="help-card">
-          <div class="help-step">💡</div>
+          <div class="help-step">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 17h2a2.5 2.5 0 0 0 2.5-2.5c0-1.3-.8-2.4-2-2.8L12 11"></path>
+              <line x1="12" y1="9" x2="12.01" y2="9"></line>
+              <path d="M9 18h6"></path>
+              <path d="M10 22h4"></path>
+            </svg>
+          </div>
           <h4>Tips</h4>
           <ul>
             <li>Start triggers with <code>-</code> <code>/</code> <code>;</code> or <code>!</code> to avoid accidental
@@ -486,10 +895,55 @@
 
   </main>
 
-  <div id="toastContainer" class="toast-container"></div>
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- Custom Dialog Overlay (Replacing browser alert/prompt/confirm) -->
+  <div class="form-overlay" id="customDialogOverlay" style="display: none;">
+    <div class="form-modal custom-dialog-modal" role="dialog" aria-modal="true">
+      <div class="form-modal-header">
+        <h3 class="form-title" id="customDialogTitle">Title</h3>
+        <button class="btn-close" id="customDialogCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="form-body">
+        <p id="customDialogMessage" class="custom-dialog-message"></p>
+        <div id="customDialogInputGroup" class="form-group" style="display: none; margin-top: 12px;">
+          <input type="text" id="customDialogInput" class="form-input" placeholder="Type here...">
+        </div>
+      </div>
+      <div class="form-modal-footer">
+        <button class="btn btn-secondary" id="customDialogCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="customDialogConfirmBtn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../utils/supabase-config.js"></script>
+  <script src="../utils/supabase-client.js"></script>
+  <script src="../utils/auth-manager.js"></script>
+  <script src="../utils/sync-manager.js"></script>
   <script src="../utils/storage.js"></script>
+  <script src="sidebar-manager.js"></script>
   <script src="dashboard.js"></script>
+  <script>
+    const profileButton = document.querySelector('.profile-btn');
+    const profileDropdown = document.getElementById('profileDropdown');
+
+    if (profileButton && profileDropdown) {
+      profileButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = profileDropdown.classList.contains('open');
+        profileDropdown.classList.toggle('open', !isOpen);
+        profileButton.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!profileDropdown.contains(event.target) && !profileButton.contains(event.target)) {
+          profileDropdown.classList.remove('open');
+          profileButton.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+  </script>
 </body>
 
 </html>

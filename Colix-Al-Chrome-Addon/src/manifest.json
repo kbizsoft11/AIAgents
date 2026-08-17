@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Colix: Auto Text Expander & Autofill",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Instantly expand text shortcuts while you type. Create custom abbreviations and boost your productivity.",
     "permissions": [
         "storage",
@@ -11,7 +11,8 @@
         "identity.email"
     ],
     "host_permissions": [
-        "<all_urls>"
+        "<all_urls>",
+        "https://*.supabase.co/*"
     ],
     "action": {
         "default_icon": {
@@ -26,6 +27,10 @@
                 "<all_urls>"
             ],
             "js": [
+                "utils/supabase-config.js",
+                "utils/supabase-client.js",
+                "utils/auth-manager.js",
+                "utils/sync-manager.js",
                 "utils/storage.js",
                 "content/content.js"
             ],
@@ -44,6 +49,7 @@
     "web_accessible_resources": [
         {
             "resources": [
+                "dashboard/paypal-checkout.html",
                 "icons/*"
             ],
             "matches": [

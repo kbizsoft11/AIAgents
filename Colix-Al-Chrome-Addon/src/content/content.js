@@ -1,14 +1,15 @@
 // content/content.js
-// Colix - Content Script with Shortcut Menu
+// ColixAI - Content Script with Shortcut Menu
 (function () {
   'use strict';
 
   if (window.__textBlitzLoaded) return;
   window.__textBlitzLoaded = true;
 
-  // console.log('Colix: Content script loaded on', window.location.hostname);
+  // console.log('ColixAI: Content script loaded on', window.location.hostname);
 
   let shortcuts = [];
+  let forms = [];
 
   // Feature flag — set to true to re-enable the "//" popup trigger in future
   const ENABLE_SLASH_MENU = true;
@@ -18,9 +19,9 @@
 
   // LinkedIn profile detection
   const isLinkedInProfile = () => {
-    return window.location.hostname.includes('linkedin.com') && 
-           (window.location.pathname.startsWith('/in/') || 
-            window.location.pathname.match(/\/feed\/|\/admin\/|\/sales\/|\/pulse\//));
+    return window.location.hostname.includes('linkedin.com') &&
+      (window.location.pathname.startsWith('/in/') ||
+        window.location.pathname.match(/\/feed\/|\/admin\/|\/sales\/|\/pulse\//));
   };
 
   // =============================================
@@ -40,7 +41,7 @@
       // ===== HEADLINE (Job Title) =====
       // Try to find in common locations
       let headlineEl = null;
-      
+
       // Method 1: Look for text near the profile photo
       let possibleHeadlines = document.querySelectorAll('div[class*="headline"], div[class*="title"], .text-body-medium');
       for (let el of possibleHeadlines) {
@@ -50,7 +51,7 @@
           break;
         }
       }
-      
+
       // Method 2: Get from meta description or page text
       if (!headlineEl) {
         let allText = document.body.innerText;
@@ -62,14 +63,14 @@
           }
         }
       }
-      
+
       profile.headline = headlineEl ? (typeof headlineEl === 'string' ? headlineEl : headlineEl.innerText).split('\n')[0].trim() : 'N/A';
       console.log('💼 Headline:', profile.headline);
 
       // ===== LOCATION =====
       let locationText = 'N/A';
       let pageText = document.body.innerText;
-      
+
       // Look for common location patterns
       let allDivs = document.querySelectorAll('div, span, p');
       for (let div of allDivs) {
@@ -85,13 +86,13 @@
 
       // ===== PROFILE PHOTO =====
       let photoEl = null;
-      
+
       // LinkedIn profile photos usually have specific patterns
       let imageEls = document.querySelectorAll('img');
       for (let img of imageEls) {
         let src = img.src || img.getAttribute('src');
         let alt = img.alt || img.getAttribute('alt');
-        
+
         // Look for profile/avatar images
         if (src && (src.includes('profile') || src.includes('avatar') || src.includes('dms') || src.match(/\d{3,}/))) {
           // Check if it's reasonably sized (profile photos are usually >50px)
@@ -101,14 +102,14 @@
           }
         }
       }
-      
+
       profile.photo = photoEl ? photoEl.src : null;
       console.log('📷 Photo:', profile.photo ? 'Found' : 'Not found');
 
       // ===== EDUCATION =====
       const educationItems = [];
       const liElements = document.querySelectorAll('li');
-      
+
       liElements.forEach(li => {
         let text = li.innerText || li.textContent;
         // Check if this li contains education keywords
@@ -125,19 +126,19 @@
           }
         }
       });
-      
+
       profile.education = educationItems.length > 0 ? educationItems.slice(0, 5) : [];
       console.log('🎓 Education items found:', profile.education.length);
 
       // ===== EXPERIENCE =====
       const experienceItems = [];
-      
+
       liElements.forEach(li => {
         let text = li.innerText || li.textContent;
         // Look for common job-related keywords
         if (text && text.match(/manager|engineer|developer|designer|analyst|consultant|lead|director|officer|executive|specialist|associate|coordinator/i)) {
           let lines = text.split('\n').filter(l => l.trim());
-          
+
           // Experience entries usually have: Title, Company, Duration
           if (lines.length >= 1) {
             // Filter out too short entries (likely false positives)
@@ -151,13 +152,13 @@
           }
         }
       });
-      
+
       profile.experience = experienceItems.length > 0 ? experienceItems.slice(0, 5) : [];
       console.log('💼 Experience items found:', profile.experience.length);
 
       console.log('✅ Profile scrape complete:', profile);
       return profile;
-      
+
     } catch (e) {
       console.error('❌ LinkedIn profile scrape error:', e);
       return {
@@ -390,9 +391,10 @@
   // LOAD SHORTCUTS
   // =============================================
   function loadShortcuts() {
-    chrome.storage.local.get({ shortcuts: [] }, function (result) {
+    chrome.storage.local.get({ shortcuts: [], forms: [] }, function (result) {
       shortcuts = result.shortcuts || [];
-      // console.log('Colix: Loaded', shortcuts.length, 'shortcuts');
+      forms = result.forms || [];
+      // console.log('ColixAI: Loaded', shortcuts.length, 'shortcuts');
     });
   }
 
@@ -400,16 +402,36 @@
     if (namespace === 'local' && changes.shortcuts) {
       shortcuts = changes.shortcuts.newValue || [];
     }
+    if (namespace === 'local' && changes.forms) {
+      forms = changes.forms.newValue || [];
+    }
   });
 
   // =============================================
   // TRACK LAST FOCUSED EDITABLE FIELD (for sidebar insert)
   // =============================================
   let lastFocusedEl = null;
+  let lastFocusedRange = null;
   document.addEventListener('focusin', function (e) {
     if (isInsideMenu(e.target)) return;        // ignore the // popup menu's own inputs
     if (isInsideSidebar(e.target)) return;      // ignore the sidebar's own search input
-    if (isEditable(e.target)) lastFocusedEl = e.target;
+    if (isEditable(e.target)) {
+      lastFocusedEl = e.target;
+      if (e.target.isContentEditable) {
+        const sel = window.getSelection();
+        lastFocusedRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+      } else {
+        lastFocusedRange = null;
+      }
+    }
+  }, true);
+
+  document.addEventListener('selectionchange', function () {
+    const active = document.activeElement;
+    if (active && isEditable(active) && active.isContentEditable) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) lastFocusedRange = sel.getRangeAt(0).cloneRange();
+    }
   }, true);
 
   // =============================================
@@ -526,7 +548,7 @@
 
     menu.innerHTML = `
       <div class="tb-header">
-        <span class="tb-logo">Colix</span>
+        <span class="tb-logo">ColixAI</span>
         <div class="tb-search-wrap">
           <input type="text" id="tb-search" placeholder="Filter shortcuts..." autocomplete="off" spellcheck="false">
         </div>
@@ -798,7 +820,7 @@
       menuState.justOpened = false;
     }, 60);
 
-    // console.log('Colix: Menu opened');
+    // console.log('ColixAI: Menu opened');
   }
 
   // =============================================
@@ -817,7 +839,7 @@
       try { menuState.triggerElement.focus({ preventScroll: true }); } catch (e) { }
     }
 
-    // console.log('Colix: Menu closed');
+    // console.log('ColixAI: Menu closed');
   }
 
   // =============================================
@@ -829,7 +851,7 @@
 
     if (!el) { closeMenu(); return; }
 
-    // console.log('Colix: Selected', shortcut.trigger);
+    // console.log('ColixAI: Selected', shortcut.trigger);
 
     menuState.lockInput = true;
     closeMenu();
@@ -947,6 +969,74 @@
   // =============================================
   // DIRECT SHORTCUT MATCHING (typing -hbd etc)
   // =============================================
+  let formPopup = null;
+  let formPopupRange = null;
+  let sidebarHiddenForForm = false;
+
+  function findFormMatch(textBefore) {
+    return forms.find(f => f.trigger && textBefore && textBefore.endsWith(f.trigger)) || null;
+  }
+
+  function closeFormPopup() {
+    if (formPopup) { formPopup.remove(); formPopup = null; }
+    formPopupRange = null;
+    sidebarHiddenForForm = false;
+  }
+
+  function openFormPopup(el, form, savedRange = null, removeTrigger = true) {
+    closeFormPopup();
+    const currentSelection = window.getSelection();
+    formPopupRange = savedRange || (currentSelection && currentSelection.rangeCount ? currentSelection.getRangeAt(0).cloneRange() : null);
+    const popup = document.createElement('div');
+    popup.id = 'tb-form-popup';
+    popup.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(15,23,42,.42);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    popup.innerHTML = `<div id="tb-form-modal" style="width:min(420px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid #e2e2e2;border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.28);padding:22px;box-sizing:border-box;">` +
+      `<div style="font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:5px;">${escapeHtml(form.label || form.template || 'Fill Form')}</div><div style="font-size:12px;color:#777;margin-bottom:16px;">Fill any fields you need, then insert the form.</div><form id="tb-form-fields">${(form.fields || []).map((field, i) => { const multi = /message|notes|address|concern|medication|experience|topic/i.test(field); return `<label style="display:block;font-size:12px;font-weight:600;color:#444;margin:0 0 10px;">${escapeHtml(field)}<${multi ? 'textarea' : 'input'} data-field-index="${i}" ${multi ? 'rows="3"' : 'type="text"'} style="display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:9px;border:1px solid #ddd;border-radius:7px;font:inherit;font-weight:400;resize:vertical;"></${multi ? 'textarea' : 'input'}></label>`; }).join('')}<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;"><button type="button" id="tb-form-cancel" style="padding:9px 14px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Cancel</button><button type="submit" style="padding:9px 14px;border:0;background:#1a1a2e;color:#fff;border-radius:7px;cursor:pointer;">Insert Form</button></div><div id="tb-form-error" style="display:none;color:#c0392b;font-size:12px;margin-top:8px;"></div></form></div>`;
+    document.documentElement.appendChild(popup); formPopup = popup;
+    popup.addEventListener('mousedown', (event) => { if (event.target === popup) closeFormPopup(); });
+    popup.querySelector('#tb-form-cancel').addEventListener('click', closeFormPopup);
+    popup.querySelector('form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const values = [...popup.querySelectorAll('[data-field-index]')].map(input => input.value.trim());
+      if (!values.some(Boolean)) { const error = popup.querySelector('#tb-form-error'); error.textContent = 'Please fill in at least one field before inserting the form.'; error.style.display = 'block'; return; }
+      const sel = window.getSelection();
+      if (!sel || !formPopupRange) { closeFormPopup(); return; }
+      sel.removeAllRanges(); sel.addRange(formPopupRange);
+      const range = sel.getRangeAt(0);
+      if (removeTrigger) {
+        let node = range.startContainer;
+        let idx = node.nodeType === Node.TEXT_NODE ? node.textContent.substring(0, range.startOffset).lastIndexOf(form.trigger) : -1;
+
+        if (node.nodeType !== Node.TEXT_NODE || idx < 0) {
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          let candidate;
+          while (walker.nextNode()) {
+            const textNode = walker.currentNode;
+            const found = textNode.textContent.lastIndexOf(form.trigger);
+            if (found >= 0) { candidate = textNode; idx = found; }
+          }
+          node = candidate;
+        }
+
+        if (!node || idx < 0) { closeFormPopup(); return; }
+        const triggerRange = document.createRange();
+        triggerRange.setStart(node, idx);
+        triggerRange.setEnd(node, idx + form.trigger.length);
+        triggerRange.deleteContents();
+        triggerRange.collapse(true);
+        sel.removeAllRanges(); sel.addRange(triggerRange);
+      } else {
+        range.collapse(true);
+        sel.removeAllRanges(); sel.addRange(range);
+      }
+      const html = (form.fields || []).map((field, i) => values[i] ? `<strong>${escapeHtml(field)}:</strong> ${escapeHtml(values[i]).replace(/\n/g, '<br>')}<br>` : '').join('').replace(/<br>$/, '');
+      document.execCommand('insertHTML', false, html);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      chrome.storage.local.get({ forms: [] }, result => { const all = result.forms; const item = all.find(f => f.id === form.id); if (item) { item.usageCount = (item.usageCount || 0) + 1; item.updatedAt = new Date().toISOString(); chrome.storage.local.set({ forms: all }); } });
+      closeFormPopup();
+    });
+  }
+
   function findDirectMatch(textBefore) {
     if (!textBefore || shortcuts.length === 0) return null;
     for (const s of shortcuts) {
@@ -1032,6 +1122,16 @@
     const info = getTextBeforeCursor(el);
     if (!info) return;
 
+    const formMatch = findFormMatch(info.text);
+    if (formMatch) {
+      if (info.type !== 'contenteditable') {
+        showTbToast('Forms can only be inserted into rich-text editors.');
+        return;
+      }
+      if (!formPopup) openFormPopup(el, formMatch);
+      return;
+    }
+
     // ---- Menu trigger '//' ----
     // ---- Menu trigger '//' (disabled for now) ----
     if (ENABLE_SLASH_MENU && info.text.endsWith('//')) {
@@ -1089,6 +1189,11 @@
   // CLOSE ON ESCAPE (when focus is NOT in menu)
   // =============================================
   document.addEventListener('keydown', function (e) {
+    if (formPopup && e.key === 'Escape') {
+      e.preventDefault();
+      closeFormPopup();
+      return;
+    }
     if (!menuState.visible) return;
     if (isInsideMenu(document.activeElement)) return;
 
@@ -1143,7 +1248,7 @@
   // INIT
   // =============================================
   loadShortcuts();
-  // console.log('Colix: Ready ✓');
+  // console.log('ColixAI: Ready ✓');
 
   // =============================================
   // TOKEN REPLACEMENT
@@ -1359,8 +1464,8 @@
         top: 50%;
         transform: translateY(-50%);
         right: -340px;
-        width: 320px;
-        height: 400px; 
+        width: 390px;
+        height: 560px; 
         padding: 10px 0;
         border-radius: 20px;
         background: #fff;
@@ -1383,19 +1488,19 @@
         flex-shrink: 0;
       }
       .tb-sb-title { font-size: 18px; font-family: monospace; font-weight: 700; color: #1a1a2e; }
+      .tb-sb-tabs { display: flex; gap: 6px; padding: 10px 16px 0; flex-shrink: 0; }
+      .tb-sb-tab { flex: 1; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #999; padding: 8px 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+      .tb-sb-tab-active { color: #1a1a2e; border-bottom-color: #1a1a2e; }
       .tb-sb-home {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #000;
-          display: flex;
-          align-items: center;
-          margin-right: 4px;
-          overflow: hidden;
-          border-radius: 100%;
-          width: 40px;
-          height: 40px;
-          padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #000;
+        display: flex;
+        align-items: center;
+        margin-right: 4px;
+        overflow: hidden;
+        border-radius: 100%;
       }
       .tb-sb-home:hover { color: #555; }
       .tb-sb-home svg { width: 18px; height: 18px; }
@@ -1522,13 +1627,13 @@
     if (sidebarEl) return;
     injectSidebarStyles();
 
-    const logo = chrome.runtime.getURL('icons/logo.png');
+    const logo = chrome.runtime.getURL('icons/icon128.png');
     sidebarEl = document.createElement('div');
     sidebarEl.id = 'tb-sidebar';
-    
+
     // Add LinkedIn Profile button if on LinkedIn
     const linkedInButtonHTML = isLinkedInProfile() ? `
-      <div style="padding: 12px 16px; background: linear-gradient(135deg, #e6f2ff 0%, #f0f8ff 100%); border-bottom: 2px solid #0A66C2;">
+      <div style="display: none; padding: 12px 16px; background: linear-gradient(135deg, #e6f2ff 0%, #f0f8ff 100%); border-bottom: 2px solid #0A66C2;">
         <button id="tb-sb-view-profile" style="
           width: 100%;
           padding: 12px 14px;
@@ -1555,9 +1660,9 @@
       ${linkedInButtonHTML}
       <div class="tb-sb-header">
         <button class="tb-sb-home" id="tb-sb-home" type="button" title="Open Dashboard">
-          <img src=${logo} style="width: 100%; height: 100%;">
+          <img src=${logo} style="width: 40px;">
         </button>
-        <span class="tb-sb-title">Colix</span>
+        <span class="tb-sb-title">ColixAI</span>
         <button class="tb-sb-close" id="tb-sb-close" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1565,10 +1670,14 @@
           </svg>
         </button>
       </div>
+      <div class="tb-sb-tabs" role="tablist">
+        <button type="button" class="tb-sb-tab tb-sb-tab-active" data-tab="shortcuts">Shortcuts</button>
+        <button type="button" class="tb-sb-tab" data-tab="forms">Forms</button>
+      </div>
       <div class="tb-sb-search-wrap">
         <input type="text" id="tb-sb-search" placeholder="Search shortcuts...">
         <div class='tb-sb-search-btn'>
-          <span>Add shortcut</span>
+          <span id="tb-sb-add-label">Add shortcut</span>
           <button id="tb-sb-add" title="Add Shortcut">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -1584,7 +1693,8 @@
     });
 
     sidebarEl.querySelector('#tb-sb-add').addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: true });
+      const activeTab = sidebarEl.querySelector('.tb-sb-tab-active');
+      chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: activeTab?.dataset.tab !== 'forms', openForm: activeTab?.dataset.tab === 'forms' });
     });
 
     document.documentElement.appendChild(sidebarEl);
@@ -1599,10 +1709,10 @@
   function renderSidebarProfile() {
     if (!sidebarEl) return;
     const profile = scrapeLinkedInProfile();
-    
+
     let educationHTML = '';
     if (Array.isArray(profile.education) && profile.education.length > 0) {
-      educationHTML = profile.education.map(edu => 
+      educationHTML = profile.education.map(edu =>
         `<div style="font-size: 12px; margin: 8px 0; padding: 10px; background: #ffffff; border-radius: 8px; border-left: 3px solid #0A66C2; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 2px;">${escapeHtml(edu.school)}</div>
           <div style="color: #666; font-size: 11px;">${escapeHtml(edu.degree)}</div>
@@ -1621,13 +1731,13 @@
       ).join('');
     }
 
-    const photoHTML = profile.photo && profile.photo !== 'N/A' 
+    const photoHTML = profile.photo && profile.photo !== 'N/A'
       ? `<img src="${profile.photo}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #0A66C2;">`
       : `<div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #0A66C2, #005399); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid #0A66C2;">👤</div>`;
 
     // Store original sidebar HTML
     const originalSidebarHTML = sidebarEl.innerHTML;
-    
+
     // Replace entire sidebar with profile overlay
     sidebarEl.innerHTML = `
       <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 20px; display: flex; flex-direction: column; z-index: 1000; overflow: hidden;">
@@ -1715,7 +1825,7 @@
     // Re-attach event listeners
     const backBtn = sidebarEl.querySelector('#tb-sb-back');
     const closeBtn = sidebarEl.querySelector('#tb-profile-close');
-    
+
     if (backBtn) {
       backBtn.addEventListener('click', () => {
         // Restore original sidebar HTML
@@ -1738,9 +1848,19 @@
   // Helper to attach sidebar event listeners
   function attachSidebarEventListeners() {
     if (!sidebarEl) return;
-    
+
     sidebarSearchEl = sidebarEl.querySelector('#tb-sb-search');
     sidebarListEl = sidebarEl.querySelector('#tb-sb-list');
+
+    sidebarEl.querySelectorAll('.tb-sb-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        sidebarEl.querySelectorAll('.tb-sb-tab').forEach(item => item.classList.toggle('tb-sb-tab-active', item === tab));
+        sidebarSearchEl.placeholder = tab.dataset.tab === 'forms' ? 'Search forms...' : 'Search shortcuts...';
+        const addLabel = sidebarEl.querySelector('#tb-sb-add-label');
+        if (addLabel) addLabel.textContent = tab.dataset.tab === 'forms' ? 'Add form' : 'Add shortcut';
+        renderSidebarList(sidebarSearchEl.value, tab.dataset.tab);
+      });
+    });
 
     // Profile button
     const profileBtn = sidebarEl.querySelector('#tb-sb-view-profile');
@@ -1761,51 +1881,52 @@
       closeBtn.addEventListener('click', closeSidebar);
     }
 
-    // Home button
-    const homeBtn = sidebarEl.querySelector('#tb-sb-home');
-    if (homeBtn) {
-      homeBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openDashboard' });
-      });
-    }
-
-    // Add button
-    const addBtn = sidebarEl.querySelector('#tb-sb-add');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: true });
-      });
-    }
-
     // Shortcuts list
     if (sidebarListEl) {
       sidebarListEl.addEventListener('click', (e) => {
         const item = e.target.closest('.tb-sb-item');
         if (!item) return;
-        const shortcut = shortcuts.find(s => s.id === item.dataset.id);
-        if (!shortcut) return;
+        const kind = item.dataset.kind || 'shortcut';
+        const entry = kind === 'form' ? forms.find(f => f.id === item.dataset.id) : shortcuts.find(s => s.id === item.dataset.id);
+        if (!entry) return;
 
         if (!lastFocusedEl || !document.contains(lastFocusedEl)) {
           showTbToast('Please select an input field first to insert the shortcut.');
           return;
         }
 
+        if (kind === 'form') {
+          if (!lastFocusedEl.isContentEditable) {
+            showTbToast('Forms can only be inserted into rich-text editors.');
+            closeSidebar();
+            return;
+          }
+          const savedRange = lastFocusedRange ? lastFocusedRange.cloneRange() : null;
+          closeSidebar();
+          openFormPopup(lastFocusedEl, entry, savedRange, false);
+          sidebarHiddenForForm = true;
+          sidebarEl.style.display = 'none';
+          return;
+        }
+
         animateFlyToInput(item, lastFocusedEl, () => {
-          sidebarInsert(lastFocusedEl, shortcut);
+          sidebarInsert(lastFocusedEl, entry);
         });
         closeSidebar();
       });
     }
   }
 
-  function renderSidebarList(filter) {
+  function renderSidebarList(filter, type = 'shortcuts') {
     if (!sidebarListEl) return;
-    const list = getSortedShortcuts(filter || '');
+    const query = (filter || '').toLowerCase();
+    const source = type === 'forms' ? forms : shortcuts;
+    const list = source.filter(item => !query || item.trigger.toLowerCase().includes(query) || (item.label || '').toLowerCase().includes(query)).sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
     if (list.length === 0) {
       sidebarListEl.innerHTML = `
         <div class="tb-sb-empty" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #bbb; font-size: 13px; padding: 20px; text-align: center;">
           <div style="font-size: 32px; margin-bottom: 8px;">✂️</div>
-          <div>No shortcuts found</div>
+          <div>No ${type} found</div>
           <div style="font-size: 11px; color: #ccc; margin-top: 4px;">Create one to get started</div>
         </div>`;
       return;
@@ -1813,7 +1934,7 @@
     sidebarListEl.innerHTML = `
       <div style="padding: 8px 12px; overflow-y: auto; height: 100%;">
         ${list.map(s => `
-          <div class="tb-sb-item" data-id="${escapeHtml(s.id)}" style="
+          <div class="tb-sb-item" data-id="${escapeHtml(s.id)}" data-kind="${type === 'forms' ? 'form' : 'shortcut'}" style="
             padding: 12px 12px;
             border-radius: 8px;
             cursor: pointer;
@@ -1843,7 +1964,7 @@
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.3;
-            ">${escapeHtml(stripHtml(s.expansion))}</div>
+            ">${escapeHtml(type === 'forms' ? `${s.template || 'Form'} form • ${(s.fields || []).join(', ')}` : stripHtml(s.expansion))}</div>
           </div>
         `).join('')}
       </div>
@@ -1852,12 +1973,16 @@
 
   function openSidebar() {
     buildSidebar();
+    sidebarEl.style.display = 'flex';
     renderSidebarList('');
     sidebarEl.classList.add('tb-sidebar-open');
   }
 
   function closeSidebar() {
-    if (sidebarEl) sidebarEl.classList.remove('tb-sidebar-open');
+    if (sidebarEl) {
+      sidebarEl.classList.remove('tb-sidebar-open');
+      sidebarEl.style.display = 'none';
+    }
   }
 
   // =============================================
@@ -1910,8 +2035,8 @@
 
     const fab = document.createElement('div');
     fab.id = 'tb-fab';
-    fab.title = 'Colix Shortcuts';
-    const iconUrl = chrome.runtime.getURL('icons/logo.png');
+    fab.title = 'ColixAI Shortcuts';
+    const iconUrl = chrome.runtime.getURL('icons/icon128.png');
 
     // Close button
     const closeBtn = document.createElement('span');
@@ -1923,7 +2048,7 @@
       dismissFab();
     });
 
-    fab.innerHTML = `<img src="${iconUrl}" alt="Colix">`;
+    fab.innerHTML = `<img src="${iconUrl}" alt="ColixAI">`;
     fab.appendChild(closeBtn);
 
     fab.addEventListener('click', () => {
@@ -1938,16 +2063,16 @@
   }
 
   if (window.location.hostname.includes('linkedin.com')) {
-    window.debugLinkedInScraper = function() {
+    window.debugLinkedInScraper = function () {
       console.log('=== LINKEDIN DEBUG INFO ===');
       console.log('\n📝 NAME ELEMENTS:');
       console.log(document.querySelector('h1'));
-      
+
       console.log('\n💼 POSSIBLE HEADLINE ELEMENTS:');
       document.querySelectorAll('div[class*="headline"], div[class*="title"], .text-body-medium').forEach((el, i) => {
         console.log(`[${i}]`, el.innerText?.substring(0, 100), el.className);
       });
-      
+
       console.log('\n📍 LOCATION ELEMENTS:');
       document.querySelectorAll('div, span, p').forEach(el => {
         let text = el.innerText || el.textContent;
@@ -1955,14 +2080,14 @@
           console.log(text, el.className, el.tagName);
         }
       });
-      
+
       console.log('\n📷 IMAGES:');
       document.querySelectorAll('img').forEach((img, i) => {
         if (img.width > 30) {
           console.log(`[${i}] src:`, img.src.substring(0, 80), 'alt:', img.alt, 'size:', img.width, 'x', img.height);
         }
       });
-      
+
       console.log('\n🎓 EDUCATION ITEMS:');
       let eduCount = 0;
       document.querySelectorAll('li').forEach((li, i) => {
@@ -1972,7 +2097,7 @@
           if (eduCount >= 3) return;
         }
       });
-      
+
       console.log('\n💼 EXPERIENCE ITEMS:');
       let expCount = 0;
       document.querySelectorAll('li').forEach((li, i) => {
@@ -1982,10 +2107,10 @@
           if (expCount >= 3) return;
         }
       });
-      
+
       console.log('\n✅ Run scrapeLinkedInProfile() to test scraper');
     };
-    
+
     console.log('💡 Tip: Run window.debugLinkedInScraper() in console to inspect LinkedIn HTML structure');
   }
 
