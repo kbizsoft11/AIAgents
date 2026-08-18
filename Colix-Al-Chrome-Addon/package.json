@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "javascript-obfuscator ./src --output ./dist --config obfuscator.config.js && html-minifier-terser src/dashboard/dashboard.html -o dist/dashboard/dashboard.html --collapse-whitespace --remove-comments && html-minifier-terser src/dashboard/blocked.html -o dist/dashboard/blocked.html --collapse-whitespace --remove-comments && cleancss -o dist/dashboard/dashboard.css src/dashboard/dashboard.css && cp src/manifest.json dist/manifest.json && cp -r src/icons dist/icons"
+    "build": "javascript-obfuscator ./src --output ./dist --config obfuscator.config.js && html-minifier-terser src/dashboard/dashboard.html -o dist/dashboard/dashboard.html --collapse-whitespace --remove-comments && html-minifier-terser src/dashboard/blocked.html -o dist/dashboard/blocked.html --collapse-whitespace --remove-comments && html-minifier-terser src/dashboard/docs.html -o dist/dashboard/docs.html --collapse-whitespace --remove-comments && html-minifier-terser src/dynamic-fields.html -o dist/dynamic-fields.html --collapse-whitespace --remove-comments && cleancss -o dist/dashboard/dashboard.css src/dashboard/dashboard.css && cleancss -o dist/dashboard/docs.css src/dashboard/docs.css && cp src/manifest.json dist/manifest.json && cp -r src/icons dist/icons && cp src/db.sql dist/utils/db.sql"
   },
   "keywords": [],
   "author": "",

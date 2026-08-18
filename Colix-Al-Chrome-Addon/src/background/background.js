@@ -1,8 +1,52 @@
 // background/background.js
 
+// Load Supabase utility files for service worker context
+importScripts('../utils/supabase-config.js');
+importScripts('../utils/supabase-client.js');
+importScripts('../utils/auth-manager.js');
+importScripts('../utils/sync-manager.js');
+importScripts('../utils/storage.js');
+
 const DASHBOARD_PATH = 'dashboard/dashboard.html';
 const AUTH_API = 'https://extensions.kbizsoft.com/magicaa-extension/check_user.php';
 const REGISTER_API = 'https://extensions.kbizsoft.com/magicaa-extension/register-user.php';
+
+// Dynamic-field windows are opened by the service worker because content
+// scripts cannot create browser windows directly.
+const dynamicFieldWindows = new Map();
+
+function createDynamicFieldWindow(message, sender, sendResponse) {
+  const requestId = message.requestId || `dynamic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  dynamicFieldWindows.set(requestId, {
+    tabId: sender.tab?.id,
+    frameId: sender.frameId || 0,
+    text: message.text || '',
+    fields: Array.isArray(message.fields) ? message.fields : [],
+    windowId: null
+  });
+  const url = `${chrome.runtime.getURL('dynamic-fields.html')}?requestId=${encodeURIComponent(requestId)}`;
+  chrome.windows.create({ type: 'popup', url, width: 560, height: 680, focused: true }, window => {
+    if (chrome.runtime.lastError || !window?.id) {
+      dynamicFieldWindows.delete(requestId);
+      sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Unable to open the dynamic field window.' });
+      return;
+    }
+    const pending = dynamicFieldWindows.get(requestId);
+    if (pending) pending.windowId = window.id;
+    sendResponse({ success: true, requestId, windowId: window.id });
+  });
+  return true;
+}
+
+chrome.windows.onRemoved.addListener(windowId => {
+  for (const [requestId, pending] of dynamicFieldWindows) {
+    if (pending.windowId !== windowId) continue;
+    if (pending.tabId !== undefined) {
+      chrome.tabs.sendMessage(pending.tabId, { action: 'dynamicFieldResult', requestId, cancelled: true }, { frameId: pending.frameId }, () => void chrome.runtime.lastError);
+    }
+    dynamicFieldWindows.delete(requestId);
+  }
+});
 
 async function registerCurrentUser() {
   try {
@@ -119,37 +163,166 @@ chrome.action.onClicked.addListener(async () => {
   }
 });
 
-// Initialize default shortcuts on install
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    const defaultShortcuts = [
-      {
-        id: 'example2',
-        trigger: '-ty',
-        expansion: 'Thank you so much! I really appreciate your help.',
-        label: 'Thank You',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        usageCount: 0
-      },
-      {
-        id: 'example3',
-        trigger: '-sig',
-        expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
-        label: 'Email Signature',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        usageCount: 0
-      }
-    ];
+/**
+ * Check if user has existing shortcuts/forms in Supabase
+ * Used to decide whether to add default shortcuts on reinstall
+ */
+async function checkIfUserHasExistingSupabaseData() {
+  try {
+    // Get user email from Chrome identity
+    const profileUserInfo = await chrome.identity.getProfileUserInfo();
+    const userEmail = profileUserInfo.email;
 
-    chrome.storage.local.set({ shortcuts: defaultShortcuts });
+    if (!userEmail) {
+      console.warn('⚠️ No user email found, will add default shortcuts');
+      return false;
+    }
+
+    // Initialize Supabase client
+    await initSupabaseClient();
+    const client = getSupabaseClient();
+
+    if (!client) {
+      console.warn('⚠️ Supabase client not available, will add default shortcuts');
+      return false;
+    }
+
+    // Set email for RLS policies
+    client.setUserEmail(userEmail);
+
+    // Check if user exists and has any shortcuts or forms
+    try {
+      const shortcuts = await client.getShortcuts(userEmail);
+      const forms = await client.getForms(userEmail);
+
+      const hasData = (shortcuts && shortcuts.length > 0) || (forms && forms.length > 0);
+      
+      if (hasData) {
+        // console.log(`✅ User has existing data in Supabase (${shortcuts?.length || 0} shortcuts, ${forms?.length || 0} forms)`);
+        return true;
+      } else {
+        // console.log('✅ User has no existing data in Supabase, will add default shortcuts');
+        return false;
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not query Supabase:', error.message);
+      return false;
+    }
+  } catch (error) {
+    console.warn('⚠️ Error checking Supabase data:', error.message);
+    return false;
+  }
+}
+
+// Initialize default shortcuts on install
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === 'install') {
+    try {
+      // Check if user already has data in Supabase (reinstall scenario)
+      const hasExistingData = await checkIfUserHasExistingSupabaseData();
+
+      if (!hasExistingData) {
+        // Only add default shortcuts if this is a fresh install (no Supabase data)
+        const defaultShortcuts = [
+          {
+            id: 'example2',
+            trigger: '-ty',
+            expansion: 'Thank you so much! I really appreciate your help.',
+            label: 'Thank You',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            usageCount: 0
+          },
+          {
+            id: 'example3',
+            trigger: '-sig',
+            expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
+            label: 'Email Signature',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            usageCount: 0
+          }
+        ];
+
+        chrome.storage.local.set({ shortcuts: defaultShortcuts });
+        // console.log('✅ Default shortcuts added (fresh install)');
+      } else {
+        // console.log('✅ User has existing data in Supabase, skipping default shortcuts');
+        chrome.storage.local.set({ shortcuts: [] });
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not check Supabase, adding default shortcuts:', error.message);
+      // Fallback: add defaults if we can't check Supabase
+      const defaultShortcuts = [
+        {
+          id: 'example2',
+          trigger: '-ty',
+          expansion: 'Thank you so much! I really appreciate your help.',
+          label: 'Thank You',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          usageCount: 0
+        },
+        {
+          id: 'example3',
+          trigger: '-sig',
+          expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
+          label: 'Email Signature',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          usageCount: 0
+        }
+      ];
+      chrome.storage.local.set({ shortcuts: defaultShortcuts });
+    }
+
     chrome.tabs.create({ url: chrome.runtime.getURL(DASHBOARD_PATH) });
+  }
+
+  // Initialize Supabase on every install/update
+  try {
+    (async () => {
+      await initSupabaseClient();
+      const authMgr = await initAuthManager();
+      
+      if (authMgr.isUserAuthenticated()) {
+        const syncMgr = await initSyncManager(authMgr.getUserId());
+        // console.log('✅ Sync manager initialized on install');
+      }
+    })();
+  } catch (error) {
+    console.error('⚠️ Supabase initialization error:', error);
   }
 });
 
 // Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'openDynamicFieldWindow') {
+    return createDynamicFieldWindow(message, sender, sendResponse);
+  }
+
+  if (message.action === 'getDynamicFieldWindowData') {
+    const pending = dynamicFieldWindows.get(message.requestId);
+    sendResponse(pending
+      ? { success: true, text: pending.text, fields: pending.fields }
+      : { success: false, error: 'This dynamic field request has expired.' });
+    return true;
+  }
+
+  if (message.action === 'completeDynamicFieldWindow' || message.action === 'cancelDynamicFieldWindow') {
+    const pending = dynamicFieldWindows.get(message.requestId);
+    if (!pending) return false;
+    chrome.tabs.sendMessage(pending.tabId, {
+      action: 'dynamicFieldResult',
+      requestId: message.requestId,
+      values: message.values || [],
+      cancelled: message.action !== 'completeDynamicFieldWindow'
+    }, { frameId: pending.frameId }, () => void chrome.runtime.lastError);
+    if (pending.windowId) chrome.windows.remove(pending.windowId, () => void chrome.runtime.lastError);
+    dynamicFieldWindows.delete(message.requestId);
+    return false;
+  }
+
   if (message.action === 'getShortcuts') {
     chrome.storage.local.get({ shortcuts: [] }, (result) => {
       sendResponse(result.shortcuts);
@@ -204,9 +377,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'openDashboard') {
-    const url = chrome.runtime.getURL('dashboard/dashboard.html') +
-      (message.openAddNew ? '?action=add-shortcut' : '');
+    const action = message.openForm ? 'add-form' : (message.openAddNew ? 'add-shortcut' : (message.openForms ? 'forms' : ''));
+    const url = chrome.runtime.getURL('dashboard/dashboard.html') + (action ? `?action=${action}` : '');
     chrome.tabs.create({ url });
+  }
+
+  // Supabase sync status request
+  if (message.action === 'GET_SYNC_STATUS') {
+    try {
+      const syncMgr = getSyncManager();
+      sendResponse(syncMgr.getSyncStatus());
+    } catch (error) {
+      sendResponse({ error: error.message, isSyncing: false, pendingItems: 0 });
+    }
+    return true;
+  }
+
+  // Supabase auth status request
+  if (message.action === 'GET_AUTH_STATUS') {
+    try {
+      const authMgr = getAuthManager();
+      sendResponse({
+        isAuthenticated: authMgr.isUserAuthenticated(),
+        user: authMgr.getCurrentUser()
+      });
+    } catch (error) {
+      sendResponse({ isAuthenticated: false, error: error.message });
+    }
+    return true;
   }
 });
 
@@ -214,6 +412,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function initializeExtension() {
   await registerCurrentUser();
   await verifyUserAccess();
+  
+  // Initialize user limits from admin panel
+  try {
+    await StorageHelper.checkUser();
+    // console.log('✅ User limits initialized:', StorageHelper.MAX_SHORTCUTS);
+  } catch (error) {
+    console.error('⚠️ Failed to initialize user limits:', error);
+  }
 }
 
 chrome.runtime.onStartup.addListener(() => {

@@ -1,14 +1,35 @@
 // content/content.js
-// Colix - Content Script with Shortcut Menu
+// ColixAI - Content Script with Shortcut Menu
 (function () {
   'use strict';
 
   if (window.__textBlitzLoaded) return;
   window.__textBlitzLoaded = true;
 
-  // console.log('Colix: Content script loaded on', window.location.hostname);
+  // console.log('ColixAI: Content script loaded on', window.location.hostname);
 
   let shortcuts = [];
+  let forms = [];
+  const pendingDynamicFields = new Map();
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action !== 'dynamicFieldResult') return;
+    const pending = pendingDynamicFields.get(message.requestId);
+    if (!pending) return;
+    pendingDynamicFields.delete(message.requestId);
+    if (message.cancelled) {
+      pending.cancel();
+      return;
+    }
+    const escapeValue = value => String(value || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    let expanded = pending.text;
+    pending.fields.forEach((field, index) => {
+      expanded = expanded.split(field.token).join(escapeValue(message.values?.[index]));
+    });
+    pending.complete(expanded);
+  });
 
   // Feature flag — set to true to re-enable the "//" popup trigger in future
   const ENABLE_SLASH_MENU = true;
@@ -18,9 +39,9 @@
 
   // LinkedIn profile detection
   const isLinkedInProfile = () => {
-    return window.location.hostname.includes('linkedin.com') && 
-           (window.location.pathname.startsWith('/in/') || 
-            window.location.pathname.match(/\/feed\/|\/admin\/|\/sales\/|\/pulse\//));
+    return window.location.hostname.includes('linkedin.com') &&
+      (window.location.pathname.startsWith('/in/') ||
+        window.location.pathname.match(/\/feed\/|\/admin\/|\/sales\/|\/pulse\//));
   };
 
   // =============================================
@@ -30,17 +51,17 @@
     try {
       const profile = {};
 
-      console.log('🔍 Starting LinkedIn profile scrape...');
+      // console.log('🔍 Starting LinkedIn profile scrape...');
 
       // ===== NAME =====
       let nameEl = document.querySelector('h1');
       profile.name = nameEl ? nameEl.innerText.split('\n')[0].trim() : 'N/A';
-      console.log('📝 Name:', profile.name);
+      // console.log('📝 Name:', profile.name);
 
       // ===== HEADLINE (Job Title) =====
       // Try to find in common locations
       let headlineEl = null;
-      
+
       // Method 1: Look for text near the profile photo
       let possibleHeadlines = document.querySelectorAll('div[class*="headline"], div[class*="title"], .text-body-medium');
       for (let el of possibleHeadlines) {
@@ -50,7 +71,7 @@
           break;
         }
       }
-      
+
       // Method 2: Get from meta description or page text
       if (!headlineEl) {
         let allText = document.body.innerText;
@@ -62,14 +83,14 @@
           }
         }
       }
-      
+
       profile.headline = headlineEl ? (typeof headlineEl === 'string' ? headlineEl : headlineEl.innerText).split('\n')[0].trim() : 'N/A';
-      console.log('💼 Headline:', profile.headline);
+      // console.log('💼 Headline:', profile.headline);
 
       // ===== LOCATION =====
       let locationText = 'N/A';
       let pageText = document.body.innerText;
-      
+
       // Look for common location patterns
       let allDivs = document.querySelectorAll('div, span, p');
       for (let div of allDivs) {
@@ -81,17 +102,17 @@
         }
       }
       profile.location = locationText;
-      console.log('📍 Location:', profile.location);
+      // console.log('📍 Location:', profile.location);
 
       // ===== PROFILE PHOTO =====
       let photoEl = null;
-      
+
       // LinkedIn profile photos usually have specific patterns
       let imageEls = document.querySelectorAll('img');
       for (let img of imageEls) {
         let src = img.src || img.getAttribute('src');
         let alt = img.alt || img.getAttribute('alt');
-        
+
         // Look for profile/avatar images
         if (src && (src.includes('profile') || src.includes('avatar') || src.includes('dms') || src.match(/\d{3,}/))) {
           // Check if it's reasonably sized (profile photos are usually >50px)
@@ -101,14 +122,14 @@
           }
         }
       }
-      
+
       profile.photo = photoEl ? photoEl.src : null;
-      console.log('📷 Photo:', profile.photo ? 'Found' : 'Not found');
+      // console.log('📷 Photo:', profile.photo ? 'Found' : 'Not found');
 
       // ===== EDUCATION =====
       const educationItems = [];
       const liElements = document.querySelectorAll('li');
-      
+
       liElements.forEach(li => {
         let text = li.innerText || li.textContent;
         // Check if this li contains education keywords
@@ -125,19 +146,19 @@
           }
         }
       });
-      
+
       profile.education = educationItems.length > 0 ? educationItems.slice(0, 5) : [];
-      console.log('🎓 Education items found:', profile.education.length);
+      // console.log('🎓 Education items found:', profile.education.length);
 
       // ===== EXPERIENCE =====
       const experienceItems = [];
-      
+
       liElements.forEach(li => {
         let text = li.innerText || li.textContent;
         // Look for common job-related keywords
         if (text && text.match(/manager|engineer|developer|designer|analyst|consultant|lead|director|officer|executive|specialist|associate|coordinator/i)) {
           let lines = text.split('\n').filter(l => l.trim());
-          
+
           // Experience entries usually have: Title, Company, Duration
           if (lines.length >= 1) {
             // Filter out too short entries (likely false positives)
@@ -151,13 +172,13 @@
           }
         }
       });
-      
-      profile.experience = experienceItems.length > 0 ? experienceItems.slice(0, 5) : [];
-      console.log('💼 Experience items found:', profile.experience.length);
 
-      console.log('✅ Profile scrape complete:', profile);
+      profile.experience = experienceItems.length > 0 ? experienceItems.slice(0, 5) : [];
+      // console.log('💼 Experience items found:', profile.experience.length);
+
+      // console.log('✅ Profile scrape complete:', profile);
       return profile;
-      
+
     } catch (e) {
       console.error('❌ LinkedIn profile scrape error:', e);
       return {
@@ -390,9 +411,10 @@
   // LOAD SHORTCUTS
   // =============================================
   function loadShortcuts() {
-    chrome.storage.local.get({ shortcuts: [] }, function (result) {
-      shortcuts = result.shortcuts || [];
-      // console.log('Colix: Loaded', shortcuts.length, 'shortcuts');
+    chrome.storage.local.get({ shortcuts: [], forms: [] }, function (result) {
+      shortcuts = Array.isArray(result.shortcuts) ? result.shortcuts : [];
+      forms = Array.isArray(result.forms) ? result.forms : [];
+      // console.log('ColixAI: Loaded', shortcuts.length, 'shortcuts');
     });
   }
 
@@ -400,16 +422,36 @@
     if (namespace === 'local' && changes.shortcuts) {
       shortcuts = changes.shortcuts.newValue || [];
     }
+    if (namespace === 'local' && changes.forms) {
+      forms = changes.forms.newValue || [];
+    }
   });
 
   // =============================================
   // TRACK LAST FOCUSED EDITABLE FIELD (for sidebar insert)
   // =============================================
   let lastFocusedEl = null;
+  let lastFocusedRange = null;
   document.addEventListener('focusin', function (e) {
     if (isInsideMenu(e.target)) return;        // ignore the // popup menu's own inputs
     if (isInsideSidebar(e.target)) return;      // ignore the sidebar's own search input
-    if (isEditable(e.target)) lastFocusedEl = e.target;
+    if (isEditable(e.target)) {
+      lastFocusedEl = e.target;
+      if (e.target.isContentEditable) {
+        const sel = window.getSelection();
+        lastFocusedRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+      } else {
+        lastFocusedRange = null;
+      }
+    }
+  }, true);
+
+  document.addEventListener('selectionchange', function () {
+    const active = document.activeElement;
+    if (active && isEditable(active) && active.isContentEditable) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) lastFocusedRange = sel.getRangeAt(0).cloneRange();
+    }
   }, true);
 
   // =============================================
@@ -438,6 +480,49 @@
       if (el.nextSibling) el.insertAdjacentText('afterend', '\n');
     });
     return (d.innerText || d.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function triggerWebConfetti() {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483646;';
+    document.documentElement.appendChild(canvas);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { canvas.remove(); return; }
+
+    const colors = ['#1dac4b', '#f43f5e', '#8b5cf6', '#3b82f6', '#f59e0b', '#ec4899'];
+    const particles = Array.from({ length: 70 }, () => ({
+      x: window.innerWidth / 2 + (Math.random() - 0.5) * 300,
+      y: window.innerHeight / 3,
+      vx: (Math.random() - 0.5) * 14,
+      vy: (Math.random() - 0.7) * 14,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      rSpeed: (Math.random() - 0.5) * 12
+    }));
+    const startTime = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(particle => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.vy += 0.3;
+        particle.rotation += particle.rSpeed;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - elapsed / 1600);
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate((particle.rotation * Math.PI) / 180);
+        ctx.fillStyle = particle.color;
+        ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        ctx.restore();
+      });
+      if (elapsed < 1600) requestAnimationFrame(animate);
+      else canvas.remove();
+    };
+    animate();
   }
 
   function formatDate(dateStr) {
@@ -526,7 +611,7 @@
 
     menu.innerHTML = `
       <div class="tb-header">
-        <span class="tb-logo">Colix</span>
+        <span class="tb-logo">ColixAI</span>
         <div class="tb-search-wrap">
           <input type="text" id="tb-search" placeholder="Filter shortcuts..." autocomplete="off" spellcheck="false">
         </div>
@@ -798,7 +883,7 @@
       menuState.justOpened = false;
     }, 60);
 
-    // console.log('Colix: Menu opened');
+    // console.log('ColixAI: Menu opened');
   }
 
   // =============================================
@@ -817,7 +902,7 @@
       try { menuState.triggerElement.focus({ preventScroll: true }); } catch (e) { }
     }
 
-    // console.log('Colix: Menu closed');
+    // console.log('ColixAI: Menu closed');
   }
 
   // =============================================
@@ -829,7 +914,7 @@
 
     if (!el) { closeMenu(); return; }
 
-    // console.log('Colix: Selected', shortcut.trigger);
+    // console.log('ColixAI: Selected', shortcut.trigger);
 
     menuState.lockInput = true;
     closeMenu();
@@ -847,6 +932,7 @@
           } else if (type === 'contenteditable') {
             menuInsertCE(el, processedShortcut);
           }
+          triggerWebConfetti();
 
           chrome.storage.local.get({ shortcuts: [] }, function (result) {
             const all = result.shortcuts;
@@ -947,6 +1033,74 @@
   // =============================================
   // DIRECT SHORTCUT MATCHING (typing -hbd etc)
   // =============================================
+  let formPopup = null;
+  let formPopupRange = null;
+  let sidebarHiddenForForm = false;
+
+  function findFormMatch(textBefore) {
+    return forms.find(f => f.trigger && textBefore && textBefore.endsWith(f.trigger)) || null;
+  }
+
+  function closeFormPopup() {
+    if (formPopup) { formPopup.remove(); formPopup = null; }
+    formPopupRange = null;
+    sidebarHiddenForForm = false;
+  }
+
+  function openFormPopup(el, form, savedRange = null, removeTrigger = true) {
+    closeFormPopup();
+    const currentSelection = window.getSelection();
+    formPopupRange = savedRange || (currentSelection && currentSelection.rangeCount ? currentSelection.getRangeAt(0).cloneRange() : null);
+    const popup = document.createElement('div');
+    popup.id = 'tb-form-popup';
+    popup.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(15,23,42,.42);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    popup.innerHTML = `<div id="tb-form-modal" style="width:min(420px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;border:1px solid #e2e2e2;border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.28);padding:22px;box-sizing:border-box;">` +
+      `<div style="font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:5px;">${escapeHtml(form.label || form.template || 'Fill Form')}</div><div style="font-size:12px;color:#777;margin-bottom:16px;">Fill any fields you need, then insert the form.</div><form id="tb-form-fields">${(form.fields || []).map((field, i) => { const multi = /message|notes|address|concern|medication|experience|topic/i.test(field); return `<label style="display:block;font-size:12px;font-weight:600;color:#444;margin:0 0 10px;">${escapeHtml(field)}<${multi ? 'textarea' : 'input'} data-field-index="${i}" ${multi ? 'rows="3"' : 'type="text"'} style="display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:9px;border:1px solid #ddd;border-radius:7px;font:inherit;font-weight:400;resize:vertical;"></${multi ? 'textarea' : 'input'}></label>`; }).join('')}<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;"><button type="button" id="tb-form-cancel" style="padding:9px 14px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Cancel</button><button type="submit" style="padding:9px 14px;border:0;background:#1a1a2e;color:#fff;border-radius:7px;cursor:pointer;">Insert Form</button></div><div id="tb-form-error" style="display:none;color:#c0392b;font-size:12px;margin-top:8px;"></div></form></div>`;
+    document.documentElement.appendChild(popup); formPopup = popup;
+    popup.addEventListener('mousedown', (event) => { if (event.target === popup) closeFormPopup(); });
+    popup.querySelector('#tb-form-cancel').addEventListener('click', closeFormPopup);
+    popup.querySelector('form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const values = [...popup.querySelectorAll('[data-field-index]')].map(input => input.value.trim());
+      if (!values.some(Boolean)) { const error = popup.querySelector('#tb-form-error'); error.textContent = 'Please fill in at least one field before inserting the form.'; error.style.display = 'block'; return; }
+      const sel = window.getSelection();
+      if (!sel || !formPopupRange) { closeFormPopup(); return; }
+      sel.removeAllRanges(); sel.addRange(formPopupRange);
+      const range = sel.getRangeAt(0);
+      if (removeTrigger) {
+        let node = range.startContainer;
+        let idx = node.nodeType === Node.TEXT_NODE ? node.textContent.substring(0, range.startOffset).lastIndexOf(form.trigger) : -1;
+
+        if (node.nodeType !== Node.TEXT_NODE || idx < 0) {
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          let candidate;
+          while (walker.nextNode()) {
+            const textNode = walker.currentNode;
+            const found = textNode.textContent.lastIndexOf(form.trigger);
+            if (found >= 0) { candidate = textNode; idx = found; }
+          }
+          node = candidate;
+        }
+
+        if (!node || idx < 0) { closeFormPopup(); return; }
+        const triggerRange = document.createRange();
+        triggerRange.setStart(node, idx);
+        triggerRange.setEnd(node, idx + form.trigger.length);
+        triggerRange.deleteContents();
+        triggerRange.collapse(true);
+        sel.removeAllRanges(); sel.addRange(triggerRange);
+      } else {
+        range.collapse(true);
+        sel.removeAllRanges(); sel.addRange(range);
+      }
+      const html = (form.fields || []).map((field, i) => values[i] ? `<strong>${escapeHtml(field)}:</strong> ${escapeHtml(values[i]).replace(/\n/g, '<br>')}<br>` : '').join('').replace(/<br>$/, '');
+      document.execCommand('insertHTML', false, html);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      chrome.storage.local.get({ forms: [] }, result => { const all = result.forms; const item = all.find(f => f.id === form.id); if (item) { item.usageCount = (item.usageCount || 0) + 1; item.updatedAt = new Date().toISOString(); chrome.storage.local.set({ forms: all }); } });
+      closeFormPopup();
+    });
+  }
+
   function findDirectMatch(textBefore) {
     if (!textBefore || shortcuts.length === 0) return null;
     for (const s of shortcuts) {
@@ -961,11 +1115,11 @@
     return null;
   }
 
-  function directExpandInput(el, shortcut) {
+  function directExpandInput(el, shortcut, savedCursor = null) {
     // Always plain text for regular inputs/textareas — strip any HTML tags
     const plainText = htmlToPlainText(shortcut.expansion);
 
-    const cursor = el.selectionStart;
+    const cursor = Number.isInteger(savedCursor) ? savedCursor : el.selectionStart;
     const val = el.value;
     const before = val.substring(0, cursor);
     if (!before.endsWith(shortcut.trigger)) return;
@@ -986,10 +1140,15 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  function directExpandCE(el, shortcut) {
+  function directExpandCE(el, shortcut, savedRange = null) {
     // contenteditable: insert as HTML so bold/italic/underline render correctly
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
+    if (!sel) return;
+    if (savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    if (sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     const node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) return;
@@ -1032,6 +1191,16 @@
     const info = getTextBeforeCursor(el);
     if (!info) return;
 
+    const formMatch = findFormMatch(info.text);
+    if (formMatch) {
+      if (info.type !== 'contenteditable') {
+        showTbToast('Forms can only be inserted into rich-text editors.');
+        return;
+      }
+      if (!formPopup) openFormPopup(el, formMatch);
+      return;
+    }
+
     // ---- Menu trigger '//' ----
     // ---- Menu trigger '//' (disabled for now) ----
     if (ENABLE_SLASH_MENU && info.text.endsWith('//')) {
@@ -1051,15 +1220,26 @@
 
     menuState.lockInput = true;
 
+    // Save the exact insertion position before token resolution can open a
+    // popup and move focus away from the webpage field.
+    const savedInputCursor = info.type === 'input' ? el.selectionStart : null;
+    const savedContentRange = info.type === 'contenteditable'
+      ? (() => {
+        const selection = window.getSelection();
+        return selection && selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+      })()
+      : null;
+
     // Replace tokens then expand
     replaceTokens(match.expansion, function (expandedText) {
       const processedShortcut = { ...match, expansion: expandedText };
 
       if (info.type === 'input') {
-        directExpandInput(el, processedShortcut);
+        directExpandInput(el, processedShortcut, savedInputCursor);
       } else {
-        directExpandCE(el, processedShortcut);
+        directExpandCE(el, processedShortcut, savedContentRange);
       }
+      triggerWebConfetti();
 
       chrome.storage.local.get({ shortcuts: [] }, function (result) {
         const all = result.shortcuts;
@@ -1089,6 +1269,11 @@
   // CLOSE ON ESCAPE (when focus is NOT in menu)
   // =============================================
   document.addEventListener('keydown', function (e) {
+    if (formPopup && e.key === 'Escape') {
+      e.preventDefault();
+      closeFormPopup();
+      return;
+    }
     if (!menuState.visible) return;
     if (isInsideMenu(document.activeElement)) return;
 
@@ -1143,7 +1328,7 @@
   // INIT
   // =============================================
   loadShortcuts();
-  // console.log('Colix: Ready ✓');
+  // console.log('ColixAI: Ready ✓');
 
   // =============================================
   // TOKEN REPLACEMENT
@@ -1156,13 +1341,54 @@
     }
 
     chrome.runtime.sendMessage({ action: 'getProfileInfo' }, function (profile) {
+      const now = new Date();
+      const date = now.toLocaleDateString();
+      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const pad = value => String(value).padStart(2, '0');
+      const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const weekdayShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weekdayLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const formatDateTime = format => {
+        const hours24 = now.getHours();
+        const hours12 = hours24 % 12 || 12;
+        const replacements = {
+          YYYY: now.getFullYear(), MMMM: monthLong[now.getMonth()], MMM: monthShort[now.getMonth()],
+          dddd: weekdayLong[now.getDay()], ddd: weekdayShort[now.getDay()], MM: pad(now.getMonth() + 1),
+          DD: pad(now.getDate()), D: now.getDate(), HH: pad(hours24), hh: pad(hours12),
+          mm: pad(now.getMinutes()), ss: pad(now.getSeconds()), a: hours24 >= 12 ? 'pm' : 'am'
+        };
+        return format.replace(/YYYY|MMMM|MMM|dddd|ddd|MM|DD|HH|hh|mm|ss|D|a/g, token => replacements[token]);
+      };
+
+      const finish = (result) => {
+        result = result.replace(/\{\{snippet:([^}]+)\}\}/g, (_, snippetId) => {
+          const imported = shortcuts.find(shortcut => shortcut.id === snippetId);
+          return imported ? (imported.expansion || '') : '';
+        });
+        // Imported snippets can contain profile tokens of their own, so
+        // resolve them after the imported content has been injected.
+        result = result.replace(/\{\{first_name\}\}/g, profile?.firstName || '');
+        result = result.replace(/\{\{last_name\}\}/g, profile?.lastName || '');
+        result = result.replace(/\{\{email\}\}/g, profile?.email || '');
+        result = result.replace(/\{\{date_time:([^}]+)\}\}/g, (_, format) => formatDateTime(format));
+        result = result.replace(/\{\{date\}\}/g, date);
+        result = result.replace(/\{\{time\}\}/g, time);
+        result = result.replace(/\{\{formula:([^|}]+)(?:\|([^}]*))?\}\}/g, (_, expression, format) => {
+          const value = evaluateNumericExpression(expression);
+          return value === null ? '' : formatFormulaResult(value, format || '');
+        });
+        resolveInputFields(result, callback);
+      };
+
       if (chrome.runtime.lastError || !profile) {
         // Remove tokens if no profile available
         let result = text;
         result = result.replace(/\{\{first_name\}\}/g, '');
         result = result.replace(/\{\{last_name\}\}/g, '');
         result = result.replace(/\{\{email\}\}/g, '');
-        callback(result);
+        result = result.replace(/\{\{clipboard\}\}/g, '');
+        finish(result);
         return;
       }
 
@@ -1170,8 +1396,239 @@
       result = result.replace(/\{\{first_name\}\}/g, profile.firstName || '');
       result = result.replace(/\{\{last_name\}\}/g, profile.lastName || '');
       result = result.replace(/\{\{email\}\}/g, profile.email || '');
-      callback(result);
+
+      if (result.includes('{{clipboard}}')) {
+        const clipboardPromise = navigator.clipboard?.readText();
+        if (clipboardPromise) {
+          clipboardPromise.then(clipboard => {
+            finish(result.replace(/\{\{clipboard\}\}/g, clipboard || ''));
+          }).catch(() => finish(result.replace(/\{\{clipboard\}\}/g, '')));
+        } else {
+          finish(result.replace(/\{\{clipboard\}\}/g, ''));
+        }
+      } else {
+        finish(result);
+      }
     });
+  }
+
+  // Safe arithmetic evaluator for formula fields. It accepts only numbers,
+  // decimal points, parentheses, and + - * / operators; it never executes JS.
+  function evaluateNumericExpression(expression) {
+    const source = String(expression).replace(/\s+/g, '');
+    if (!source || !/^[0-9+\-*/().]+$/.test(source)) return null;
+    let index = 0;
+
+    const parseNumber = () => {
+      const start = index;
+      while (index < source.length && /[0-9.]/.test(source[index])) index++;
+      const number = Number(source.slice(start, index));
+      return Number.isFinite(number) ? number : null;
+    };
+    const parseFactor = () => {
+      if (source[index] === '+') { index++; return parseFactor(); }
+      if (source[index] === '-') { index++; const value = parseFactor(); return value === null ? null : -value; }
+      if (source[index] === '(') {
+        index++;
+        const value = parseExpression();
+        if (source[index] !== ')') return null;
+        index++;
+        return value;
+      }
+      return parseNumber();
+    };
+    const parseTerm = () => {
+      let value = parseFactor();
+      if (value === null) return null;
+      while (source[index] === '*' || source[index] === '/') {
+        const operator = source[index++];
+        const right = parseFactor();
+        if (right === null || (operator === '/' && right === 0)) return null;
+        value = operator === '*' ? value * right : value / right;
+      }
+      return value;
+    };
+    function parseExpression() {
+      let value = parseTerm();
+      if (value === null) return null;
+      while (source[index] === '+' || source[index] === '-') {
+        const operator = source[index++];
+        const right = parseTerm();
+        if (right === null) return null;
+        value = operator === '+' ? value + right : value - right;
+      }
+      return value;
+    }
+
+    const value = parseExpression();
+    return index === source.length && Number.isFinite(value) ? value : null;
+  }
+
+  function formatFormulaResult(value, format) {
+    if (format === 'integer') return String(Math.round(value));
+    if (format === '2-decimals') return value.toFixed(2);
+    if (format === 'currency') {
+      return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return String(value);
+  }
+
+  function resolveInputFields(text, callback) {
+    const fieldPattern = /\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}/g;
+    const fields = [];
+    const seen = new Set();
+    let match;
+
+    while ((match = fieldPattern.exec(text))) {
+      const token = match[0];
+      if (seen.has(token)) continue;
+      seen.add(token);
+      const values = match[3] ? match[3].split('|').slice(1).map(value => value.trim()).filter(Boolean) : [];
+      fields.push({
+        token,
+        kind: match[1],
+        label: match[2].trim() || (['select', 'radio'].includes(match[1]) ? 'Choose an option' : 'Text field'),
+        defaultValue: values[0] || '',
+        options: values
+      });
+    }
+
+    if (!fields.length) {
+      callback(text);
+      return;
+    }
+
+    // Prefer a real Chrome popup window. If it cannot be created (for example
+    // while the browser is shutting down), continue with the existing in-page
+    // implementation below so shortcut insertion remains available.
+    const requestId = `dynamic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    pendingDynamicFields.set(requestId, {
+      text,
+      fields,
+      complete: callback,
+      cancel: () => { menuState.lockInput = false; }
+    });
+    let fallbackTimer = setTimeout(() => {
+      if (!pendingDynamicFields.has(requestId)) return;
+      pendingDynamicFields.delete(requestId);
+      renderInPagePopup();
+    }, 2500);
+    chrome.runtime.sendMessage({ action: 'openDynamicFieldWindow', requestId, text, fields }, response => {
+      if (chrome.runtime.lastError || !response?.success) {
+        clearTimeout(fallbackTimer);
+        if (pendingDynamicFields.delete(requestId)) renderInPagePopup();
+        return;
+      }
+      // The native window opened successfully. Do not let the fallback timer
+      // open a second in-page popup while the user is filling this window.
+      clearTimeout(fallbackTimer);
+    });
+
+    function renderInPagePopup() {
+
+    const escapeHtml = value => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'textblitz-input-fields';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(15,23,42,.42);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    let previewHtml = text.replace(/\n/g, '<br>');
+    fields.forEach((field, index) => {
+      let control;
+      if (field.kind === 'select') {
+        control = `<select data-field-index="${index}" aria-label="${escapeHtml(field.label)}" style="display:inline-block;max-width:200px;box-sizing:border-box;margin:0 3px;padding:5px 7px;border:1px solid #b9c0a0;border-radius:2px;outline:none;background:#ffffc9;color:#243029;font:inherit;font-size:13px;vertical-align:middle;">${field.options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}</select>`;
+      } else if (field.kind === 'radio') {
+        control = `<span data-field-index="${index}" style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 3px;vertical-align:middle;">${field.options.map((option, optionIndex) => `<label style="display:inline-flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap;"><input type="radio" data-field-index="${index}" name="tb-radio-${index}" value="${escapeHtml(option)}" ${optionIndex === 0 ? 'checked' : ''}>${escapeHtml(option)}</label>`).join('')}</span>`;
+      } else if (field.kind === 'textarea') {
+        control = `<textarea data-field-index="${index}" aria-label="${escapeHtml(field.label)}" placeholder="${escapeHtml(field.label)}" rows="2" style="display:inline-block;width:min(240px,60vw);box-sizing:border-box;margin:0 3px;padding:5px 7px;border:1px solid #b9c0a0;border-radius:2px;outline:none;resize:vertical;background:#ffffc9;color:#243029;font:inherit;font-size:13px;vertical-align:middle;">${escapeHtml(field.defaultValue)}</textarea>`;
+      } else {
+        control = `<input data-field-index="${index}" type="text" value="${escapeHtml(field.defaultValue)}" placeholder="${escapeHtml(field.label)}" aria-label="${escapeHtml(field.label)}" style="display:inline-block;width:min(170px,45vw);box-sizing:border-box;margin:0 3px;padding:5px 7px;border:1px solid #b9c0a0;border-radius:2px;outline:none;background:#ffffc9;color:#243029;font:inherit;font-size:13px;vertical-align:middle;">`;
+      }
+      previewHtml = previewHtml.split(field.token).join(control);
+    });
+    overlay.innerHTML = `<div data-field-window style="display:flex;flex-direction:column;width:min(535px,calc(100vw - 40px));height:min(610px,calc(100vh - 40px));box-sizing:border-box;background:#fff;border:1px solid #c8c8c8;box-shadow:0 18px 60px rgba(0,0,0,.35);">
+      <div data-field-titlebar style="display:flex;align-items:center;justify-content:space-between;height:34px;flex:0 0 34px;padding:0 9px;background:#09282a;color:#fff;font-size:13px;font-weight:600;user-select:none;">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Fill shortcut fields</span>
+        <span style="display:flex;align-items:center;gap:2px;"><button type="button" data-field-minimize aria-label="Minimize" style="width:28px;height:26px;border:0;background:transparent;color:#fff;cursor:pointer;font-size:16px;line-height:1;">−</button><button type="button" data-field-cancel aria-label="Close" style="width:28px;height:26px;border:0;background:transparent;color:#fff;cursor:pointer;font-size:19px;line-height:1;">&times;</button></span>
+      </div>
+      <form data-field-form style="display:flex;flex:1;min-height:0;flex-direction:column;">
+        <div data-field-content style="flex:1;overflow:auto;padding:20px;color:#1e2a22;font-size:14px;line-height:2.2;white-space:normal;">${previewHtml}</div>
+        <div data-field-footer style="display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid #edf0ed;background:#fff;"><button type="button" data-field-cancel style="padding:9px 16px;border:0;background:#fff;color:#009fb4;border-radius:5px;cursor:pointer;font-weight:600;">Cancel</button><button type="submit" style="padding:9px 16px;border:0;background:#08a9bd;color:#fff;border-radius:5px;cursor:pointer;font-weight:600;box-shadow:0 3px 8px rgba(8,169,189,.25);">Insert</button></div>
+      </form>
+    </div>`;
+
+    const close = (cancelled = false) => {
+      overlay.remove();
+      if (cancelled) menuState.lockInput = false;
+    };
+    overlay.querySelectorAll('[data-field-cancel]').forEach(button => button.addEventListener('click', () => close(true)));
+    overlay.addEventListener('mousedown', event => { if (event.target === overlay) close(true); });
+    overlay.querySelector('[data-field-minimize]').addEventListener('click', () => {
+      const windowEl = overlay.querySelector('[data-field-window]');
+      const form = overlay.querySelector('[data-field-form]');
+      const minimized = windowEl.classList.toggle('tb-field-minimized');
+      form.style.display = minimized ? 'none' : 'flex';
+      windowEl.style.height = minimized ? '34px' : 'min(610px,calc(100vh - 40px))';
+    });
+    const fieldWindow = overlay.querySelector('[data-field-window]');
+    const titlebar = overlay.querySelector('[data-field-titlebar]');
+    let dragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    titlebar.addEventListener('pointerdown', event => {
+      if (event.target.closest('button')) return;
+      const rect = fieldWindow.getBoundingClientRect();
+      dragging = true;
+      dragOffsetX = event.clientX - rect.left;
+      dragOffsetY = event.clientY - rect.top;
+      fieldWindow.style.position = 'fixed';
+      fieldWindow.style.left = `${rect.left}px`;
+      fieldWindow.style.top = `${rect.top}px`;
+      fieldWindow.style.margin = '0';
+      titlebar.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    });
+    titlebar.addEventListener('pointermove', event => {
+      if (!dragging) return;
+      const maxLeft = Math.max(0, window.innerWidth - fieldWindow.offsetWidth);
+      const maxTop = Math.max(0, window.innerHeight - fieldWindow.offsetHeight);
+      const left = Math.min(Math.max(0, event.clientX - dragOffsetX), maxLeft);
+      const top = Math.min(Math.max(0, event.clientY - dragOffsetY), maxTop);
+      fieldWindow.style.left = `${left}px`;
+      fieldWindow.style.top = `${top}px`;
+    });
+    const stopDragging = () => { dragging = false; };
+    titlebar.addEventListener('pointerup', stopDragging);
+    titlebar.addEventListener('pointercancel', stopDragging);
+    overlay.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
+      }
+    });
+    overlay.querySelector('[data-field-form]').addEventListener('submit', event => {
+      event.preventDefault();
+      const values = fields.map((field, index) => {
+        const selector = field.kind === 'radio'
+          ? `[data-field-index="${index}"]:checked`
+          : `[data-field-index="${index}"]`;
+        return escapeHtml(overlay.querySelector(selector)?.value || '');
+      });
+      let expanded = text;
+      fields.forEach((field, index) => {
+        expanded = expanded.split(field.token).join(values[index]);
+      });
+      close();
+      callback(expanded);
+    });
+
+    document.documentElement.appendChild(overlay);
+    setTimeout(() => overlay.querySelector('[data-field-index]')?.focus(), 40);
+    }
   }
 
   // =============================================
@@ -1233,7 +1690,7 @@
   // =============================================
   // SIDEBAR INSERT (plain text for inputs, HTML for contenteditable)
   // =============================================
-  function sidebarInsert(el, shortcut) {
+  function sidebarInsert(el, shortcut, savedRange = null) {
     if (!el || !document.contains(el)) return;
     if (sidebarEl && sidebarEl.contains(el)) return;
     el.focus();
@@ -1267,19 +1724,30 @@
         el.dispatchEvent(new Event('change', { bubbles: true }));
       } else if (el.isContentEditable) {
         const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).startContainer)) {
-          document.execCommand('insertHTML', false, expandedText);
-        } else {
+        if (!sel) return;
+        if (savedRange) {
+          try {
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+          } catch (err) {
+            savedRange = null;
+          }
+        }
+        if (!savedRange && !(sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).startContainer))) {
           // No active selection inside el — place cursor at end and insert
           const range = document.createRange();
           range.selectNodeContents(el);
           range.collapse(false);
           sel.removeAllRanges();
           sel.addRange(range);
-          document.execCommand('insertHTML', false, expandedText);
         }
+        // Restore the target range before inserting so rich HTML formatting
+        // is preserved after the sidebar temporarily owns focus.
+        document.execCommand('insertHTML', false, expandedText);
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }
+
+      triggerWebConfetti();
 
       // Bump usage count
       chrome.storage.local.get({ shortcuts: [] }, function (result) {
@@ -1359,8 +1827,8 @@
         top: 50%;
         transform: translateY(-50%);
         right: -340px;
-        width: 320px;
-        height: 400px; 
+        width: 390px;
+        height: 560px; 
         padding: 10px 0;
         border-radius: 20px;
         background: #fff;
@@ -1383,19 +1851,19 @@
         flex-shrink: 0;
       }
       .tb-sb-title { font-size: 18px; font-family: monospace; font-weight: 700; color: #1a1a2e; }
+      .tb-sb-tabs { display: flex; gap: 6px; padding: 10px 16px 0; flex-shrink: 0; }
+      .tb-sb-tab { flex: 1; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #999; padding: 8px 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
+      .tb-sb-tab-active { color: #1a1a2e; border-bottom-color: #1a1a2e; }
       .tb-sb-home {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #000;
-          display: flex;
-          align-items: center;
-          margin-right: 4px;
-          overflow: hidden;
-          border-radius: 100%;
-          width: 40px;
-          height: 40px;
-          padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #000;
+        display: flex;
+        align-items: center;
+        margin-right: 4px;
+        overflow: hidden;
+        border-radius: 100%;
       }
       .tb-sb-home:hover { color: #555; }
       .tb-sb-home svg { width: 18px; height: 18px; }
@@ -1525,10 +1993,10 @@
     const logo = chrome.runtime.getURL('icons/logo.png');
     sidebarEl = document.createElement('div');
     sidebarEl.id = 'tb-sidebar';
-    
+
     // Add LinkedIn Profile button if on LinkedIn
     const linkedInButtonHTML = isLinkedInProfile() ? `
-      <div style="padding: 12px 16px; background: linear-gradient(135deg, #e6f2ff 0%, #f0f8ff 100%); border-bottom: 2px solid #0A66C2;">
+      <div style="display: none; padding: 12px 16px; background: linear-gradient(135deg, #e6f2ff 0%, #f0f8ff 100%); border-bottom: 2px solid #0A66C2;">
         <button id="tb-sb-view-profile" style="
           width: 100%;
           padding: 12px 14px;
@@ -1555,9 +2023,9 @@
       ${linkedInButtonHTML}
       <div class="tb-sb-header">
         <button class="tb-sb-home" id="tb-sb-home" type="button" title="Open Dashboard">
-          <img src=${logo} style="width: 100%; height: 100%;">
+          <img src=${logo} style="width: 40px;">
         </button>
-        <span class="tb-sb-title">Colix</span>
+        <span class="tb-sb-title">ColixAI</span>
         <button class="tb-sb-close" id="tb-sb-close" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1565,10 +2033,14 @@
           </svg>
         </button>
       </div>
+      <div class="tb-sb-tabs" role="tablist">
+        <button type="button" class="tb-sb-tab tb-sb-tab-active" data-tab="shortcuts">Shortcuts</button>
+        <button type="button" class="tb-sb-tab" data-tab="forms">Forms</button>
+      </div>
       <div class="tb-sb-search-wrap">
         <input type="text" id="tb-sb-search" placeholder="Search shortcuts...">
         <div class='tb-sb-search-btn'>
-          <span>Add shortcut</span>
+          <span id="tb-sb-add-label">Add shortcut</span>
           <button id="tb-sb-add" title="Add Shortcut">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -1584,7 +2056,8 @@
     });
 
     sidebarEl.querySelector('#tb-sb-add').addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: true });
+      const activeTab = sidebarEl.querySelector('.tb-sb-tab-active');
+      chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: activeTab?.dataset.tab !== 'forms', openForm: activeTab?.dataset.tab === 'forms' });
     });
 
     document.documentElement.appendChild(sidebarEl);
@@ -1599,10 +2072,10 @@
   function renderSidebarProfile() {
     if (!sidebarEl) return;
     const profile = scrapeLinkedInProfile();
-    
+
     let educationHTML = '';
     if (Array.isArray(profile.education) && profile.education.length > 0) {
-      educationHTML = profile.education.map(edu => 
+      educationHTML = profile.education.map(edu =>
         `<div style="font-size: 12px; margin: 8px 0; padding: 10px; background: #ffffff; border-radius: 8px; border-left: 3px solid #0A66C2; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <div style="font-weight: 700; color: #1a1a2e; margin-bottom: 2px;">${escapeHtml(edu.school)}</div>
           <div style="color: #666; font-size: 11px;">${escapeHtml(edu.degree)}</div>
@@ -1621,13 +2094,13 @@
       ).join('');
     }
 
-    const photoHTML = profile.photo && profile.photo !== 'N/A' 
+    const photoHTML = profile.photo && profile.photo !== 'N/A'
       ? `<img src="${profile.photo}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #0A66C2;">`
       : `<div style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #0A66C2, #005399); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid #0A66C2;">👤</div>`;
 
     // Store original sidebar HTML
     const originalSidebarHTML = sidebarEl.innerHTML;
-    
+
     // Replace entire sidebar with profile overlay
     sidebarEl.innerHTML = `
       <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 20px; display: flex; flex-direction: column; z-index: 1000; overflow: hidden;">
@@ -1715,7 +2188,7 @@
     // Re-attach event listeners
     const backBtn = sidebarEl.querySelector('#tb-sb-back');
     const closeBtn = sidebarEl.querySelector('#tb-profile-close');
-    
+
     if (backBtn) {
       backBtn.addEventListener('click', () => {
         // Restore original sidebar HTML
@@ -1738,9 +2211,19 @@
   // Helper to attach sidebar event listeners
   function attachSidebarEventListeners() {
     if (!sidebarEl) return;
-    
+
     sidebarSearchEl = sidebarEl.querySelector('#tb-sb-search');
     sidebarListEl = sidebarEl.querySelector('#tb-sb-list');
+
+    sidebarEl.querySelectorAll('.tb-sb-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        sidebarEl.querySelectorAll('.tb-sb-tab').forEach(item => item.classList.toggle('tb-sb-tab-active', item === tab));
+        sidebarSearchEl.placeholder = tab.dataset.tab === 'forms' ? 'Search forms...' : 'Search shortcuts...';
+        const addLabel = sidebarEl.querySelector('#tb-sb-add-label');
+        if (addLabel) addLabel.textContent = tab.dataset.tab === 'forms' ? 'Add form' : 'Add shortcut';
+        renderSidebarList(sidebarSearchEl.value, tab.dataset.tab);
+      });
+    });
 
     // Profile button
     const profileBtn = sidebarEl.querySelector('#tb-sb-view-profile');
@@ -1761,51 +2244,60 @@
       closeBtn.addEventListener('click', closeSidebar);
     }
 
-    // Home button
-    const homeBtn = sidebarEl.querySelector('#tb-sb-home');
-    if (homeBtn) {
-      homeBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openDashboard' });
-      });
-    }
-
-    // Add button
-    const addBtn = sidebarEl.querySelector('#tb-sb-add');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openDashboard', openAddNew: true });
-      });
-    }
-
     // Shortcuts list
     if (sidebarListEl) {
       sidebarListEl.addEventListener('click', (e) => {
         const item = e.target.closest('.tb-sb-item');
         if (!item) return;
-        const shortcut = shortcuts.find(s => s.id === item.dataset.id);
-        if (!shortcut) return;
+        const kind = item.dataset.kind || 'shortcut';
+        const entry = kind === 'form' ? forms.find(f => f.id === item.dataset.id) : shortcuts.find(s => s.id === item.dataset.id);
+        if (!entry) return;
 
         if (!lastFocusedEl || !document.contains(lastFocusedEl)) {
           showTbToast('Please select an input field first to insert the shortcut.');
           return;
         }
 
+        if (kind === 'form') {
+          if (!lastFocusedEl.isContentEditable) {
+            showTbToast('Forms can only be inserted into rich-text editors.');
+            closeSidebar();
+            return;
+          }
+          const savedRange = lastFocusedRange ? lastFocusedRange.cloneRange() : null;
+          closeSidebar();
+          openFormPopup(lastFocusedEl, entry, savedRange, false);
+          sidebarHiddenForForm = true;
+          sidebarEl.style.display = 'none';
+          return;
+        }
+
+        const savedInsertRange = lastFocusedRange ? lastFocusedRange.cloneRange() : null;
         animateFlyToInput(item, lastFocusedEl, () => {
-          sidebarInsert(lastFocusedEl, shortcut);
+          sidebarInsert(lastFocusedEl, entry, savedInsertRange);
         });
         closeSidebar();
       });
     }
   }
 
-  function renderSidebarList(filter) {
+  function renderSidebarList(filter, type = 'shortcuts') {
     if (!sidebarListEl) return;
-    const list = getSortedShortcuts(filter || '');
+    const query = (filter || '').toLowerCase();
+    const source = type === 'forms' ? forms : shortcuts;
+    const list = (Array.isArray(source) ? source : [])
+      .filter(item => item && typeof item === 'object')
+      .filter(item => {
+        const trigger = String(item.trigger || '').toLowerCase();
+        const label = String(item.label || '').toLowerCase();
+        return !query || trigger.includes(query) || label.includes(query);
+      })
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
     if (list.length === 0) {
       sidebarListEl.innerHTML = `
         <div class="tb-sb-empty" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #bbb; font-size: 13px; padding: 20px; text-align: center;">
           <div style="font-size: 32px; margin-bottom: 8px;">✂️</div>
-          <div>No shortcuts found</div>
+          <div>No ${type} found</div>
           <div style="font-size: 11px; color: #ccc; margin-top: 4px;">Create one to get started</div>
         </div>`;
       return;
@@ -1813,7 +2305,7 @@
     sidebarListEl.innerHTML = `
       <div style="padding: 8px 12px; overflow-y: auto; height: 100%;">
         ${list.map(s => `
-          <div class="tb-sb-item" data-id="${escapeHtml(s.id)}" style="
+          <div class="tb-sb-item" data-id="${escapeHtml(s.id)}" data-kind="${type === 'forms' ? 'form' : 'shortcut'}" style="
             padding: 12px 12px;
             border-radius: 8px;
             cursor: pointer;
@@ -1843,7 +2335,7 @@
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.3;
-            ">${escapeHtml(stripHtml(s.expansion))}</div>
+            ">${escapeHtml(type === 'forms' ? `${s.template || 'Form'} form • ${(Array.isArray(s.fields) ? s.fields : []).join(', ')}` : stripHtml(String(s.expansion || '')))}</div>
           </div>
         `).join('')}
       </div>
@@ -1851,13 +2343,23 @@
   }
 
   function openSidebar() {
-    buildSidebar();
-    renderSidebarList('');
-    sidebarEl.classList.add('tb-sidebar-open');
+    try {
+      buildSidebar();
+      if (!sidebarEl) return;
+      sidebarEl.style.display = 'flex';
+      renderSidebarList('');
+      sidebarEl.classList.add('tb-sidebar-open');
+    } catch (error) {
+      console.error('ColixAI: Could not open shortcuts sidebar:', error);
+      showTbToast('Could not open shortcuts. Please reload the page.');
+    }
   }
 
   function closeSidebar() {
-    if (sidebarEl) sidebarEl.classList.remove('tb-sidebar-open');
+    if (sidebarEl) {
+      sidebarEl.classList.remove('tb-sidebar-open');
+      sidebarEl.style.display = 'none';
+    }
   }
 
   // =============================================
@@ -1910,7 +2412,7 @@
 
     const fab = document.createElement('div');
     fab.id = 'tb-fab';
-    fab.title = 'Colix Shortcuts';
+    fab.title = 'ColixAI Shortcuts';
     const iconUrl = chrome.runtime.getURL('icons/logo.png');
 
     // Close button
@@ -1923,7 +2425,7 @@
       dismissFab();
     });
 
-    fab.innerHTML = `<img src="${iconUrl}" alt="Colix">`;
+    fab.innerHTML = `<img src="${iconUrl}" alt="ColixAI">`;
     fab.appendChild(closeBtn);
 
     fab.addEventListener('click', () => {
@@ -1938,55 +2440,55 @@
   }
 
   if (window.location.hostname.includes('linkedin.com')) {
-    window.debugLinkedInScraper = function() {
-      console.log('=== LINKEDIN DEBUG INFO ===');
-      console.log('\n📝 NAME ELEMENTS:');
-      console.log(document.querySelector('h1'));
-      
-      console.log('\n💼 POSSIBLE HEADLINE ELEMENTS:');
+    window.debugLinkedInScraper = function () {
+      // console.log('=== LINKEDIN DEBUG INFO ===');
+      // console.log('\n📝 NAME ELEMENTS:');
+      // console.log(document.querySelector('h1'));
+
+      // console.log('\n💼 POSSIBLE HEADLINE ELEMENTS:');
       document.querySelectorAll('div[class*="headline"], div[class*="title"], .text-body-medium').forEach((el, i) => {
-        console.log(`[${i}]`, el.innerText?.substring(0, 100), el.className);
+        // console.log(`[${i}]`, el.innerText?.substring(0, 100), el.className);
       });
-      
-      console.log('\n📍 LOCATION ELEMENTS:');
+
+      // console.log('\n📍 LOCATION ELEMENTS:');
       document.querySelectorAll('div, span, p').forEach(el => {
         let text = el.innerText || el.textContent;
         if (text && text.match(/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,\s*[A-Z]/)) {
-          console.log(text, el.className, el.tagName);
+          // console.log(text, el.className, el.tagName);
         }
       });
-      
-      console.log('\n📷 IMAGES:');
+
+      // console.log('\n📷 IMAGES:');
       document.querySelectorAll('img').forEach((img, i) => {
         if (img.width > 30) {
-          console.log(`[${i}] src:`, img.src.substring(0, 80), 'alt:', img.alt, 'size:', img.width, 'x', img.height);
+          // console.log(`[${i}] src:`, img.src.substring(0, 80), 'alt:', img.alt, 'size:', img.width, 'x', img.height);
         }
       });
-      
-      console.log('\n🎓 EDUCATION ITEMS:');
+
+      // console.log('\n🎓 EDUCATION ITEMS:');
       let eduCount = 0;
       document.querySelectorAll('li').forEach((li, i) => {
         if (li.innerText.match(/university|college|school|degree|bachelor|master/i)) {
-          console.log(`[${i}]`, li.innerText.substring(0, 80));
+          // console.log(`[${i}]`, li.innerText.substring(0, 80));
           eduCount++;
           if (eduCount >= 3) return;
         }
       });
-      
-      console.log('\n💼 EXPERIENCE ITEMS:');
+
+      // console.log('\n💼 EXPERIENCE ITEMS:');
       let expCount = 0;
       document.querySelectorAll('li').forEach((li, i) => {
         if (li.innerText.match(/manager|engineer|developer|director|lead/i)) {
-          console.log(`[${i}]`, li.innerText.substring(0, 80));
+          // console.log(`[${i}]`, li.innerText.substring(0, 80));
           expCount++;
           if (expCount >= 3) return;
         }
       });
-      
-      console.log('\n✅ Run scrapeLinkedInProfile() to test scraper');
+
+      // console.log('\n✅ Run scrapeLinkedInProfile() to test scraper');
     };
-    
-    console.log('💡 Tip: Run window.debugLinkedInScraper() in console to inspect LinkedIn HTML structure');
+
+    // console.log('💡 Tip: Run window.debugLinkedInScraper() in console to inspect LinkedIn HTML structure');
   }
 
   if (window.top === window.self) {

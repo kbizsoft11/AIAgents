@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fill shortcut fields</title>
+  <style>
+    :root { font-family: "Segoe UI", Arial, sans-serif; color: #18322b; }
+    * { box-sizing: border-box; } body { margin: 0; background: #fff; min-width: 420px; }
+    header { height: 48px; display:flex; align-items:center; gap:10px; padding:0 16px; color:#fff; background:#123f36; font-weight:700; }
+    header span { width:26px; height:26px; display:grid; place-items:center; border-radius:8px; background:#20a957; }
+    main { min-height: 570px; display:flex; flex-direction:column; } form { min-height:570px; display:flex; flex-direction:column; }
+    #preview { flex:1; overflow:auto; padding:24px; font-size:15px; line-height:1.8; }
+    #preview input, #preview textarea, #preview select { margin:2px 4px; padding:8px 10px; border:1px solid #b9d7c5; border-radius:7px; background:#f8fff9; color:#18322b; font:inherit; vertical-align:middle; }
+    #preview input:not([type=radio]), #preview textarea { width:min(260px, 90%); } #preview textarea { resize:vertical; }
+    .radio-group { display:inline-flex; flex-wrap:wrap; gap:10px; margin:2px 4px; vertical-align:middle; }
+    .radio-group label { display:inline-flex; align-items:center; gap:4px; }
+    footer { display:flex; justify-content:flex-end; gap:10px; padding:14px 18px; border-top:1px solid #e5eee8; }
+    button { border:0; border-radius:7px; padding:10px 18px; font:inherit; font-weight:700; cursor:pointer; }
+    #cancel { background:#fff; color:#168b4a; } #insert { background:#20a957; color:#fff; box-shadow:0 3px 8px #20a95744; }
+    #error { display:none; padding:0 20px 12px; color:#b42318; font-size:12px; }
+  </style>
+</head>
+<body><header><span>✦</span><div>Fill shortcut fields</div></header>
+  <main><form id="form"><div id="preview"></div><div id="error"></div><footer><button id="cancel" type="button">Cancel</button><button id="insert" type="submit">Insert</button></footer></form></main>
+  <script src="dynamic-fields.js"></script>
+</body>
+</html>
