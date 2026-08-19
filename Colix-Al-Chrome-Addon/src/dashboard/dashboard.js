@@ -49,6 +49,41 @@ class TextBlitzDashboard {
     await initSidebarManager();
     
     await this.loadShortcuts();
+
+    // Populate sample forms if empty
+    if (!this.forms || this.forms.length === 0) {
+      const sampleForms = [
+        {
+          id: 'form_sample_contact',
+          trigger: '/contact',
+          label: 'Client Contact Form',
+          template: 'contact',
+          fields: ['Name', 'Email', 'Phone', 'Message'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: 'form_sample_meeting',
+          trigger: '/meeting',
+          label: 'Meeting Scheduler',
+          template: 'meeting',
+          fields: ['Name', 'Email', 'Company', 'Meeting Date', 'Meeting Topic', 'Notes'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      await StorageHelper.saveAllForms(sampleForms);
+      this.forms = sampleForms;
+      // Refresh sidebar manager data
+      if (typeof getSidebarManager === 'function') {
+        const sidebarMgr = getSidebarManager();
+        if (sidebarMgr) {
+          sidebarMgr.forms = sampleForms;
+          sidebarMgr.render();
+        }
+      }
+    }
+
     await this.loadProfileData();
     await this.checkUser(); // This will call updateLimitDisplays()
     this.render();
@@ -60,6 +95,7 @@ class TextBlitzDashboard {
     this.sectionShortcuts = document.getElementById('sectionShortcuts');
     this.sectionHelp = document.getElementById('sectionHelp');
     this.sectionForms = document.getElementById('sectionForms');
+    this.profileModule = window.ProfileModule || null;
 
     // Mobile / responsive shell elements
     this.sidebar = document.getElementById('sidebar');
@@ -201,7 +237,16 @@ class TextBlitzDashboard {
 
     this.checkUser();
 
+    window.addEventListener('headerFormsClick', () => {
+      this.switchSection('forms');
+      this.closeMobileSidebar();
+    });
+
     const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'profile') {
+      this.showProfilePage();
+      return;
+    }
     if (params.get('action') === 'forms') {
       window.history.replaceState({}, '', window.location.pathname);
       this.switchSection('forms');
@@ -336,6 +381,7 @@ class TextBlitzDashboard {
       this.emojiPicker.classList.remove('open');
       this.toggleProfileDropdown();
     });
+
 
     this.profileDropdown.querySelectorAll('.profile-dropdown-item').forEach(item => {
       item.addEventListener('click', (e) => {
@@ -720,6 +766,9 @@ class TextBlitzDashboard {
     }
     this.generateAvatar();
     this.updateDropdownPreviews();
+    if (this.profileModule && this.profileModule.isVisible()) {
+      this.profileModule.loadProfileData();
+    }
   }
 
   generateAvatar() {
@@ -770,6 +819,7 @@ class TextBlitzDashboard {
     this.previewFullName.textContent = (data && data.firstName + " " + data.lastName) || 'Not available';
   }
 
+
   getInitials(firstName, lastName, email) {
     if (firstName && lastName) return (firstName[0] + lastName[0]).toUpperCase();
     if (firstName) return firstName.length >= 2 ? firstName.substring(0, 2).toUpperCase() : firstName[0].toUpperCase();
@@ -781,6 +831,35 @@ class TextBlitzDashboard {
       if (local.length === 1) return local[0].toUpperCase();
     }
     return 'TB';
+  }
+
+  buildAvatarDataUrl(email, firstName, lastName) {
+    const initials = this.getInitials(firstName, lastName, email);
+    const colors = [
+      '#1a1a2e', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6',
+      '#e67e22', '#1abc9c', '#34495e', '#e91e63', '#00bcd4',
+      '#ff5722', '#795548', '#607d8b', '#8bc34a', '#ff9800'
+    ];
+    const seed = email || firstName || lastName || 'textblitz';
+    const colorIndex = this.hashString(seed) % colors.length;
+    const size = 120;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = colors[colorIndex];
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    const fontSize = initials.length === 1 ? 46 : 36;
+    ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials, size / 2, size / 2 + 2);
+    return canvas.toDataURL('image/png');
   }
 
   hashString(str) {
@@ -833,17 +912,39 @@ class TextBlitzDashboard {
   // SECTIONS & DATA
   // =============================================
   switchSection(section) {
-    this.currentSection = section;
+      this.currentSection = section;
+  if (this.navItems) {
     this.navItems.forEach(item => item.classList.toggle('active', item.dataset.section === section));
-    this.sectionShortcuts.style.display = section === 'shortcuts' ? 'block' : 'none';
-    this.sectionHelp.style.display = section === 'help' ? 'block' : 'none';
-    this.sectionForms.style.display = section === 'forms' ? 'block' : 'none';
-    if (section === 'forms') {
-      this.renderForms();
-      this.renderFormLimit();
-    } else if (section === 'shortcuts') {
-      this.renderShortcutLimit();
-    }
+  }
+  this.sectionShortcuts.style.display = section === 'shortcuts' ? 'block' : 'none';
+  this.sectionHelp.style.display = section === 'help' ? 'block' : 'none';
+  this.sectionForms.style.display = section === 'forms' ? 'block' : 'none';
+  
+  // Hide profile when switching to other sections
+  if (this.profileModule) {
+    this.profileModule.hide();
+  }
+  
+  if (section === 'forms') {
+    this.renderForms();
+    this.renderFormLimit();
+  } else if (section === 'shortcuts') {
+    this.renderShortcutLimit();
+  }
+  }
+
+  showProfilePage() {
+     if (this.profileModule) {
+    this.profileModule.show();
+  }
+  // Hide other sections
+  if (this.sectionShortcuts) this.sectionShortcuts.style.display = 'none';
+  if (this.sectionHelp) this.sectionHelp.style.display = 'none';
+  if (this.sectionForms) this.sectionForms.style.display = 'none';
+  if (this.navItems) {
+    this.navItems.forEach(item => item.classList.remove('active'));
+  }
+  this.currentSection = 'profile';
   }
 
   async loadShortcuts() {

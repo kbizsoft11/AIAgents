@@ -77,9 +77,13 @@
 }
 
 .topbar-link {
+  border: none;
+  background: transparent;
   color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
   text-decoration: none;
   font-size: 14px;
+  font-family: inherit;
   font-weight: 600;
   padding: 8px 12px;
   border-radius: 8px;

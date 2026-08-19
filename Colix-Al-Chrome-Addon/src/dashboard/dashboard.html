@@ -7,6 +7,7 @@
   <title>ColixAI — Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="./header/header.css">
+  <link rel="stylesheet" href="./profile/profile.css">
   <script src="./auth-check.js"></script>
   <script src="./header/header.js"></script>
 </head>
@@ -120,6 +121,7 @@
 
     <!-- Main Content -->
     <main class="main">
+      <div id="profile-container" style="display: none;"></div>
 
     <!-- Editor View (Hidden by default, shown when editing) -->
     <section class="section editor-view" id="editorView">
@@ -817,6 +819,7 @@
   <script src="../utils/sync-manager.js"></script>
   <script src="../utils/storage.js"></script>
   <script src="sidebar-manager.js"></script>
+  <script src="profile/profile.js"></script>
   <script src="dashboard.js"></script>
 </body>
 
