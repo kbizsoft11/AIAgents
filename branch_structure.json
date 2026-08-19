@@ -1,0 +1,24 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "invite-users",
+    "main",
+    "merge",
+    "origin",
+    "updated-17-08-2026"
+  ],
+  "parent": {
+    "invite-users": "main",
+    "main": null,
+    "merge": "main",
+    "origin": "main",
+    "updated-17-08-2026": "main"
+  },
+  "order": [
+    "main",
+    "invite-users",
+    "merge",
+    "origin",
+    "updated-17-08-2026"
+  ]
+}
