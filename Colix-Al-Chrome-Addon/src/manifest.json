@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Colix: Auto Text Expander & Autofill",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "Instantly expand text shortcuts while you type. Create custom abbreviations and boost your productivity.",
     "permissions": [
         "storage",
@@ -13,8 +13,16 @@
     ],
     "host_permissions": [
         "<all_urls>",
-        "https://*.supabase.co/*"
+        "https://*.supabase.co/*",
+        "https://www.googleapis.com/*"
     ],
+    "oauth2": {
+        "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email"
+        ]
+    },
     "action": {
         "default_icon": {
             "16": "icons/icon16.png",
@@ -50,6 +58,8 @@
     "web_accessible_resources": [
         {
             "resources": [
+                "dashboard/*.html",
+                "dashboard/header/*.html",
                 "icons/*"
             ],
             "matches": [

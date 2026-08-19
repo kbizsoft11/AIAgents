@@ -27,10 +27,8 @@ class SyncManager {
     } catch (error) {
       console.warn('Could not fetch user ID:', error);
     }
-
     // Load pending syncs
     await this.loadPendingSyncs();
-
     // Perform initial sync
     await this.syncAll();
   }
@@ -93,7 +91,6 @@ class SyncManager {
 
     // Try to sync immediately
     this.syncAll().catch(console.error);
-
     return syncItem;
   }
 
@@ -129,7 +126,6 @@ class SyncManager {
   async pullFromSupabase() {
     try {
       const client = getSupabaseClient();
-
       // Fetch shortcuts from Supabase (by email)
       const remoteShortcuts = await client.getShortcuts(this.userEmail);
       const localShortcuts = await this.getLocalShortcuts();
@@ -174,7 +170,6 @@ class SyncManager {
 
       try {
         await this.syncItem(client, item);
-
         // Remove from queue
         this.pendingSyncQueue = this.pendingSyncQueue.filter(i => i.id !== item.id);
         await this.savePendingSyncs();
@@ -456,7 +451,6 @@ class SyncManager {
 
     try {
       const client = getSupabaseClient();
-
       const shortcuts = await client.getShortcuts(this.userId);
       const forms = await client.getForms(this.userId);
 

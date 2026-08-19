@@ -262,6 +262,16 @@ class TextBlitzDashboard {
 
     this.checkUser();
 
+    window.addEventListener('headerFormsClick', () => {
+      this.switchSection('forms');
+      this.closeMobileSidebar();
+    });
+
+    window.addEventListener('headerBrandClick', () => {
+      this.switchSection('shortcuts');
+      this.closeMobileSidebar();
+    });
+
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'forms') {
       window.history.replaceState({}, '', window.location.pathname);
