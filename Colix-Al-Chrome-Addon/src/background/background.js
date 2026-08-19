@@ -268,10 +268,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'getProfileInfo') {
-    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, async (userInfo) => {
       let email = userInfo?.email || '';
       let firstName = '';
       let lastName = '';
+      let photoUrl = '';
 
       if (email) {
         const namePart = email.split('@')[0];
@@ -280,22 +281,123 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         lastName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
       }
 
+      try {
+        const token = await new Promise((resolve, reject) => {
+          chrome.identity.getAuthToken({ interactive: false }, (tokenValue) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            resolve(tokenValue || null);
+          });
+        });
+
+        if (token) {
+          const response = await fetch('https://www.googleapis.com/people/v1/people/me?personFields=names,photos,emailAddresses', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            firstName = data.names?.[0]?.givenName || firstName;
+            lastName = data.names?.[0]?.familyName || lastName;
+            photoUrl = data.photos?.[0]?.url || photoUrl;
+            if (!email && data.emailAddresses?.[0]?.value) {
+              email = data.emailAddresses[0].value;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Could not refresh Google profile details:', error.message);
+      }
+
+      try {
+        await initSupabaseClient();
+        const authMgr = await initAuthManager();
+        const supabaseUser = await authMgr.getUserProfileFromSupabase(email || userInfo?.email || '');
+
+        const fallback = {
+          firstName: supabaseUser?.firstName || firstName,
+          lastName: supabaseUser?.lastName || lastName,
+          email: email || supabaseUser?.email || userInfo?.email || '',
+          photoUrl: supabaseUser?.photoUrl || supabaseUser?.avatarUrl || photoUrl || ''
+        };
+
+        if ((!supabaseUser || !supabaseUser.firstName || !supabaseUser.lastName || !supabaseUser.photoUrl) && email) {
+          const googleFallback = {
+            firstName: firstName || fallback.firstName,
+            lastName: lastName || fallback.lastName,
+            avatarUrl: photoUrl || fallback.photoUrl,
+            email
+          };
+          await authMgr.saveUserProfile(email, googleFallback).catch(() => undefined);
+        }
+
+        chrome.storage.local.get({ profileData: null }, (result) => {
+          const stored = result.profileData || {};
+          const profile = {
+            firstName: fallback.firstName || stored.firstName || firstName,
+            lastName: fallback.lastName || stored.lastName || lastName,
+            email: fallback.email || stored.email || email,
+            photoUrl: fallback.photoUrl || stored.photoUrl || stored.avatarUrl || photoUrl || ''
+          };
+
+          chrome.storage.local.set({ profileData: profile }, () => {
+            sendResponse(profile);
+          });
+        });
+        return;
+      } catch (error) {
+        console.warn('Supabase profile fallback failed:', error.message);
+      }
+
       chrome.storage.local.get({ profileData: null }, (result) => {
-        const profile = result.profileData || {};
-        sendResponse({
-          firstName: profile.firstName || firstName,
-          lastName: profile.lastName || lastName,
+        const stored = result.profileData || {};
+        const profile = {
+          firstName: stored.firstName || firstName,
+          lastName: stored.lastName || lastName,
           email: email,
-          photoUrl: profile.photoUrl || ''
+          photoUrl: stored.photoUrl || stored.avatarUrl || photoUrl || ''
+        };
+
+        chrome.storage.local.set({ profileData: profile }, () => {
+          sendResponse(profile);
         });
       });
     });
     return true;
   }
 
-  if (message.action === 'saveProfileData') {
-    chrome.storage.local.set({ profileData: message.data }, () => {
-      sendResponse({ success: true });
+  if (message.action === 'updateProfileInfo' || message.action === 'saveProfileData') {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, async (userInfo) => {
+      try {
+        const email = userInfo?.email || message.data?.email || '';
+        if (!email) {
+          sendResponse({ success: false, error: 'No account email found' });
+          return;
+        }
+
+        await initSupabaseClient();
+        const authMgr = await initAuthManager();
+        const saved = await authMgr.saveUserProfile(email, message.data || {});
+
+        const profile = {
+          firstName: saved.firstName || message.data?.firstName || '',
+          lastName: saved.lastName || message.data?.lastName || '',
+          email,
+          photoUrl: saved.photoUrl || message.data?.photoUrl || message.data?.avatarUrl || ''
+        };
+
+        chrome.storage.local.set({ profileData: profile }, () => {
+          sendResponse({ success: true, profile });
+        });
+      } catch (error) {
+        console.error('Profile update failed:', error);
+        sendResponse({ success: false, error: error.message });
+      }
     });
     return true;
   }
