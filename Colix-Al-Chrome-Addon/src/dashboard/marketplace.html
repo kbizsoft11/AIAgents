@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI — Marketplace</title>
+  <link rel="stylesheet" href="header/header.css">
+  <link rel="stylesheet" href="marketplace.css">
+</head>
+<body>
+  <div id="header-container"></div>
+
+  <main class="marketplace-main">
+    <section class="marketplace-hero">
+      <div>
+        <p class="eyebrow">COLIXAI MARKETPLACE</p>
+        <h1>Ready-made snippets for your everyday work</h1>
+        <p>Copy a template and make it yours. Every copied snippet is added to your Marketplace folder and can be edited or deleted from the dashboard.</p>
+      </div>
+      <a class="back-dashboard" href="dashboard.html">← Dashboard</a>
+    </section>
+
+    <div class="marketplace-notice" id="marketplaceNotice" role="status" aria-live="polite"></div>
+    <section class="template-grid" aria-label="Snippet templates">
+      <article class="template-card">
+        <img class="template-image" src="images/medical-form.png" alt="Medical Intake Form template preview" onerror="this.style.display='none'">
+        <div class="template-card-top"><span class="template-icon">✚</span><span class="template-type">Healthcare</span></div>
+        <h2>Medical Intake Form</h2><code>-medical-form</code>
+        <p class="template-preview">Patient: [Alex]<br>Concern: [Annual check-up and wellness review]<br>Visit type: [New patient]<br>Consent: [Yes]</p>
+        <div class="template-tags"><span>Text</span><span>Paragraph</span><span>Dropdown</span><span>Radio</span></div>
+        <button class="copy-template" type="button" data-template="medical">Copy template</button>
+      </article>
+
+      <article class="template-card">
+        <img class="template-image" src="images/support-reply.png" alt="Customer Support Reply template preview" onerror="this.style.display='none'">
+        <div class="template-card-top"><span class="template-icon">▣</span><span class="template-type">Customer care</span></div>
+        <h2>Customer Support Reply</h2><code>-support-reply</code>
+        <p class="template-preview">Hello [Alex],<br><br>Thanks for reaching out about [Order #1042]. Your request is marked as [High].<br><br>[Thank you for your patience — we are looking into this now.]<br><br>Best,<br>[Your name]</p>
+        <div class="template-tags"><span>Text</span><span>Paragraph</span><span>Dropdown</span><span>Profile</span></div>
+        <button class="copy-template" type="button" data-template="support">Copy template</button>
+      </article>
+
+      <article class="template-card">
+        <img class="template-image" src="images/meeting-notes.png" alt="Meeting Notes template preview" onerror="this.style.display='none'">
+        <div class="template-card-top"><span class="template-icon">◷</span><span class="template-type">Meetings</span></div>
+        <h2>Meeting Notes</h2><code>-meeting-notes</code>
+        <p class="template-preview">Meeting: [Weekly project review]<br>Date: [Aug 19, 2026 10:30]<br>Attendees: [Alex, Sam, Jordan]<br>Outcome: [In progress]<br>Follow-up needed: [Yes]</p>
+        <div class="template-tags"><span>Text</span><span>Date/Time</span><span>Paragraph</span><span>Radio</span></div>
+        <button class="copy-template" type="button" data-template="meeting">Copy template</button>
+      </article>
+
+      <article class="template-card">
+        <img class="template-image" src="images/handover.png" alt="Project Handover template preview" onerror="this.style.display='none'">
+        <div class="template-card-top"><span class="template-icon">✉</span><span class="template-type">Business</span></div>
+        <h2>Project Handover</h2><code>-handover</code>
+        <p class="template-preview">Project: [Website refresh]<br>Status: [Active]<br>Summary:<br>[The design phase is complete and development is underway.]<br>Copied reference: [Latest copied text]</p>
+        <div class="template-tags"><span>Text</span><span>Dropdown</span><span>Paragraph</span><span>Clipboard</span></div>
+        <button class="copy-template" type="button" data-template="handover">Copy template</button>
+      </article>
+
+      <article class="template-card">
+        <img class="template-image" src="images/cost-estimate.png" alt="Simple Cost Estimate template preview" onerror="this.style.display='none'">
+        <div class="template-card-top"><span class="template-icon">∑</span><span class="template-type">Finance</span></div>
+        <h2>Simple Cost Estimate</h2><code>-cost-estimate</code>
+        <p class="template-preview">Item: [Design package]<br>Quantity: [8]<br>Unit cost: [125]<br>Example calculation: [56.00]<br>Notes: [Includes two rounds of revisions.]</p>
+        <div class="template-tags"><span>Text</span><span>Paragraph</span><span>Formula</span></div>
+        <button class="copy-template" type="button" data-template="estimate">Copy template</button>
+      </article>
+    </section>
+  </main>
+
+  <script src="../utils/supabase-config.js"></script>
+  <script src="../utils/supabase-client.js"></script>
+  <script src="../utils/sync-manager.js"></script>
+  <script src="../utils/storage.js"></script>
+  <script src="header/header.js"></script>
+  <script src="marketplace.js"></script>
+</body>
+</html>
