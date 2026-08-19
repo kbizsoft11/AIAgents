@@ -91,7 +91,7 @@ class SupabaseClient {
   filterFieldsForTable(table, data) {
     // Define which fields are allowed for each table
     const allowedFields = {
-      'users': ['id', 'email', 'created_at', 'updated_at'],
+      'users': ['id', 'email', 'first_name', 'last_name', 'avatar_url', 'is_premium', 'premium_until', 'created_at', 'updated_at'],
       'shortcuts': ['id', 'user_id', 'trigger', 'expansion', 'label', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
       'forms': ['id', 'user_id', 'trigger', 'label', 'template_type', 'fields', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
       'folders': ['id', 'user_id', 'name', 'is_expanded', 'created_at', 'updated_at', 'deleted_at', 'email']

@@ -45,6 +45,7 @@ class HeaderModule {
   bindElements() {
     // Brand/Home button
     this.brandHome = document.getElementById('brandHome');
+    this.headerFormsBtn = document.getElementById('headerFormsBtn');
 
     // Profile menu (header)
     this.headerProfileBtn = document.getElementById('headerProfileBtn');
@@ -71,6 +72,12 @@ class HeaderModule {
       });
     }
 
+    if (this.headerFormsBtn) {
+      this.headerFormsBtn.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('headerFormsClick'));
+      });
+    }
+
     // Profile menu items
     if (this.headerProfileDropdown) {
       const profileMenuItems = this.headerProfileDropdown.querySelectorAll('.profile-menu-item');
@@ -81,8 +88,10 @@ class HeaderModule {
 
           // Handle menu item based on position: 0=Profile, 1=Usage, 2=Trash, 3=Signout
           if (index === 0) {
-            // Profile
-            console.log('Profile clicked');
+            const params = new URLSearchParams(window.location.search);
+            params.set('view', 'profile');
+            const nextUrl = `${window.location.pathname}?${params.toString()}`;
+            window.location.href = nextUrl;
           } else if (index === 1) {
             // Usage
             console.log('Usage clicked');
