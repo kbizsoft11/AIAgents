@@ -384,6 +384,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'updateProfileInfo') {
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, async (userInfo) => {
+      try {
+        const email = userInfo?.email || message.data?.email || '';
+        if (!email) {
+          sendResponse({ success: false, error: 'No account email found' });
+          return;
+        }
+
+        await initSupabaseClient();
+        const authMgr = await initAuthManager();
+        const saved = await authMgr.saveUserProfile(email, message.data || {});
+        const profile = {
+          firstName: saved.firstName || message.data?.firstName || '',
+          lastName: saved.lastName || message.data?.lastName || '',
+          email: saved.email || email,
+          avatarUrl: saved.avatarUrl || saved.photoUrl || message.data?.avatarUrl || '',
+          photoUrl: saved.photoUrl || saved.avatarUrl || message.data?.photoUrl || ''
+        };
+
+        chrome.storage.local.set({ profileData: profile }, () => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            return;
+          }
+          sendResponse({ success: true, profile });
+        });
+      } catch (error) {
+        console.error('Profile update failed:', error);
+        sendResponse({ success: false, error: error.message || 'Profile update failed' });
+      }
+    });
+    return true;
+  }
+
   if (message.action === 'incrementUsage') {
     chrome.storage.local.get({ shortcuts: [] }, (result) => {
       const shortcuts = result.shortcuts;

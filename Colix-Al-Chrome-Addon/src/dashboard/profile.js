@@ -1,4 +1,4 @@
-// dashboard/profile/profile.js
+// dashboard/profile.js
 class ProfileModule {
   constructor(containerId = 'profile-container') {
     this.containerId = containerId;
@@ -6,7 +6,7 @@ class ProfileModule {
     this.profileData = null;
     this.initialized = false;
     this.oldAvatarUrl = null; // Track old avatar URL for deletion
-    this.init();
+    this.ready = this.init();
   }
 
   async init() {
@@ -16,28 +16,9 @@ class ProfileModule {
       return;
     }
 
-    await this.loadHTML();
     this.bindEvents();
     this.initialized = true;
     await this.loadProfileData();
-  }
-
-  async loadHTML() {
-    const profilePath = 'dashboard/profile/profile.html';
-    const url = chrome.runtime.getURL(profilePath);
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Failed to load profile HTML: ${response.status}`);
-
-      const html = await response.text();
-      this.container.innerHTML = html;
-      // Don't show by default - dashboard will call show() when needed
-      this.container.style.display = 'none';
-    } catch (error) {
-      console.error('Profile module HTML load failed:', error);
-      this.container.innerHTML = '<div class="profile-error">Unable to load profile.</div>';
-    }
   }
 
   bindEvents() {
@@ -262,16 +243,6 @@ class ProfileModule {
 
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodeURIComponent(fileName)}`;
 
-      // STEP 2: Delete old avatar if it exists and is different from the new one
-      if (this.oldAvatarUrl && this.oldAvatarUrl !== publicUrl) {
-        await this.deleteOldAvatar(this.oldAvatarUrl);
-      }
-
-      const avatarInput = document.getElementById('profileAvatarInput');
-      if (avatarInput) {
-        avatarInput.value = publicUrl;
-      }
-
       // Update profile data with new avatar URL
       this.profileData = {
         ...(this.profileData || {}),
@@ -281,9 +252,6 @@ class ProfileModule {
         avatarUrl: publicUrl,
         photoUrl: publicUrl
       };
-
-      // Clear old avatar URL since it's been deleted
-      this.oldAvatarUrl = null;
 
       this.setUploadStatus('Photo uploaded successfully. Save changes to update your profile.');
       this.render();
@@ -354,8 +322,16 @@ class ProfileModule {
       });
 
       if (response && response.profile) {
+        const oldAvatarUrl = this.oldAvatarUrl;
         this.profileData = response.profile;
         this.render();
+        if (window.headerModule && typeof window.headerModule.loadProfileData === 'function') {
+          await window.headerModule.loadProfileData();
+        }
+        if (oldAvatarUrl && oldAvatarUrl !== response.profile.photoUrl) {
+          await this.deleteOldAvatar(oldAvatarUrl);
+        }
+        this.oldAvatarUrl = null;
         this.setUploadStatus('Profile saved successfully.');
         // Show success toast if available
         if (window.dashboard && typeof window.dashboard.showToast === 'function') {
@@ -492,10 +468,11 @@ class ProfileModule {
     return Math.abs(hash);
   }
 
-  show() {
+  async show() {
+    await this.ready;
     if (!this.container) return;
     this.container.style.display = 'block';
-    this.loadProfileData();
+    await this.loadProfileData();
   }
 
   hide() {

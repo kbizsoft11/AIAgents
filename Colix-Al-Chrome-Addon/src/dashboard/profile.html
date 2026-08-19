@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Profile</title>
+  <link rel="stylesheet" href="header/header.css">
+  <link rel="stylesheet" href="profile.css">
+</head>
+<body>
+  <div id="header-container"></div>
+
+  <main class="profile-page-main" id="profile-container">
+    <section class="section" id="sectionProfile">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <h2 class="page-title">My Profile</h2>
+        </div>
+      </div>
+
+      <div class="profile-page-shell">
+        <div class="profile-page-card primary">
+          <div class="profile-page-header">
+            <img id="profilePageAvatar" class="profile-page-avatar" src="" alt="Profile avatar" style="display: none">
+            <div id="profilePageAvatarFallback" class="profile-page-avatar-fallback">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4 20c1.5-3 4.5-4.5 8-4.5s6.5 1.5 8 4.5"></path>
+              </svg>
+            </div>
+            <div class="profile-page-meta">
+              <h3 id="profilePageName">Your profile</h3>
+              <p id="profilePageEmail">No email available</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-page-grid">
+          <div class="profile-page-card">
+            <div class="profile-field-group">
+              <label>First name</label>
+              <div class="profile-field-value" id="profileFirstNameValue">Not available</div>
+            </div>
+            <div class="profile-field-group">
+              <label>Last name</label>
+              <div class="profile-field-value" id="profileLastNameValue">Not available</div>
+            </div>
+            <div class="profile-field-group">
+              <label>Email</label>
+              <div class="profile-field-value" id="profileEmailValue">Not available</div>
+            </div>
+          </div>
+
+          <div class="profile-page-card">
+            <h4 class="profile-card-title">Profile settings</h4>
+            <p class="profile-card-copy">Your values are loaded from Supabase first. If they are empty, Google profile data fills them in automatically.</p>
+
+            <div class="profile-avatar-upload-row">
+              <img id="profileUploadPreview" class="profile-upload-preview" src="" alt="" style="display: none">
+              <button type="button" class="btn btn-secondary" id="profileChooseAvatarBtn">Upload photo</button>
+              <input id="profileAvatarFileInput" type="file" accept="image/*" hidden>
+              <span id="profileUploadStatus" class="profile-upload-status">No file selected</span>
+            </div>
+
+            <form class="profile-edit-form" id="profileEditForm">
+              <div class="profile-input-group">
+                <label for="profileFirstNameInput">First name</label>
+                <input id="profileFirstNameInput" name="firstName" type="text" placeholder="First name">
+              </div>
+              <div class="profile-input-group">
+                <label for="profileLastNameInput">Last name</label>
+                <input id="profileLastNameInput" name="lastName" type="text" placeholder="Last name">
+              </div>
+              <div class="profile-form-actions">
+                <button type="submit" class="btn btn-primary" id="profileSaveBtn">Save changes</button>
+                <button type="button" class="btn btn-secondary" id="profileCancelBtn">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../utils/supabase-config.js"></script>
+  <script src="../utils/supabase-client.js"></script>
+  <script src="../utils/auth-manager.js"></script>
+  <script src="../utils/sync-manager.js"></script>
+  <script src="../utils/storage.js"></script>
+  <script src="header/header.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

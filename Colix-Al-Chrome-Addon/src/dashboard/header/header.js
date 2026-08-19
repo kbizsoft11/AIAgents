@@ -83,16 +83,16 @@ class HeaderModule {
       const profileMenuItems = this.headerProfileDropdown.querySelectorAll('.profile-menu-item');
       profileMenuItems.forEach((item, index) => {
         item.addEventListener('click', (e) => {
+          if (index === 0) {
+            this.closeProfileDropdown();
+            return;
+          }
+
           e.preventDefault();
           e.stopPropagation();
 
           // Handle menu item based on position: 0=Profile, 1=Usage, 2=Trash, 3=Signout
-          if (index === 0) {
-            const params = new URLSearchParams(window.location.search);
-            params.set('view', 'profile');
-            const nextUrl = `${window.location.pathname}?${params.toString()}`;
-            window.location.href = nextUrl;
-          } else if (index === 1) {
+          if (index === 1) {
             // Usage
             console.log('Usage clicked');
           } else if (index === 2) {
@@ -192,6 +192,22 @@ class HeaderModule {
 
   generateAvatar() {
     const data = this.profileData;
+    const photoUrl = data && (data.photoUrl || data.avatarUrl);
+
+    if (photoUrl && /^https?:\/\//i.test(photoUrl)) {
+      if (this.profileAvatar && this.profileAvatarFallback) {
+        this.profileAvatar.src = photoUrl;
+        this.profileAvatar.style.display = 'block';
+        this.profileAvatarFallback.style.display = 'none';
+      }
+      if (this.profileAvatarLarge && this.profileAvatarLargeFallback) {
+        this.profileAvatarLarge.src = photoUrl;
+        this.profileAvatarLarge.style.display = 'block';
+        this.profileAvatarLargeFallback.style.display = 'none';
+      }
+      return;
+    }
+
     const email = (data && data.email) ? data.email.trim() : '';
     const firstName = (data && data.firstName) ? data.firstName.trim() : '';
     const lastName = (data && data.lastName) ? data.lastName.trim() : '';

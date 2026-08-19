@@ -219,7 +219,7 @@ class AuthManager {
           updateData.avatar_url = profileData.avatarUrl || profileData.photoUrl;
         }
 
-        const updated = await client.update('users', { id: user.id }, updateData);
+        const updated = await client.update('users', updateData, { id: user.id });
         const merged = {
           ...user,
           ...updateData,
@@ -270,7 +270,7 @@ class AuthManager {
         updated_at: new Date().toISOString()
       };
 
-      await client.update('users', { id: userId }, updateData);
+      await client.update('users', updateData, { id: userId });
 
       console.log('✅ User profile updated');
     } catch (error) {
