@@ -25,16 +25,37 @@ function createDynamicFieldWindow(message, sender, sendResponse) {
     windowId: null
   });
   const url = `${chrome.runtime.getURL('dynamic-fields.html')}?requestId=${encodeURIComponent(requestId)}`;
-  chrome.windows.create({ type: 'popup', url, width: 560, height: 680, focused: true }, window => {
-    if (chrome.runtime.lastError || !window?.id) {
-      dynamicFieldWindows.delete(requestId);
-      sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Unable to open the dynamic field window.' });
-      return;
+  const width = 560;
+  const height = 680;
+  const createWindow = bounds => {
+    const options = { type: 'popup', url, width, height, focused: true };
+    if (bounds && Number.isFinite(bounds.left) && Number.isFinite(bounds.top) && bounds.width && bounds.height) {
+      options.left = Math.round(bounds.left + Math.max(0, (bounds.width - width) / 2));
+      options.top = Math.round(bounds.top + Math.max(0, (bounds.height - height) / 2));
     }
-    const pending = dynamicFieldWindows.get(requestId);
-    if (pending) pending.windowId = window.id;
-    sendResponse({ success: true, requestId, windowId: window.id });
-  });
+    chrome.windows.create(options, window => {
+      if (chrome.runtime.lastError || !window?.id) {
+        dynamicFieldWindows.delete(requestId);
+        sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Unable to open the dynamic field window.' });
+        return;
+      }
+      const pending = dynamicFieldWindows.get(requestId);
+      if (pending) pending.windowId = window.id;
+      sendResponse({ success: true, requestId, windowId: window.id });
+    });
+  };
+
+  // Center the popup in the browser window that owns the active webpage.
+  // If the browser does not provide bounds, Chrome chooses its normal popup
+  // position automatically.
+  if (sender.tab?.windowId !== undefined) {
+    chrome.windows.get(sender.tab.windowId, currentWindow => {
+      if (chrome.runtime.lastError) createWindow(null);
+      else createWindow(currentWindow);
+    });
+  } else {
+    createWindow(null);
+  }
   return true;
 }
 

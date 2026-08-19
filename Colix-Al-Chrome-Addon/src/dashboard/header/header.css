@@ -8,6 +8,14 @@
 }
 
 /* ===== Top Navigation Bar ===== */
+#header-container {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  width: 100%;
+  flex-shrink: 0;
+}
+
 .app-topbar {
   display: flex;
   align-items: center;
@@ -18,10 +26,11 @@
   color: #ffffff;
   box-shadow: 0 2px 12px var(--brand-nav-shadow);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  position: sticky;
-  top: 0;
-  z-index: 120;
+  position: relative;
+  z-index: 1;
   width: 100%;
+  align-self: flex-start;
+  flex-shrink: 0;
 }
 
 .topbar-left-group,
@@ -40,6 +49,7 @@
   background: none;
   padding: 0;
   cursor: pointer;
+  text-decoration: none;
   transition: opacity 0.15s ease;
 }
 

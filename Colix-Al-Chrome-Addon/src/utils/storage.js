@@ -1,7 +1,7 @@
 const StorageHelper = {
   // Maximum shortcuts allowed
-  MAX_SHORTCUTS: 5,
-  DEFAULT_FREE_LIMIT: 5, // Fallback default limit
+  MAX_SHORTCUTS: 10,
+  DEFAULT_FREE_LIMIT: 10, // Fallback default limit
 
   // API endpoints
   API_BASE_URL: 'https://extensions.kbizsoft.com/magicaa-extension',
