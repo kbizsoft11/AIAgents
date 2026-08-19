@@ -192,7 +192,7 @@ class HeaderModule {
 
   generateAvatar() {
     const data = this.profileData;
-    const photoUrl = data && (data.photoUrl || data.avatarUrl);
+    const photoUrl = data && (data.avatarUrl || data.photoUrl);
 
     if (photoUrl && /^https?:\/\//i.test(photoUrl)) {
       if (this.profileAvatar && this.profileAvatarFallback) {

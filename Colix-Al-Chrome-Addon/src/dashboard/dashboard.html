@@ -79,7 +79,7 @@
         <div class="limit-bar">
           <div class="limit-fill" id="limitFill"></div>
         </div>
-        <span class="limit-text" id="limitText">0 / 5 shortcuts</span>
+        <span class="limit-text" id="limitText">Loading limit...</span>
       </div>
 
       <!-- Go Premium CTA -->
@@ -498,8 +498,8 @@
                 <div id="format-container">
                   <button class="profile-token-btn" id="profileTokenBtn" type="button" title="Insert profile tokens"
                     aria-label="Insert profile tokens" aria-haspopup="true" aria-expanded="false">
-                    <img id="profileAvatar" class="profile-avatar" src="" alt="" style="display: none;">
-                    <div id="profileAvatarFallback" class="profile-avatar-fallback">
+                    <img id="editorProfileAvatar" class="profile-avatar" src="" alt="" style="display: none;">
+                    <div id="editorProfileAvatarFallback" class="profile-avatar-fallback">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -535,14 +535,14 @@
                     <div class="profile-dropdown-item" data-token="{{first_name}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">First Name</span>
-                        <span class="profile-dropdown-item-preview" id="previewFirstName"></span>
+                        <span class="profile-dropdown-item-preview" id="editorPreviewFirstName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{first_name}}</code>
                     </div>
                     <div class="profile-dropdown-item" data-token="{{last_name}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Last Name</span>
-                        <span class="profile-dropdown-item-preview" id="previewLastName"></span>
+                        <span class="profile-dropdown-item-preview" id="editorPreviewLastName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{last_name}}</code>
                     </div>
@@ -550,14 +550,14 @@
                       tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Full name</span>
-                        <span class="profile-dropdown-item-preview" id="previewFullName"></span>
+                        <span class="profile-dropdown-item-preview" id="editorPreviewFullName"></span>
                       </div>
                       <code class="profile-dropdown-token">{{full_name}}</code>
                     </div>
                     <div class="profile-dropdown-item" data-token="{{email}}" role="menuitem" tabindex="0">
                       <div class="profile-dropdown-item-left">
                         <span class="profile-dropdown-item-label">Email</span>
-                        <span class="profile-dropdown-item-preview" id="previewEmail"></span>
+                        <span class="profile-dropdown-item-preview" id="editorPreviewEmail"></span>
                       </div>
                       <code class="profile-dropdown-token">{{email}}</code>
                     </div>

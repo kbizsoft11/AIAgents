@@ -352,27 +352,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'getProfileInfo') {
-    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
-      let email = userInfo?.email || '';
-      let firstName = '';
-      let lastName = '';
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, async (userInfo) => {
+      try {
+        const email = userInfo?.email || '';
+        let firstName = '';
+        let lastName = '';
 
-      if (email) {
-        const namePart = email.split('@')[0];
-        const parts = namePart.split(/[._-]/);
-        firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
-        lastName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
-      }
+        if (email) {
+          const namePart = email.split('@')[0];
+          const parts = namePart.split(/[._-]/);
+          firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
+          lastName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
+        }
 
-      chrome.storage.local.get({ profileData: null }, (result) => {
-        const profile = result.profileData || {};
-        sendResponse({
-          firstName: profile.firstName || firstName,
-          lastName: profile.lastName || lastName,
-          email: email,
-          photoUrl: profile.photoUrl || ''
+        const stored = await new Promise((resolve) => {
+          chrome.storage.local.get({ profileData: null }, (result) => resolve(result.profileData || {}));
         });
-      });
+
+        let remote = null;
+        let google = null;
+        if (email) {
+          try {
+            await initSupabaseClient();
+            const authMgr = await initAuthManager();
+            remote = await authMgr.getUserProfileFromSupabase(email);
+            if (!remote?.avatarUrl && !remote?.photoUrl) {
+              google = await authMgr.getGoogleProfileData();
+            }
+          } catch (error) {
+            console.warn('Could not load profile from Supabase:', error.message);
+          }
+        }
+
+        const profile = {
+          firstName: remote?.firstName || stored.firstName || google?.firstName || firstName,
+          lastName: remote?.lastName || stored.lastName || google?.lastName || lastName,
+          email: remote?.email || stored.email || email,
+          avatarUrl: remote?.avatarUrl || remote?.photoUrl || stored.avatarUrl || stored.photoUrl || google?.avatarUrl || '',
+          photoUrl: remote?.photoUrl || remote?.avatarUrl || stored.photoUrl || stored.avatarUrl || google?.avatarUrl || ''
+        };
+
+        await new Promise((resolve) => {
+          chrome.storage.local.set({ profileData: profile }, resolve);
+        });
+
+        sendResponse(profile);
+      } catch (error) {
+        console.error('Profile lookup failed:', error);
+        sendResponse({ success: false, error: error.message || 'Profile lookup failed' });
+      }
     });
     return true;
   }

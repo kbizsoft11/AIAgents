@@ -57,6 +57,18 @@ class AuthManager {
    */
   async getGoogleProfileData() {
     try {
+      const manifest = chrome.runtime.getManifest();
+      const clientId = manifest.oauth2?.client_id || '';
+      if (!clientId || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
+        console.warn('Google People API skipped: configure a real OAuth client ID in manifest.json');
+        return {
+          firstName: '',
+          lastName: '',
+          avatarUrl: null,
+          email: this.userEmail
+        };
+      }
+
       // Get access token for Google services
       const token = await chrome.identity.getAuthToken({ interactive: true });
       
@@ -146,9 +158,14 @@ class AuthManager {
         if (result && result.length > 0) {
           this.currentUser = result[0];
 
-          // Update with new profile data if available
-          if (profileData.firstName || profileData.lastName || profileData.avatarUrl) {
-            await this.updateUserProfile(result[0].id, profileData);
+          // Google data is only a fallback; never overwrite saved Supabase values.
+          const existing = result[0];
+          const fallbackData = {};
+          if (!existing.first_name && profileData.firstName) fallbackData.firstName = profileData.firstName;
+          if (!existing.last_name && profileData.lastName) fallbackData.lastName = profileData.lastName;
+          if (!existing.avatar_url && profileData.avatarUrl) fallbackData.avatarUrl = profileData.avatarUrl;
+          if (Object.keys(fallbackData).length > 0) {
+            await this.updateUserProfile(existing.id, fallbackData);
           }
 
           return result[0];

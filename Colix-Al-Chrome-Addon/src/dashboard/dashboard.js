@@ -199,12 +199,12 @@ class TextBlitzDashboard {
     // Profile token
     this.profileTokenBtn = document.getElementById('profileTokenBtn');
     this.profileDropdown = document.getElementById('profileDropdown');
-    this.profileAvatar = document.getElementById('profileAvatar');
-    this.profileAvatarFallback = document.getElementById('profileAvatarFallback');
-    this.previewFirstName = document.getElementById('previewFirstName');
-    this.previewLastName = document.getElementById('previewLastName');
-    this.previewEmail = document.getElementById('previewEmail');
-    this.previewFullName = document.getElementById('previewFullName');
+    this.profileAvatar = document.getElementById('editorProfileAvatar');
+    this.profileAvatarFallback = document.getElementById('editorProfileAvatarFallback');
+    this.previewFirstName = document.getElementById('editorPreviewFirstName');
+    this.previewLastName = document.getElementById('editorPreviewLastName');
+    this.previewEmail = document.getElementById('editorPreviewEmail');
+    this.previewFullName = document.getElementById('editorPreviewFullName');
 
     // Upgrade box
 
@@ -1708,6 +1708,7 @@ class TextBlitzDashboard {
     const query = (this.searchInput && this.searchInput.value) ? this.searchInput.value.trim().toLowerCase() : '';
     const sidebarMgr = getSidebarManager();
     const activeFolder = sidebarMgr ? sidebarMgr.activeFolder : null;
+    const welcomeVisible = !activeFolder && !query;
 
     const total = this.shortcuts.length;
     const max = StorageHelper.MAX_SHORTCUTS;
@@ -1718,10 +1719,16 @@ class TextBlitzDashboard {
     const maxDisplay = max >= 1000000 ? 'Unlimited' : max;
     if (this.limitText) this.limitText.textContent = `${total} / ${maxDisplay} shortcuts used`;
 
-    if (this.bulkDeleteBtn) this.bulkDeleteBtn.style.display = total > 0 ? 'inline-flex' : 'none';
+    if (this.bulkDeleteBtn) this.bulkDeleteBtn.style.display = welcomeVisible ? 'none' : (total > 0 ? 'inline-flex' : 'none');
+    const shortcutsToolbar = this.sectionShortcuts?.querySelector('.top-bar');
+    if (shortcutsToolbar) shortcutsToolbar.style.display = welcomeVisible ? 'none' : 'flex';
+    const shortcutLimit = this.limitText?.closest('.shortcut-limit');
+    if (shortcutLimit) {
+      shortcutLimit.style.display = welcomeVisible ? 'none' : 'block';
+    }
 
     // Decide whether to show Welcome View or Folder View
-    if (!activeFolder && !query) {
+    if (welcomeVisible) {
       // No folder selected & no search query -> Show Welcome View
       if (this.welcomeView) this.welcomeView.style.display = 'flex';
       if (this.folderView) this.folderView.style.display = 'none';

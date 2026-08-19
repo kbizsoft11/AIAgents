@@ -117,9 +117,6 @@ class SidebarManager {
 
         if (savedFolder && this.folders.some(folder => folder.id === savedFolder)) {
           this.activeFolder = savedFolder;
-        } else if (this.folders.length > 0) {
-          this.activeFolder = this.folders[0].id;
-          this.saveActiveFolder(this.activeFolder);
         } else {
           this.activeFolder = null;
         }
