@@ -105,6 +105,34 @@ class AuthManager {
   }
 
   /**
+   * Fetch the saved profile from Supabase by email.
+   * Priority is Supabase first, with Google as fallback only when needed.
+   */
+  async getUserProfileFromSupabase(email) {
+    try {
+      const client = getSupabaseClient();
+      client.setUserEmail(email);
+      const result = await client.selectWithFilter('users', { email });
+      const user = Array.isArray(result) && result.length > 0 ? result[0] : null;
+
+      if (!user) {
+        return null;
+      }
+
+      return {
+        email: user.email || email,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        avatarUrl: user.avatar_url || '',
+        photoUrl: user.avatar_url || ''
+      };
+    } catch (error) {
+      console.warn('Could not fetch user profile from Supabase:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Create or get user in Supabase by email
    * Stores first_name, last_name, and avatar_url from Google profile
    */
@@ -117,12 +145,12 @@ class AuthManager {
         const result = await client.selectWithFilter('users', { email });
         if (result && result.length > 0) {
           this.currentUser = result[0];
-          
+
           // Update with new profile data if available
           if (profileData.firstName || profileData.lastName || profileData.avatarUrl) {
             await this.updateUserProfile(result[0].id, profileData);
           }
-          
+
           return result[0];
         }
       } catch (error) {
@@ -141,18 +169,89 @@ class AuthManager {
       const created = await client.insert('users', newUser);
       const user = Array.isArray(created) ? created[0] : created;
       this.currentUser = user;
-      
+
       console.log('✅ User created with profile:', {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
         avatarUrl: user.avatar_url
       });
-      
+
       return user;
 
     } catch (error) {
       console.error('User creation/fetch error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save the profile to Supabase and return the normalized user profile.
+   */
+  async saveUserProfile(email, profileData = {}) {
+    try {
+      const client = getSupabaseClient();
+      client.setUserEmail(email);
+
+      const normalized = {
+        email,
+        first_name: profileData.firstName || '',
+        last_name: profileData.lastName || '',
+        avatar_url: profileData.avatarUrl || profileData.photoUrl || null,
+        updated_at: new Date().toISOString()
+      };
+
+      const existing = await client.selectWithFilter('users', { email });
+      const user = Array.isArray(existing) && existing.length > 0 ? existing[0] : null;
+
+      if (user) {
+        const updateData = {
+          updated_at: normalized.updated_at
+        };
+
+        if (profileData.firstName !== undefined && profileData.firstName !== null) {
+          updateData.first_name = profileData.firstName;
+        }
+        if (profileData.lastName !== undefined && profileData.lastName !== null) {
+          updateData.last_name = profileData.lastName;
+        }
+        if (profileData.avatarUrl || profileData.photoUrl) {
+          updateData.avatar_url = profileData.avatarUrl || profileData.photoUrl;
+        }
+
+        const updated = await client.update('users', { id: user.id }, updateData);
+        const merged = {
+          ...user,
+          ...updateData,
+          ...(updated || {})
+        };
+        this.currentUser = merged;
+
+        return {
+          email: merged.email || normalized.email,
+          firstName: merged.first_name || normalized.first_name,
+          lastName: merged.last_name || normalized.last_name,
+          avatarUrl: merged.avatar_url || normalized.avatar_url,
+          photoUrl: merged.avatar_url || normalized.avatar_url
+        };
+      }
+
+      const created = await client.insert('users', {
+        ...normalized,
+        created_at: new Date().toISOString()
+      });
+      const createdUser = Array.isArray(created) ? created[0] : created;
+      this.currentUser = createdUser || { ...normalized };
+
+      return {
+        email: createdUser?.email || normalized.email,
+        firstName: createdUser?.first_name || normalized.first_name,
+        lastName: createdUser?.last_name || normalized.last_name,
+        avatarUrl: createdUser?.avatar_url || normalized.avatar_url,
+        photoUrl: createdUser?.avatar_url || normalized.avatar_url
+      };
+    } catch (error) {
+      console.warn('Could not save user profile:', error.message);
       throw error;
     }
   }
@@ -163,16 +262,16 @@ class AuthManager {
   async updateUserProfile(userId, profileData) {
     try {
       const client = getSupabaseClient();
-      
+
       const updateData = {
         first_name: profileData.firstName || '',
         last_name: profileData.lastName || '',
-        avatar_url: profileData.avatarUrl || null,
+        avatar_url: profileData.avatarUrl || profileData.photoUrl || null,
         updated_at: new Date().toISOString()
       };
 
       await client.update('users', { id: userId }, updateData);
-      
+
       console.log('✅ User profile updated');
     } catch (error) {
       console.warn('Could not update user profile:', error.message);
