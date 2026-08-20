@@ -7,6 +7,164 @@ class AuthManager {
     this.currentUser = null;
     this.userEmail = null;
     this.isAuthenticated = false;
+    this.session = null;
+  }
+
+  async restoreSession() {
+    const stored = await new Promise((resolve) => {
+      chrome.storage.local.get(['supabaseSession'], (result) => resolve(result.supabaseSession || null));
+    });
+
+    if (!stored?.access_token) return false;
+
+    if (stored.expires_at && stored.refresh_token && stored.expires_at * 1000 < Date.now() + 60000) {
+      try {
+        const refreshed = await this.refreshSession(stored.refresh_token);
+        await this.setSession(refreshed);
+        return this.isAuthenticated;
+      } catch (error) {
+        console.warn('Could not refresh Supabase session:', error.message);
+        await this.clearSession();
+        return false;
+      }
+    }
+
+    this.session = stored;
+    const client = getSupabaseClient();
+    client.setAccessToken(stored.access_token);
+    this.userEmail = stored.user?.email || null;
+    this.currentUser = stored.user || null;
+    this.isAuthenticated = !!this.userEmail;
+    return this.isAuthenticated;
+  }
+
+  async refreshSession(refreshToken) {
+    const client = getSupabaseClient();
+    const response = await fetch(`${client.url}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: client.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    if (!response.ok) throw new Error('Supabase session refresh failed');
+    return response.json();
+  }
+
+  async clearSession() {
+    this.session = null;
+    this.currentUser = null;
+    this.userEmail = null;
+    this.isAuthenticated = false;
+    getSupabaseClient().setAccessToken(null);
+    await new Promise((resolve) => chrome.storage.local.remove('supabaseSession', resolve));
+  }
+
+  async signInWithGoogle() {
+    const client = getSupabaseClient();
+    const redirectTo = this.getExtensionRedirectUrl();
+    const codeVerifier = this.createRandomString(64);
+    const codeChallenge = await this.createCodeChallenge(codeVerifier);
+    const state = this.createRandomString(32);
+
+    const authUrl = new URL(`${client.url}/auth/v1/authorize`);
+    authUrl.searchParams.set('provider', 'google');
+    authUrl.searchParams.set('redirect_to', redirectTo);
+    authUrl.searchParams.set('flow_type', 'pkce');
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('code_challenge', codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('prompt', 'select_account');
+    console.info('Clonix Supabase OAuth URL:', authUrl.toString());
+
+    let callbackUrl;
+    try {
+      callbackUrl = await chrome.identity.launchWebAuthFlow({
+        url: authUrl.toString(),
+        interactive: true
+      });
+    } catch (error) {
+      throw new Error(`${error.message || 'Authorization page could not be loaded.'} Redirect URL: ${redirectTo}`);
+    }
+    const callback = new URL(callbackUrl);
+    console.info('Clonix Supabase OAuth callback:', callback.toString().replace(/(access_token=)[^&]+/i, '$1[redacted]'));
+    const returnedState = callback.searchParams.get('state');
+    const code = callback.searchParams.get('code');
+    const accessToken = callback.hash.match(/(?:^|&)access_token=([^&]+)/)?.[1];
+    const error = callback.searchParams.get('error_description') || callback.searchParams.get('error');
+
+    if (error) throw new Error(`Google sign-in failed: ${error}`);
+    if (!code || returnedState !== state) {
+      if (accessToken) {
+        throw new Error('Supabase returned an implicit access token instead of a PKCE code. Check that response_type=code is enabled for this OAuth request.');
+      }
+      throw new Error('Invalid Supabase OAuth callback');
+    }
+
+    const response = await fetch(`${client.url}/auth/v1/token?grant_type=pkce`, {
+      method: 'POST',
+      headers: {
+        apikey: client.anonKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ auth_code: code, code_verifier: codeVerifier })
+    });
+
+    if (!response.ok) {
+      const details = await response.json().catch(() => ({}));
+      throw new Error(details.error_description || details.msg || 'Could not exchange OAuth code');
+    }
+
+    await this.setSession(await response.json());
+    return this.userEmail;
+  }
+
+  getExtensionRedirectUrl() {
+    const redirectTo = chrome.identity.getRedirectURL('supabase-auth');
+    console.info('Clonix Supabase OAuth redirect URL:', redirectTo);
+    return redirectTo;
+  }
+
+  async setSession(session) {
+    this.session = session;
+    const client = getSupabaseClient();
+    client.setAccessToken(session.access_token);
+    this.userEmail = session.user?.email || null;
+    this.currentUser = session.user || null;
+    this.isAuthenticated = !!this.userEmail;
+    await new Promise((resolve) => chrome.storage.local.set({ supabaseSession: session }, resolve));
+    await this.linkApplicationUser();
+  }
+
+  async linkApplicationUser() {
+    if (!this.userEmail || !this.session?.user?.id) return;
+    try {
+      const client = getSupabaseClient();
+      const result = await client.selectWithFilter('users', { email: this.userEmail });
+      const user = result?.[0];
+      if (user?.id && user.auth_user_id !== this.session.user.id) {
+        const updated = await client.update('users', { auth_user_id: this.session.user.id }, { id: user.id });
+        this.currentUser = { ...user, ...(updated || {}), auth_user_id: this.session.user.id };
+      } else if (user) {
+        this.currentUser = user;
+      }
+    } catch (error) {
+      console.warn('Could not link Clonix profile to Supabase Auth:', error.message);
+    }
+  }
+
+  createRandomString(length) {
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('').slice(0, length);
+  }
+
+  async createCodeChallenge(verifier) {
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    const bytes = new Uint8Array(digest);
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
   /**

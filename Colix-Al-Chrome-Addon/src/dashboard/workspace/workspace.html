@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Workspace</title>
+  <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="../header/header.css">
+</head>
+<body>
+  <div id="header-container"></div>
+  <main class="workspace-page">
+    <header class="workspace-heading">
+      <div>
+        <p class="workspace-kicker">Workspace</p>
+        <h1>Members and access</h1>
+        <p class="workspace-intro">Invite people to collaborate on shared snippets, forms, and folders.</p>
+      </div>
+      <button class="workspace-primary-btn" id="inviteUserBtn" type="button">Invite user</button>
+    </header>
+    <section class="workspace-notice" id="workspaceNotice" role="status" aria-live="polite"></section>
+    <section class="workspace-panel invite-panel" id="invitePanel" hidden>
+      <div class="workspace-panel-heading">
+        <div><h2>Invite a collaborator</h2><p>They will receive a secure link to join this workspace.</p></div>
+      </div>
+      <form id="inviteForm" class="invite-form">
+        <label>Email address<input id="inviteEmail" type="email" autocomplete="email" required placeholder="name@example.com"></label>
+        <label>Role<select id="inviteRole"><option value="viewer">Viewer</option><option value="editor">Editor</option><option value="admin">Admin</option></select></label>
+        <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelInviteBtn" type="button">Cancel</button><button class="workspace-primary-btn" type="submit">Send invitation</button></div>
+      </form>
+    </section>
+    <section class="workspace-panel">
+      <div class="workspace-panel-heading">
+        <div><h2 id="workspaceName">Your workspace</h2><p id="workspaceIdentity">Loading account details...</p></div>
+        <span class="workspace-status">Personal workspace</span>
+      </div>
+      <div class="workspace-table-wrap">
+        <table><thead><tr><th>Member</th><th>Role</th><th>Status</th><th></th></tr></thead>
+          <tbody id="memberList"><tr><td colspan="3">Loading members...</td></tr></tbody></table>
+      </div>
+    </section>
+    <section class="workspace-panel">
+      <div class="workspace-panel-heading"><div><h2>Pending invitations</h2><p>Invitations expire automatically after seven days.</p></div></div>
+      <div class="workspace-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead><tbody id="invitationList"><tr><td colspan="4">Loading invitations...</td></tr></tbody></table></div>
+    </section>
+    <section class="workspace-panel workspace-next-panel"><h2>Shared resources</h2><p>Folder sharing and inherited snippet access will appear here after workspace authentication is enabled.</p></section>
+  </main>
+  <script src="../header/header.js"></script>
+  <script src="workspace.js"></script>
+</body>
+</html>

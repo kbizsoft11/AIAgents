@@ -33,12 +33,29 @@ class HeaderModule {
 
       // Inject HTML into container
       container.innerHTML = html;
+      this.normalizeNavigationLinks(container);
       console.log('✅ Header HTML injected');
       return true;
     } catch (error) {
       console.error('❌ Error loading header:', error);
       return false;
     }
+  }
+
+  normalizeNavigationLinks(container) {
+    const routes = {
+      brandHome: 'dashboard/dashboard.html',
+      docs: 'dashboard/docs.html',
+      workspace: 'dashboard/workspace/workspace.html',
+      marketplace: 'dashboard/marketplace.html'
+    };
+
+    Object.entries(routes).forEach(([key, route]) => {
+      const link = key === 'brandHome'
+        ? container.querySelector('#brandHome')
+        : container.querySelector(`[data-header-route="${key}"]`);
+      if (link) link.href = chrome.runtime.getURL(route);
+    });
   }
 
   // Second: Bind HTML elements after they're loaded
@@ -67,7 +84,8 @@ class HeaderModule {
   bindEvents() {
     // Brand/Home button - Navigate to home (shortcuts section)
     if (this.brandHome) {
-      this.brandHome.addEventListener('click', () => {
+      this.brandHome.addEventListener('click', (event) => {
+        event.preventDefault();
         this.handleBrandClick();
       });
     }

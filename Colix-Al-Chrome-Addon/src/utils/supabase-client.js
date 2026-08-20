@@ -7,6 +7,7 @@ class SupabaseClient {
     this.url = url;
     this.anonKey = anonKey;
     this.userEmail = null;
+    this.accessToken = null;
   }
 
   /**
@@ -26,6 +27,10 @@ class SupabaseClient {
     this.userEmail = email;
   }
 
+  setAccessToken(accessToken) {
+    this.accessToken = accessToken || null;
+  }
+
   /**
    * Make request to Supabase using Anon Key
    * RLS policies handle authorization based on email header
@@ -35,6 +40,10 @@ class SupabaseClient {
       'apikey': this.anonKey,
       'Content-Type': 'application/json'
     };
+
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
 
     // Send email as header for RLS policies
     if (this.userEmail) {
@@ -82,6 +91,31 @@ class SupabaseClient {
     }
   }
 
+  async invokeFunction(functionName, body = {}) {
+    if (!this.accessToken && !this.userEmail) {
+      throw new Error('A Clonix email identity is required for this action');
+    }
+
+    const headers = {
+      apikey: this.anonKey,
+      'Content-Type': 'application/json'
+    };
+    if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
+    if (this.userEmail) headers['x-user-email'] = this.userEmail;
+
+    const response = await fetch(`${this.url}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || payload.message || `Supabase function failed (${response.status})`);
+    }
+    return payload;
+  }
+
   /**
    * Convert object keys from camelCase to snake_case
    */
@@ -91,10 +125,10 @@ class SupabaseClient {
   filterFieldsForTable(table, data) {
     // Define which fields are allowed for each table
     const allowedFields = {
-      'users': ['id', 'email', 'first_name', 'last_name', 'avatar_url', 'is_premium', 'premium_until', 'created_at', 'updated_at'],
-      'shortcuts': ['id', 'user_id', 'trigger', 'expansion', 'label', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
-      'forms': ['id', 'user_id', 'trigger', 'label', 'template_type', 'fields', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
-      'folders': ['id', 'user_id', 'name', 'is_expanded', 'created_at', 'updated_at', 'deleted_at', 'email']
+      'users': ['id', 'auth_user_id', 'email', 'first_name', 'last_name', 'avatar_url', 'is_premium', 'premium_until', 'created_at', 'updated_at'],
+      'shortcuts': ['id', 'user_id', 'workspace_id', 'trigger', 'expansion', 'label', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
+      'forms': ['id', 'user_id', 'workspace_id', 'trigger', 'label', 'template_type', 'fields', 'usage_count', 'created_at', 'updated_at', 'deleted_at', 'email', 'folder_id'],
+      'folders': ['id', 'user_id', 'workspace_id', 'name', 'is_expanded', 'created_at', 'updated_at', 'deleted_at', 'email']
     };
 
     const allowed = allowedFields[table] || [];
