@@ -38,14 +38,19 @@
           <path d="M4 7h7V4H4v3zm9 0h7V4h-7v3zm-9 7h7v-3H4v3zm9 0h7v-3h-7v3zM4 18h7v-3H4v3zm9 0h7v-3h-7v3z"></path>
         </svg>
       </button>
-      <button class="topbar-icon-btn" type="button" aria-label="Notifications">
+      <button class="topbar-icon-btn notification-trigger" id="headerNotificationsBtn" type="button" aria-label="Notifications" aria-expanded="false" aria-controls="headerNotificationsPanel">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 01-3.46 0"></path>
         </svg>
-        <span class="notification-dot"></span>
+        <span class="notification-dot" id="headerNotificationCount" hidden></span>
       </button>
+
+      <div class="header-notifications-panel" id="headerNotificationsPanel" role="dialog" aria-label="Notifications" hidden>
+        <div class="header-notifications-heading"><strong>Notifications</strong><button type="button" id="headerNotificationsMarkAll">Mark all read</button></div>
+        <div class="header-notifications-list" id="headerNotificationsList"><p class="header-notifications-empty">No notifications</p></div>
+      </div>
 
       <div class="profile-dropdown-wrapper">
         <button class="topbar-icon-btn profile-btn" id="headerProfileBtn" type="button" aria-label="Profile"

@@ -93,7 +93,7 @@ class SupabaseClient {
 
   async invokeFunction(functionName, body = {}) {
     if (!this.accessToken && !this.userEmail) {
-      throw new Error('A Clonix email identity is required for this action');
+      throw new Error('A Colix email identity is required for this action');
     }
 
     const headers = {

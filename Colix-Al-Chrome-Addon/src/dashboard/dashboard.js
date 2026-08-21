@@ -259,6 +259,7 @@ class TextBlitzDashboard {
     this.folderEmptyAddBtn = document.getElementById('folderEmptyAddBtn');
     this.folderDisableBtn = document.getElementById('folderDisableBtn');
     this.folderDeleteBtn = document.getElementById('folderDeleteBtn');
+    if (this.folderDeleteBtn) this.folderDeleteBtn.hidden = true;
   }
 
   bindEvents() {
@@ -761,7 +762,7 @@ class TextBlitzDashboard {
     if (this.folderDeleteBtn) {
       this.folderDeleteBtn.addEventListener('click', () => {
         const sidebarMgr = getSidebarManager();
-        if (sidebarMgr && sidebarMgr.activeFolder) {
+        if (sidebarMgr?.canManageSharing && sidebarMgr.activeFolder) {
           sidebarMgr.deleteFolder(sidebarMgr.activeFolder);
         }
       });

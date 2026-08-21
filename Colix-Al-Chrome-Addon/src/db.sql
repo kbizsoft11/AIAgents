@@ -119,6 +119,23 @@ CREATE TABLE public.resource_permissions (
   CONSTRAINT resource_permissions_unique UNIQUE (workspace_id, resource_type, resource_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  recipient_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  actor_id uuid NOT NULL REFERENCES public.users(id),
+  type text NOT NULL CHECK (type IN ('folder_shared')),
+  resource_type text NOT NULL CHECK (resource_type = 'folder'),
+  resource_id text NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_unique UNIQUE (workspace_id, recipient_id, type, resource_id)
+);
+
+CREATE INDEX IF NOT EXISTS notifications_recipient_idx ON public.notifications(recipient_id, read_at, created_at DESC);
+
 ALTER TABLE public.folders ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id);
 ALTER TABLE public.shortcuts ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id);
 ALTER TABLE public.forms ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id);

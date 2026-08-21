@@ -497,3 +497,43 @@ body {
     transition: none;
   }
 }
+
+.notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--brand-nav-bg);
+  border-radius: 999px;
+  background: #e74c3c;
+  color: #fff;
+  font: 700 10px/13px Arial, sans-serif;
+  text-align: center;
+}
+
+.header-notifications-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 70px;
+  z-index: 10;
+  width: min(360px, calc(100vw - 28px));
+  border: 1px solid #dfe6e0;
+  border-radius: 6px;
+  background: #fff;
+  color: #17221c;
+  box-shadow: 0 14px 35px rgba(26, 55, 35, .16);
+}
+
+.header-notifications-heading { display: flex; justify-content: space-between; align-items: center; padding: 15px 16px; border-bottom: 1px solid #dfe6e0; font: 15px Georgia, serif; }
+.header-notifications-heading button { border: 0; background: transparent; color: #159447; cursor: pointer; font: 12px Arial, sans-serif; }
+.header-notifications-list { display: grid; max-height: 360px; overflow-y: auto; }
+.header-notification { padding: 14px 16px; border-bottom: 1px solid #edf1ed; font: 13px/1.45 Arial, sans-serif; }
+.header-notification.unread { background: #f4f8f4; }
+.header-notification strong { display: block; margin-bottom: 4px; font: 16px Georgia, serif; }
+.header-notification small { display: block; margin-top: 8px; color: #6d786f; }
+.header-notification button { margin-top: 10px; border: 1px solid #159447; border-radius: 3px; padding: 8px 11px; color: #159447; background: #fff; cursor: pointer; font: 700 12px Arial, sans-serif; }
+.header-notifications-empty { margin: 0; padding: 22px 16px; color: #6d786f; font: 13px Arial, sans-serif; }
+
+@media (max-width: 640px) { .header-notifications-panel { right: 8px; } }

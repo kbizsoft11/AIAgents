@@ -7,6 +7,9 @@ class HeaderModule {
   constructor() {
     this.profileData = null;
     this.profileDropdownOpen = false;
+    this.notificationsOpen = false;
+    this.notifications = [];
+    this.notificationsApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/notifications.php';
   }
 
   // First: Load header HTML file
@@ -80,6 +83,11 @@ class HeaderModule {
     // Dropdown identity card text
     this.previewFullName = document.getElementById('previewFullName');
     this.previewEmail = document.getElementById('previewEmail');
+    this.notificationsBtn = document.getElementById('headerNotificationsBtn');
+    this.notificationsPanel = document.getElementById('headerNotificationsPanel');
+    this.notificationsList = document.getElementById('headerNotificationsList');
+    this.notificationCount = document.getElementById('headerNotificationCount');
+    this.markAllNotificationsBtn = document.getElementById('headerNotificationsMarkAll');
   }
 
   bindEvents() {
@@ -150,6 +158,13 @@ class HeaderModule {
       });
     }
 
+    this.notificationsBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggleNotifications();
+    });
+    this.markAllNotificationsBtn?.addEventListener('click', () => this.markAllNotificationsRead());
+
     document.addEventListener('click', (e) => {
       if (this.profileDropdownOpen &&
         this.headerProfileBtn &&
@@ -157,6 +172,9 @@ class HeaderModule {
         !this.headerProfileBtn.contains(e.target) &&
         !this.headerProfileDropdown.contains(e.target)) {
         this.closeProfileDropdown();
+      }
+      if (this.notificationsOpen && this.notificationsPanel && !this.notificationsPanel.contains(e.target) && !this.notificationsBtn?.contains(e.target)) {
+        this.closeNotifications();
       }
     });
 
@@ -191,9 +209,62 @@ class HeaderModule {
     // Step 4: Load and display profile data
     console.log('👤 Loading profile data...');
     await this.loadProfileData();
+    await this.loadNotifications();
+    this.notificationsTimer = window.setInterval(() => this.loadNotifications(), 30000);
     
     console.log('✨ Header initialization complete!');
   }
+
+  async loadNotifications() {
+    const email = this.profileData?.email;
+    if (!email || !this.notificationsList) return;
+    try {
+      const response = await fetch(this.notificationsApiUrl, { headers: { 'X-User-Email': email } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load notifications.');
+      this.notifications = payload.notifications || [];
+      this.renderNotifications(payload.unread || 0);
+    } catch (error) {
+      console.warn('Could not load notifications:', error);
+    }
+  }
+
+  renderNotifications(unread = this.notifications.filter((item) => !item.read_at).length) {
+    if (this.notificationCount) {
+      this.notificationCount.hidden = unread === 0;
+      this.notificationCount.textContent = unread > 9 ? '9+' : String(unread);
+    }
+    if (!this.notificationsList) return;
+    this.notificationsList.innerHTML = this.notifications.length ? this.notifications.map((notification) => {
+      return `<article class="header-notification${notification.read_at ? '' : ' unread'}"><strong>${this.escapeHtml(notification.title)}</strong><span>${this.escapeHtml(notification.message)}</span><small>${this.formatNotificationDate(notification.created_at)}</small><button type="button" data-notification-id="${this.escapeAttribute(notification.id)}">${notification.read_at ? 'View folder' : 'Enable folder'}</button></article>`;
+    }).join('') : '<p class="header-notifications-empty">No notifications</p>';
+    this.notificationsList.querySelectorAll('[data-notification-id]').forEach((button) => button.addEventListener('click', () => this.markNotificationRead(button.dataset.notificationId)));
+  }
+
+  toggleNotifications() { this.notificationsOpen ? this.closeNotifications() : this.openNotifications(); }
+  openNotifications() { this.notificationsOpen = true; this.notificationsPanel.hidden = false; this.notificationsBtn?.setAttribute('aria-expanded', 'true'); }
+  closeNotifications() { this.notificationsOpen = false; if (this.notificationsPanel) this.notificationsPanel.hidden = true; this.notificationsBtn?.setAttribute('aria-expanded', 'false'); }
+
+  async markNotificationRead(id) {
+    const notification = this.notifications.find((item) => item.id === id);
+    if (!notification || notification.read_at) return;
+    try {
+      const response = await fetch(this.notificationsApiUrl, { method: 'POST', headers: { 'X-User-Email': this.profileData.email, 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not enable folder.');
+      notification.read_at = new Date().toISOString();
+      this.renderNotifications();
+      window.dispatchEvent(new CustomEvent('sharedFolderNotification', { detail: { ...notification, folder: payload.folder, shortcuts: payload.shortcuts || [] } }));
+    } catch (error) { console.warn('Could not mark notification read:', error); }
+  }
+
+  async markAllNotificationsRead() {
+    await Promise.all(this.notifications.filter((item) => !item.read_at).map((item) => this.markNotificationRead(item.id)));
+  }
+
+  formatNotificationDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : 'Just now'; }
+  escapeHtml(value) { const element = document.createElement('span'); element.textContent = value ?? ''; return element.innerHTML; }
+  escapeAttribute(value) { return this.escapeHtml(value).replace(/"/g, '&quot;'); }
 
   // =============================================
   // PROFILE DATA

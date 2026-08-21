@@ -1335,6 +1335,30 @@ div#format-container {
 }
 
 /* ===== Confirm Modal ===== */
+.share-resource-modal { width: min(620px, 100%); max-width: 100%; max-height: 86vh; border: 1px solid #dfe6e0; border-radius: 6px; color: #17221c; box-shadow: 0 20px 55px rgba(26, 55, 35, .18); }
+.share-resource-modal .form-modal-header { align-items: flex-start; padding: 26px 26px 18px; border-bottom: 1px solid #dfe6e0; }
+.share-resource-modal .form-modal-header h2 { margin: 0 0 6px; color: #17221c; font: 500 24px/1.15 Georgia, 'Times New Roman', serif; }
+.share-resource-modal .form-modal-header p { margin: 0; color: #6d786f; font: 13px/1.5 Arial, sans-serif; }
+.share-resource-modal form { padding: 20px 26px 0; }
+.share-resource-members { display: grid; gap: 8px; max-height: 320px; overflow-y: auto; margin-bottom: 18px; }
+.share-resource-search { width: 100%; margin-bottom: 14px; padding: 10px 11px; border: 1px solid #dfe6e0; border-radius: 3px; color: #17221c; background: #fff; font: 14px Arial, sans-serif; }
+.share-resource-search::placeholder { color: #8b958e; }
+.share-resource-search:focus { outline: 0; border-color: #159447; box-shadow: 0 0 0 3px rgba(21, 148, 71, .1); }
+.share-resource-member { display: grid; grid-template-columns: 18px minmax(0, 1fr) 126px 28px; grid-template-areas: "select identity permission action"; align-items: center; gap: 12px; min-width: 0; padding: 11px 12px; border: 1px solid #dfe6e0; border-radius: 3px; background: #fff; }
+.share-resource-member:hover { border-color: #b8c9bb; background: #f4f8f4; }
+.share-resource-member input { grid-area: select; width: 16px; height: 16px; accent-color: #1dac4b; }
+.share-resource-member span { display: grid; grid-area: identity; gap: 3px; min-width: 0; overflow: hidden; }
+.share-resource-member strong, .share-resource-member small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.share-resource-member small, .share-resource-empty, .share-resource-error { color: #777; font-size: 12px; }
+.share-member-permission { grid-area: permission; width: 100%; min-width: 0; padding: 8px 7px; border: 1px solid #dfe6e0; border-radius: 3px; color: #17221c; background: #fff; font: 13px Arial, sans-serif; }
+.share-member-remove { grid-area: action; border: 0; color: #999; background: transparent; font-size: 21px; cursor: pointer; }
+.share-member-remove:hover { color: #c0392b; }
+.share-resource-empty { margin: 0 0 8px; }
+.share-resource-error { min-height: 18px; margin: 10px 0 0; color: #c0392b; }
+.share-resource-modal .form-modal-footer { padding: 18px 0 20px; border-top: 1px solid #dfe6e0; }
+.share-resource-modal .btn-primary { border-radius: 3px; background: #159447; }
+.share-resource-modal .btn-secondary { border: 1px solid #dfe6e0; border-radius: 3px; color: #17221c; background: #fff; }
+
 .confirm-modal {
   background: #fff;
   border-radius: 16px;
@@ -1343,6 +1367,12 @@ div#format-container {
   padding: 32px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   text-align: center;
+}
+
+@media (max-width: 560px) {
+  .share-resource-modal .form-modal-header, .share-resource-modal form { padding-left: 18px; padding-right: 18px; }
+  .share-resource-member { grid-template-columns: 18px minmax(0, 1fr) 28px; grid-template-areas: "select identity action" "select permission action"; }
+  .share-member-permission { grid-column: auto; }
 }
 
 .confirm-icon {

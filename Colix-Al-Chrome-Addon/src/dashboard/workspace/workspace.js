@@ -1,7 +1,7 @@
 class WorkspacePage {
   constructor() {
-    this.workspaceApiUrl = 'http://localhost/aiagents/api/workspace.php';
-    this.inviteApiUrl = 'http://localhost/aiagents/api/send-invitation.php';
+    this.workspaceApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/workspace.php';
+    this.inviteApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/send-invitation.php';
     this.notice = document.getElementById('workspaceNotice');
     this.invitePanel = document.getElementById('invitePanel');
     this.inviteForm = document.getElementById('inviteForm');
@@ -58,10 +58,15 @@ class WorkspacePage {
     });
     document.getElementById('workspacePrevious')?.addEventListener('click', () => { if (this.state.page > 1) { this.state.page--; this.loadResults(); } });
     document.getElementById('workspaceNext')?.addEventListener('click', () => { if (this.state.page < this.state.pages) { this.state.page++; this.loadResults(); } });
-
     document.getElementById('inviteUserBtn')?.addEventListener('click', () => { this.invitePanel.hidden = false; document.getElementById('inviteEmail')?.focus(); });
     document.getElementById('cancelInviteBtn')?.addEventListener('click', () => { this.invitePanel.hidden = true; });
     this.inviteForm?.addEventListener('submit', (event) => this.submitInvitation(event));
+    document.getElementById('closeWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
+    document.getElementById('cancelWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
+    this.results?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-edit-folder]');
+      if (button) this.openShareEditor(button.dataset.editFolder, button.dataset.folderName);
+    });
   }
 
   async submitInvitation(event) {
@@ -98,9 +103,17 @@ class WorkspacePage {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.error || `Could not load workspace (${response.status}).`);
       this.state = { ...this.state, ...payload.pagination };
+      this.canManageMembers = payload.membership.role === 'owner';
+      if (!this.canManageMembers && this.state.tab === 'invitations') {
+        this.state.tab = 'members';
+        this.state.page = 1;
+        await this.loadResults();
+        return;
+      }
       document.getElementById('workspaceName').textContent = payload.workspace.name || 'Your workspace';
       document.getElementById('workspaceIdentity').textContent = `${payload.current_user.email} · ${payload.membership.role}`;
-      document.getElementById('inviteUserBtn').hidden = !['owner', 'admin'].includes(payload.membership.role);
+      document.getElementById('inviteUserBtn').hidden = !this.canManageMembers;
+      document.querySelector('[data-tab="invitations"]').hidden = !this.canManageMembers;
       this.updateFilterVisibility();
       this.renderTabState();
       this.renderItems(payload.items || []);
@@ -134,11 +147,11 @@ class WorkspacePage {
     const headers = {
       members: '<tr><th>Member</th><th>Role</th><th>Status</th><th>Joined</th></tr>',
       invitations: '<tr><th>Email</th><th>Role</th><th>Status</th><th>Expires</th></tr>',
-      resources: '<tr><th>Name</th><th>Type</th><th>Trigger</th><th>Updated</th></tr>'
+      resources: '<tr><th>Name</th><th>Type</th><th>Updated</th><th>Access</th><th></th></tr>'
     };
     this.tableHead.innerHTML = headers[this.state.tab];
     if (!items.length) {
-      this.results.innerHTML = `<tr><td colspan="4">No ${this.state.tab} found.</td></tr>`;
+      this.results.innerHTML = `<tr><td colspan="${this.state.tab === 'resources' ? 5 : 4}">No ${this.state.tab} found.</td></tr>`;
       return;
     }
     this.results.innerHTML = items.map((item) => {
@@ -148,7 +161,9 @@ class WorkspacePage {
         return `<tr><td><strong>${this.escape(name)}</strong><br><small>${this.escape(user.email || 'Email unavailable')}</small></td><td>${this.escape(item.role)}</td><td>${this.escape(item.status)}</td><td>${this.formatDate(item.created_at)}</td></tr>`;
       }
       if (this.state.tab === 'invitations') return `<tr><td>${this.escape(item.email)}</td><td>${this.escape(item.role)}</td><td>${this.escape(item.status)}</td><td>${this.formatDate(item.expires_at)}</td></tr>`;
-      return `<tr><td><strong>${this.escape(item.name)}</strong></td><td>${this.escape(item.type)}</td><td>${this.escape(item.trigger || '-')}</td><td>${this.formatDate(item.updated_at)}</td></tr>`;
+      const shareAction = this.escape(item.permission || 'view');
+      const edit = this.canManageMembers && item.type === 'folder' ? `<button class="workspace-secondary-btn workspace-edit-share" type="button" data-edit-folder="${this.escape(item.id)}" data-folder-name="${this.escape(item.name)}">Edit</button>` : '';
+      return `<tr><td><strong>${this.escape(item.name)}</strong></td><td>${this.escape(item.type)}</td><td>${this.formatDate(item.updated_at)}</td><td>${shareAction}</td><td>${edit}</td></tr>`;
     }).join('');
   }
 
@@ -158,8 +173,45 @@ class WorkspacePage {
     document.getElementById('workspaceNext').disabled = this.state.page >= this.state.pages;
   }
 
-  showLoading() { this.results.innerHTML = '<tr><td colspan="4">Loading results...</td></tr>'; }
-  renderError(message) { this.results.innerHTML = `<tr><td colspan="4">${this.escape(message)}</td></tr>`; }
+  async openShareEditor(folderId, folderName) {
+    const modal = document.getElementById('workspaceShareModal');
+    const membersWrap = document.getElementById('workspaceShareMembers');
+    const error = document.getElementById('workspaceShareError');
+    error.textContent = '';
+    document.getElementById('workspaceShareName').textContent = folderName;
+    modal.hidden = false;
+    try {
+      const [membersResponse, permissionsResponse] = await Promise.all([
+        fetch(`${this.workspaceApiUrl}?tab=members&page=1&per_page=50`, { headers: { 'X-User-Email': this.identityEmail } }),
+        fetch(`https://extensions.kbizsoft.com/magicaa-extension/share-resource.php?resource_type=folder&resource_id=${encodeURIComponent(folderId)}`, { headers: { 'X-User-Email': this.identityEmail } })
+      ]);
+      const membersPayload = await membersResponse.json().catch(() => ({}));
+      const permissionsPayload = await permissionsResponse.json().catch(() => ({}));
+      if (!membersResponse.ok || !membersPayload.success || !permissionsResponse.ok || !permissionsPayload.success) throw new Error(permissionsPayload.error || membersPayload.error || 'Could not load folder access.');
+      const permissions = permissionsPayload.permissions || [];
+      membersWrap.innerHTML = (membersPayload.items || []).filter((item) => item.status === 'active' && item.user?.email && item.user.email.toLowerCase() !== this.identityEmail.toLowerCase()).map((item) => {
+        const email = item.user.email;
+        const current = permissions.find((permission) => permission.user?.email?.toLowerCase() === email.toLowerCase());
+        return `<div class="workspace-share-member" data-email="${this.escape(email)}"><span><strong>${this.escape(email)}</strong><small>${this.escape(item.role)}</small></span><select><option value="view"${current?.permission === 'view' ? ' selected' : ''}>Can view</option><option value="edit"${current?.permission === 'edit' ? ' selected' : ''}>Can edit</option><option value="manage"${current?.permission === 'manage' ? ' selected' : ''}>Can manage</option></select><button class="workspace-secondary-btn" type="button" data-revoke="${current ? 'true' : 'false'}">${current ? 'Remove' : 'Grant'}</button></div>`;
+      }).join('') || '<p>No other active members.</p>';
+      membersWrap.querySelectorAll('[data-revoke]').forEach((button) => button.addEventListener('click', () => this.updateFolderAccess(folderId, button.closest('.workspace-share-member'), button.dataset.revoke === 'true')));
+    } catch (loadError) { error.textContent = loadError.message; }
+  }
+
+  async updateFolderAccess(folderId, row, revoke) {
+    const email = row.dataset.email;
+    const body = { resource_type: 'folder', resource_id: folderId, email, permission: row.querySelector('select').value, action: revoke ? 'revoke' : 'grant' };
+    const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/share-resource.php', { method: revoke ? 'DELETE' : 'POST', headers: { 'X-User-Email': this.identityEmail, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.success) { document.getElementById('workspaceShareError').textContent = payload.error || 'Could not update folder access.'; return; }
+    this.showNotice(revoke ? 'Access removed.' : 'Folder access updated.');
+    await this.openShareEditor(folderId, document.getElementById('workspaceShareName').textContent);
+  }
+
+  closeShareEditor() { document.getElementById('workspaceShareModal').hidden = true; }
+
+  showLoading() { this.results.innerHTML = `<tr><td colspan="${this.state.tab === 'resources' ? 5 : 4}">Loading results...</td></tr>`; }
+  renderError(message) { this.results.innerHTML = `<tr><td colspan="${this.state.tab === 'resources' ? 5 : 4}">${this.escape(message)}</td></tr>`; }
   showNotice(message, isError = false) { this.notice.textContent = message; this.notice.classList.toggle('is-error', isError); }
   formatDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : 'Not available'; }
   escape(value) { const element = document.createElement('span'); element.textContent = value ?? ''; return element.innerHTML; }

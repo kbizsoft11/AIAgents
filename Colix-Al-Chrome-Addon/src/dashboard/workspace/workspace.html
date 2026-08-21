@@ -16,7 +16,7 @@
         <h1>Members and access</h1>
         <p class="workspace-intro">Invite people to collaborate on shared snippets, forms, and folders.</p>
       </div>
-      <button class="workspace-primary-btn" id="inviteUserBtn" type="button">Invite user</button>
+      <button class="workspace-primary-btn" id="inviteUserBtn" type="button" hidden>Invite user</button>
     </header>
     <section class="workspace-notice" id="workspaceNotice" role="status" aria-live="polite"></section>
     <section class="workspace-panel invite-panel" id="invitePanel" hidden>
@@ -36,7 +36,7 @@
       </div>
       <nav class="workspace-tabs" role="tablist" aria-label="Workspace views">
         <button class="workspace-tab is-active" type="button" role="tab" aria-selected="true" data-tab="members">Members</button>
-        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="invitations">Pending invitations</button>
+        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="invitations" hidden>Pending invitations</button>
         <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="resources">Shared resources</button>
       </nav>
     </section>
@@ -56,6 +56,14 @@
     </section>
   </main>
   <script src="../header/header.js"></script>
+  <div class="workspace-modal-backdrop" id="workspaceShareModal" hidden>
+    <section class="workspace-modal" role="dialog" aria-modal="true" aria-labelledby="workspaceShareTitle">
+      <div class="workspace-modal-heading"><div><h2 id="workspaceShareTitle">Edit folder access</h2><p id="workspaceShareName"></p></div><button class="workspace-modal-close" id="closeWorkspaceShare" type="button" aria-label="Close">&times;</button></div>
+      <div id="workspaceShareMembers" class="workspace-share-members"></div>
+      <p id="workspaceShareError" class="workspace-share-error" role="alert"></p>
+      <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelWorkspaceShare" type="button">Close</button></div>
+    </section>
+  </div>
   <script src="workspace.js"></script>
 </body>
 </html>

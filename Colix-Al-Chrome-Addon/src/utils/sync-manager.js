@@ -24,6 +24,7 @@ class SyncManager {
     // Fetch and cache user ID
     try {
       await this.fetchAndCacheUserId();
+      await this.fetchAndCacheWorkspaceId();
     } catch (error) {
       console.warn('Could not fetch user ID:', error);
     }
@@ -49,13 +50,34 @@ class SyncManager {
     }
   }
 
+  async fetchAndCacheWorkspaceId() {
+    try {
+      if (!this.userId) return;
+      const client = getSupabaseClient();
+      const memberships = await client.selectWithFilter('workspace_members', { user_id: this.userId, status: 'active' });
+      this.workspaceId = memberships?.[0]?.workspace_id || null;
+      if (!this.workspaceId) {
+        const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/workspace.php?tab=members&page=1&per_page=5', { headers: { 'X-User-Email': this.userEmail } });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok && payload.success) this.workspaceId = payload.membership?.workspace_id || null;
+      }
+    } catch (error) {
+      console.warn('Could not fetch workspace ID:', error);
+    }
+  }
+
   /**
    * Load pending syncs from storage
    */
   async loadPendingSyncs() {
     return new Promise((resolve) => {
       chrome.storage.local.get(['pendingSyncs'], (result) => {
-        this.pendingSyncQueue = result.pendingSyncs || [];
+        this.pendingSyncQueue = (result.pendingSyncs || []).map((item) => {
+          if (['folder', 'shortcut', 'form'].includes(item.entityType) && item.retries >= item.maxRetries) {
+            return { ...item, retries: 0, status: 'pending' };
+          }
+          return item;
+        });
         resolve();
       });
     });
@@ -189,6 +211,21 @@ class SyncManager {
     const { action, entityType, entityId, data } = item;
     let result;
 
+    if (action === 'create' && ['shortcut', 'form', 'folder'].includes(entityType) && !this.workspaceId) {
+      throw new Error('Active workspace is not available yet.');
+    }
+
+    if (['shortcut', 'form', 'folder'].includes(entityType)) {
+      const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/sync-resource.php', {
+        method: 'POST',
+        headers: { 'X-User-Email': this.userEmail, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_type: entityType, action, entity_id: entityId, data: data || {} })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.details || payload.error || `Resource sync failed (${response.status}).`);
+      return payload;
+    }
+
     try {
       if (entityType === 'shortcut') {
         switch (action) {
@@ -196,7 +233,8 @@ class SyncManager {
             result = await client.insert('shortcuts', {
               ...data,
               email: this.userEmail,
-              user_id: this.userId
+              user_id: this.userId,
+              workspace_id: this.workspaceId
             });
             break;
           case 'update':
@@ -213,7 +251,8 @@ class SyncManager {
             result = await client.insert('forms', {
               ...data,
               email: this.userEmail,
-              user_id: this.userId
+              user_id: this.userId,
+              workspace_id: this.workspaceId
             });
             break;
           case 'update':
@@ -229,7 +268,8 @@ class SyncManager {
             result = await client.insert('folders', {
               ...data,
               email: this.userEmail,
-              user_id: this.userId
+              user_id: this.userId,
+              workspace_id: this.workspaceId
             });
             break;
           case 'update':

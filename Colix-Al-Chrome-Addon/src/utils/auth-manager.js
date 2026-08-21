@@ -74,7 +74,7 @@ class AuthManager {
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('prompt', 'select_account');
-    console.info('Clonix Supabase OAuth URL:', authUrl.toString());
+    console.info('Colix Supabase OAuth URL:', authUrl.toString());
 
     let callbackUrl;
     try {
@@ -86,7 +86,7 @@ class AuthManager {
       throw new Error(`${error.message || 'Authorization page could not be loaded.'} Redirect URL: ${redirectTo}`);
     }
     const callback = new URL(callbackUrl);
-    console.info('Clonix Supabase OAuth callback:', callback.toString().replace(/(access_token=)[^&]+/i, '$1[redacted]'));
+    console.info('Colix Supabase OAuth callback:', callback.toString().replace(/(access_token=)[^&]+/i, '$1[redacted]'));
     const returnedState = callback.searchParams.get('state');
     const code = callback.searchParams.get('code');
     const accessToken = callback.hash.match(/(?:^|&)access_token=([^&]+)/)?.[1];
@@ -120,7 +120,7 @@ class AuthManager {
 
   getExtensionRedirectUrl() {
     const redirectTo = chrome.identity.getRedirectURL('supabase-auth');
-    console.info('Clonix Supabase OAuth redirect URL:', redirectTo);
+    console.info('Colix Supabase OAuth redirect URL:', redirectTo);
     return redirectTo;
   }
 
@@ -148,7 +148,7 @@ class AuthManager {
         this.currentUser = user;
       }
     } catch (error) {
-      console.warn('Could not link Clonix profile to Supabase Auth:', error.message);
+      console.warn('Could not link Colix profile to Supabase Auth:', error.message);
     }
   }
 

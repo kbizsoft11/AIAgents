@@ -14,15 +14,37 @@ class SidebarManager {
     this.contextMenu = null;
     this.contextMenuTarget = null;
     this.activeFolder = null; // Track active folder for creating new snippets
+    this.shareApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/share-resource.php';
+    this.workspaceApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/workspace.php';
+    this.canManageSharing = false;
+    this.workspaceMembers = [];
+    this.shareResource = null;
   }
 
   async init() {
     await this.loadFolders();
     await this.loadActiveFolder();
+    await this.loadSharingContext();
     this.bindElements();
     this.bindEvents();
     this.createContextMenu();
     this.render();
+  }
+
+  async loadSharingContext() {
+    try {
+      const identity = await new Promise((resolve) => chrome.identity.getProfileUserInfo(resolve));
+      if (!identity?.email) return;
+      this.currentUserEmail = identity.email;
+      const params = new URLSearchParams({ tab: 'members', page: '1', per_page: '50' });
+      const response = await fetch(`${this.workspaceApiUrl}?${params}`, { headers: { 'X-User-Email': identity.email } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) return;
+      this.canManageSharing = payload.membership?.role === 'owner';
+      this.workspaceMembers = (payload.items || []).filter((member) => member.status === 'active' && member.user?.email && member.user.email.toLowerCase() !== identity.email.toLowerCase());
+    } catch (error) {
+      console.warn('Could not load workspace sharing members:', error);
+    }
   }
 
   bindElements() {
@@ -58,6 +80,11 @@ class SidebarManager {
         e.preventDefault();
       });
     }
+
+    document.getElementById('closeShareResourceBtn')?.addEventListener('click', () => this.closeShareDialog());
+    document.getElementById('cancelShareResourceBtn')?.addEventListener('click', () => this.closeShareDialog());
+    document.getElementById('shareResourceForm')?.addEventListener('submit', (event) => this.submitShare(event));
+    window.addEventListener('sharedFolderNotification', (event) => this.enableSharedFolder(event.detail));
   }
 
   async loadFolders() {
@@ -89,6 +116,34 @@ class SidebarManager {
         resolve();
       });
     });
+  }
+
+  async enableSharedFolder(notification) {
+    const folder = notification?.folder;
+    if (!folder?.id) return;
+    if (!this.folders.some((item) => String(item.id) === String(folder.id))) {
+      this.folders.push({ ...folder, isExpanded: true, isShared: true });
+      await this.saveFolders();
+    }
+    const existingById = new Map(this.shortcuts.map((item) => [String(item.id), item]));
+    const importedShortcuts = (notification.shortcuts || []).map((item) => ({ ...item, type: 'shortcut', folderId: item.folder_id || folder.id, isShared: true }));
+    importedShortcuts.forEach((item) => {
+      const existing = existingById.get(String(item.id));
+      if (existing) Object.assign(existing, item);
+      else this.shortcuts.push(item);
+    });
+    if (importedShortcuts.length) {
+      await this.saveShortcuts();
+    }
+    if (window.dashboard) {
+      window.dashboard.shortcuts = this.shortcuts;
+      window.dashboard.forms = this.forms;
+      if (window.dashboard.folderDeleteBtn) window.dashboard.folderDeleteBtn.hidden = !this.canManageSharing;
+    }
+    this.render();
+    window.dashboard?.render();
+    window.dashboard?.renderForms();
+    window.dashboard?.showToast(`Folder "${folder.name}" enabled.`);
   }
 
   createDefaultFolders() {
@@ -538,7 +593,7 @@ class SidebarManager {
         </svg>
         <span>New snippet</span>
       </div>
-      <div class="context-menu-item context-menu-disabled" style="display:none;" data-action="share-folder">
+      <div class="context-menu-item" data-action="share-folder">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
           <polyline points="16 6 12 2 8 6"></polyline>
@@ -561,7 +616,7 @@ class SidebarManager {
         <span>Disable folder</span>
       </div>
       <div class="context-menu-divider"></div>
-      <div class="context-menu-item" data-action="rename">
+      <div class="context-menu-item${!this.canManageSharing ? ' context-menu-disabled' : ''}" data-action="rename">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -580,7 +635,7 @@ class SidebarManager {
         </svg>
       </div>
       <div class="context-menu-divider"></div>
-      <div class="context-menu-item danger" data-action="delete">
+      <div class="context-menu-item danger${!this.canManageSharing ? ' context-menu-disabled' : ''}" data-action="delete">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -604,7 +659,14 @@ class SidebarManager {
   showContextMenu(x, y, folderId) {
     if (!this.contextMenu) return;
 
+    if (!this.contextMenu.querySelector('[data-action="share-folder"]')) {
+      this.contextMenu.remove();
+      this.createContextMenu();
+    }
+
     this.contextMenuTarget = folderId;
+    const shareFolder = this.contextMenu.querySelector('[data-action="share-folder"]');
+    if (shareFolder) shareFolder.style.display = this.canManageSharing && folderId !== 'uncategorized' ? 'flex' : 'none';
     this.contextMenu.style.display = 'block';
     
     // Position the menu
@@ -634,12 +696,22 @@ class SidebarManager {
 
   handleContextMenuAction(action) {
     const folderId = this.contextMenuTarget;
+    if (!this.canManageSharing && ['rename', 'delete', 'share-folder'].includes(action)) {
+      this.hideContextMenu();
+      return;
+    }
     
     switch (action) {
       case 'new-snippet':
         this.hideContextMenu();
         // Pass folder ID to create snippet in this folder
         this.createSnippet('shortcut', folderId);
+        break;
+
+      case 'share-folder':
+        this.hideContextMenu();
+        const folder = this.folders.find((item) => item.id === folderId);
+        this.openShareDialog('folder', folderId, folder?.name || 'Folder');
         break;
         
       case 'rename':
@@ -746,7 +818,7 @@ class SidebarManager {
         this.hideContextMenu();
         this.duplicateItem(item);
         break;
-        
+
       case 'move-to':
         this.hideContextMenu();
         this.showMoveToFolderDialog(item);
@@ -761,6 +833,158 @@ class SidebarManager {
         this.hideContextMenu();
         break;
     }
+  }
+
+  async openShareDialog(type, id, name) {
+    if (!this.canManageSharing) return;
+    const overlay = document.getElementById('shareResourceOverlay');
+    const members = document.getElementById('shareResourceMembers');
+    const error = document.getElementById('shareResourceError');
+    if (!overlay || !members) return;
+
+    this.shareResource = { type, id, name, permissions: [] };
+    document.getElementById('shareResourceTitle').textContent = `Share ${type === 'folder' ? 'folder' : type === 'form' ? 'form' : 'snippet'}`;
+    document.getElementById('shareResourceDescription').textContent = `${name} - choose the workspace members who can access it.`;
+    error.textContent = '';
+    overlay.style.display = 'none';
+    members.innerHTML = '<p class="share-resource-empty">Loading workspace members...</p>';
+    document.getElementById('shareResourceMemberSearch').value = '';
+    document.getElementById('shareResourceMemberSearch').oninput = (event) => this.filterShareMembers(event.target.value);
+    const renderMemberRows = () => this.workspaceMembers.length ? this.workspaceMembers.map((member) => {
+      const user = member.user;
+      const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+      return `<div class="share-resource-member" data-member-email="${this.escapeAttribute(user.email)}" data-member-search="${this.escapeAttribute(`${displayName} ${user.email} ${member.role}`.toLowerCase())}" data-shared="false"><input type="checkbox" aria-label="Select ${this.escapeAttribute(displayName)}"><span><strong>${this.escapeHtml(displayName)}</strong><small>${this.escapeHtml(user.email)} · ${this.escapeHtml(member.role)}</small></span><select class="share-member-permission" aria-label="Permission for ${this.escapeAttribute(displayName)}"><option value="view">Can view</option><option value="edit">Can edit</option><option value="manage">Can manage</option></select><button class="share-member-remove" type="button" aria-label="Remove access from ${this.escapeAttribute(displayName)}" hidden>&times;</button></div>`;
+    }).join('') : '<p class="share-resource-empty">No active workspace members are available.</p>';
+    members.innerHTML = '<p class="share-resource-empty">Loading folder access...</p>';
+    try {
+      const response = await fetch(`${this.shareApiUrl}?resource_type=folder&resource_id=${encodeURIComponent(id)}`, { headers: { 'X-User-Email': this.currentUserEmail } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load folder access.');
+      this.shareResource.permissions = payload.permissions || [];
+      members.innerHTML = renderMemberRows();
+      this.shareResource.permissions.forEach((permission) => {
+        const row = members.querySelector(`[data-member-email="${CSS.escape(permission.user?.email || '')}"]`);
+        if (!row) return;
+        row.querySelector('input').checked = true;
+        row.querySelector('select').value = permission.permission;
+      });
+      this.applySharePermissions();
+    } catch (loadError) {
+      error.textContent = loadError.message;
+      members.innerHTML = renderMemberRows();
+    }
+    overlay.style.display = 'flex';
+    this.bindShareMemberActions();
+  }
+
+  filterShareMembers(value) {
+    const query = value.trim().toLowerCase();
+    document.querySelectorAll('#shareResourceMembers .share-resource-member').forEach((row) => { row.hidden = query !== '' && !row.dataset.memberSearch.includes(query); });
+  }
+
+  bindShareMemberActions() {
+    document.querySelectorAll('#shareResourceMembers .share-member-remove').forEach((button) => button.onclick = () => {
+      const row = button.closest('.share-resource-member');
+      if (row.dataset.shared === 'true') this.removeShareMember(row);
+      else { row.querySelector('input').checked = true; row.dataset.shared = 'pending'; this.updateShareRowAction(row); }
+    });
+  }
+
+  applySharePermissions() {
+    this.shareResource.permissions.forEach((permission) => {
+      const row = [...document.querySelectorAll('#shareResourceMembers .share-resource-member')].find((item) => item.dataset.memberEmail.toLowerCase() === (permission.user?.email || '').toLowerCase());
+      if (!row) return;
+      row.querySelector('input').checked = true;
+      row.querySelector('select').value = permission.permission;
+      row.dataset.shared = 'true';
+      this.updateShareRowAction(row);
+    });
+  }
+
+  updateShareRowAction(row) {
+    const button = row.querySelector('.share-member-remove');
+    const shared = row.dataset.shared === 'true' || row.dataset.shared === 'pending';
+    const checkbox = row.querySelector('input[type="checkbox"]');
+    button.hidden = !shared;
+    checkbox.hidden = shared;
+    button.setAttribute('aria-label', `${shared ? 'Remove access from' : 'Grant access to'} ${row.dataset.memberEmail}`);
+  }
+
+  closeShareDialog() {
+    const overlay = document.getElementById('shareResourceOverlay');
+    if (overlay) overlay.style.display = 'none';
+    this.shareResource = null;
+  }
+
+  async submitShare(event) {
+    event.preventDefault();
+    const selected = [...document.querySelectorAll('#shareResourceMembers .share-resource-member input:checked')].map((input) => input.closest('.share-resource-member'));
+    const error = document.getElementById('shareResourceError');
+    const submit = event.currentTarget.querySelector('[type="submit"]');
+    if (!selected.length) {
+      error.textContent = 'Select at least one workspace member.';
+      return;
+    }
+    if (!this.shareResource) return;
+
+    submit.disabled = true;
+    error.textContent = '';
+    try {
+      const results = await Promise.all(selected.map((row) => fetch(this.shareApiUrl, {
+        method: 'POST',
+        headers: { 'X-User-Email': this.currentUserEmail, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resource_type: 'folder',
+          resource_id: this.shareResource.id,
+          email: row.dataset.memberEmail,
+          permission: row.querySelector('select').value
+        })
+      }).then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not share resource.');
+        return { row, payload };
+      })));
+      results.forEach(({ row }) => {
+        const email = row.dataset.memberEmail;
+        const permission = row.querySelector('select').value;
+        row.dataset.shared = 'true';
+        row.querySelector('input').checked = true;
+        this.updateShareRowAction(row);
+        this.shareResource.permissions = this.shareResource.permissions.filter((item) => item.user?.email?.toLowerCase() !== email.toLowerCase());
+        this.shareResource.permissions.push({ permission, user: { email } });
+      });
+      window.dashboard?.showToast(`Shared with ${results.length} member${results.length === 1 ? '' : 's'}.`);
+    } catch (shareError) {
+      error.textContent = shareError.message;
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
+  async removeShareMember(row) {
+    if (!row || !this.shareResource) return;
+    const email = row.dataset.memberEmail;
+    const permission = this.shareResource.permissions.find((item) => item.user?.email?.toLowerCase() === email.toLowerCase());
+    if (!permission) { row.querySelector('input').checked = false; return; }
+    try {
+      const response = await fetch(this.shareApiUrl, { method: 'DELETE', headers: { 'X-User-Email': this.currentUserEmail, 'Content-Type': 'application/json' }, body: JSON.stringify({ resource_type: 'folder', resource_id: this.shareResource.id, email, permission: permission.permission, action: 'revoke' }) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not remove access.');
+      row.querySelector('input').checked = false;
+      row.dataset.shared = 'false';
+      this.updateShareRowAction(row);
+      this.shareResource.permissions = this.shareResource.permissions.filter((item) => item.user?.email?.toLowerCase() !== email.toLowerCase());
+    } catch (removeError) { document.getElementById('shareResourceError').textContent = removeError.message; }
+  }
+
+  escapeHtml(value) {
+    const element = document.createElement('span');
+    element.textContent = value ?? '';
+    return element.innerHTML;
+  }
+
+  escapeAttribute(value) {
+    return this.escapeHtml(value).replace(/"/g, '&quot;');
   }
 
   async duplicateItem(item) {

@@ -221,6 +221,7 @@
                 <div class="editor-datetime-modal">
                   <div class="editor-datetime-modal-header">
                     <div>
+
                       <strong>Date/Time field</strong>
                       <small>Choose the format to insert into your snippet.</small>
                     </div>
@@ -1043,6 +1044,27 @@
         <button class="btn btn-secondary" id="customDialogCancelBtn">Cancel</button>
         <button class="btn btn-primary" id="customDialogConfirmBtn">OK</button>
       </div>
+    </div>
+  </div>
+
+  <div class="form-overlay" id="shareResourceOverlay" style="display: none;">
+    <div class="form-modal share-resource-modal" role="dialog" aria-modal="true" aria-labelledby="shareResourceTitle">
+      <div class="form-modal-header">
+        <div>
+          <h2 id="shareResourceTitle">Share resource</h2>
+          <p id="shareResourceDescription">Choose workspace members who can access this resource.</p>
+        </div>
+        <button class="btn-close" id="closeShareResourceBtn" type="button" aria-label="Close">&times;</button>
+      </div>
+      <form id="shareResourceForm">
+        <input class="share-resource-search" id="shareResourceMemberSearch" type="search" placeholder="Search workspace members..." autocomplete="off">
+        <div class="share-resource-members" id="shareResourceMembers"></div>
+        <p class="share-resource-error" id="shareResourceError" role="alert"></p>
+        <div class="form-modal-footer">
+          <button class="btn btn-secondary" id="cancelShareResourceBtn" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit">Share resource</button>
+        </div>
+      </form>
     </div>
   </div>
 

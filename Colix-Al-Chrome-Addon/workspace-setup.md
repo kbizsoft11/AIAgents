@@ -1,6 +1,6 @@
-# Clonix Workspace Setup
+# Colix Workspace Setup
 
-This document contains the database setup, migration order, Supabase Auth requirements, RLS expectations, and rollout checks for invitations and shared Clonix resources.
+This document contains the database setup, migration order, Supabase Auth requirements, RLS expectations, and rollout checks for invitations and shared Colix resources.
 
 ## 1. Prerequisites
 
@@ -120,7 +120,7 @@ Remove `x-user-email` authorization only after authenticated workspace sync pass
 
 ## 7. PHP invitation API
 
-The workspace form currently calls the local XAMPP endpoint `http://localhost/aiagents/api/send-invitation.php`. For production, deploy the `api` directory and change `inviteApiUrl` in `workspace.js` to the public HTTPS API URL. Install its Composer dependency:
+The workspace form currently calls the local XAMPP endpoint `https://extensions.kbizsoft.com/magicaa-extension/send-invitation.php`. For production, deploy the `api` directory and change `inviteApiUrl` in `workspace.js` to the public HTTPS API URL. Install its Composer dependency:
 
 ```powershell
 cd c:\xampp\htdocs\aiagents\api
