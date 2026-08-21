@@ -29,24 +29,33 @@
         <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelInviteBtn" type="button">Cancel</button><button class="workspace-primary-btn" type="submit">Send invitation</button></div>
       </form>
     </section>
-    <section class="workspace-panel">
+    <section class="workspace-panel workspace-overview-panel">
       <div class="workspace-panel-heading">
         <div><h2 id="workspaceName">Your workspace</h2><p id="workspaceIdentity">Loading account details...</p></div>
         <span class="workspace-status">Personal workspace</span>
       </div>
-      <div class="workspace-table-wrap">
-        <table><thead><tr><th>Member</th><th>Role</th><th>Status</th><th></th></tr></thead>
-          <tbody id="memberList"><tr><td colspan="3">Loading members...</td></tr></tbody></table>
+      <nav class="workspace-tabs" role="tablist" aria-label="Workspace views">
+        <button class="workspace-tab is-active" type="button" role="tab" aria-selected="true" data-tab="members">Members</button>
+        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="invitations">Pending invitations</button>
+        <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="resources">Shared resources</button>
+      </nav>
+    </section>
+    <section class="workspace-panel workspace-results-panel">
+      <div class="workspace-filters">
+        <label class="workspace-search">Search<input id="workspaceSearch" type="search" placeholder="Search this view..." autocomplete="off"></label>
+        <label>Role<select id="workspaceRoleFilter"><option value="">All roles</option><option value="owner">Owner</option><option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label>
+        <label id="workspaceStatusFilterWrap">Status<select id="workspaceStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="revoked">Revoked</option><option value="expired">Expired</option></select></label>
+        <label id="workspaceResourceFilterWrap">Type<select id="workspaceResourceFilter"><option value="">All resources</option><option value="folder">Folders</option><option value="shortcut">Shortcuts</option><option value="form">Forms</option></select></label>
+        <button class="workspace-secondary-btn" id="workspaceClearFilters" type="button">Clear</button>
       </div>
+      <div class="workspace-panel-heading workspace-results-heading"><div><h2 id="workspaceResultsTitle">Members</h2><p id="workspaceResultsSummary">Loading results...</p></div></div>
+      <div class="workspace-table-wrap">
+        <table><thead id="workspaceTableHead"></thead><tbody id="workspaceResults"><tr><td>Loading results...</td></tr></tbody></table>
+      </div>
+      <div class="workspace-pagination" aria-label="Pagination"><button class="workspace-secondary-btn" id="workspacePrevious" type="button">Previous</button><span id="workspacePageSummary">Page 1 of 1</span><button class="workspace-secondary-btn" id="workspaceNext" type="button">Next</button></div>
     </section>
-    <section class="workspace-panel">
-      <div class="workspace-panel-heading"><div><h2>Pending invitations</h2><p>Invitations expire automatically after seven days.</p></div></div>
-      <div class="workspace-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead><tbody id="invitationList"><tr><td colspan="4">Loading invitations...</td></tr></tbody></table></div>
-    </section>
-    <section class="workspace-panel workspace-next-panel"><h2>Shared resources</h2><p>Folder sharing and inherited snippet access will appear here after workspace authentication is enabled.</p></section>
   </main>
   <script src="../header/header.js"></script>
-  <script src="../../utils/supabase-config.js"></script>
   <script src="workspace.js"></script>
 </body>
 </html>

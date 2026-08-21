@@ -24,3 +24,10 @@ backup.sql
 *.pyc
 
 supabase/.temp/
+!api/
+api/*
+!api/*.php
+!api/composer.json
+!api/composer.lock
+api/vendor/
+api/
