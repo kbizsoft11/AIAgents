@@ -87,7 +87,13 @@ After verification, make `workspace_id` `NOT NULL` in a later migration. Existin
 
 The client obtains the Gmail address from Chrome Identity and sends it to workspace Edge Functions as `x-user-email`. Functions perform all workspace authorization and database access. Invitation links are the proof that the invited person controls the mailbox.
 
-Invitation creation and acceptance must be implemented as Edge Functions or protected RPCs. The invite function validates owner/admin permission, normalizes email, hashes a random token, creates the invitation, and sends the email. The accept function validates token, expiry, status, and authenticated email before inserting membership.
+The invitation creation is handled by the PHP API. Acceptance is implemented in `supabase/functions/accept-invitation/index.ts`; deploy it with the Supabase CLI:
+
+```powershell
+supabase functions deploy accept-invitation
+```
+
+The function validates token, expiry, status, and authenticated email before inserting membership. The acceptance client must send the invitation token in a POST body and the invited user's Supabase access token in the `Authorization` header.
 
 ## 4. RLS rules
 
@@ -112,11 +118,24 @@ Keep legacy personal sync during migration. Then update the sync manager to sele
 
 Remove `x-user-email` authorization only after authenticated workspace sync passes staging tests.
 
-## 7. Workspace UI
+## 7. PHP invitation API
 
-The workspace page currently provides a visual UI only. Invitation, membership loading, revocation, email delivery, and workspace APIs are intentionally disabled until a future backend implementation is added.
+The workspace form currently calls the local XAMPP endpoint `http://localhost/aiagents/api/send-invitation.php`. For production, deploy the `api` directory and change `inviteApiUrl` in `workspace.js` to the public HTTPS API URL. Install its Composer dependency:
 
-## 8. Verification checklist
+```powershell
+cd c:\xampp\htdocs\aiagents\api
+composer install --no-dev
+```
+
+The Supabase URL, keys, invite acceptance URL, and Gmail SMTP settings are currently hardcoded in `send-invitation.php`. The service-role key and SMTP password must remain server-side. Configure `ALLOWED_ORIGIN` to the extension origin in production instead of `*`.
+
+The endpoint validates the Chrome Identity email, checks the linked application user and owner/admin role, initializes a missing personal workspace for that user, stores only a SHA-256 invitation-token hash, and sends a seven-day invitation link through Gmail STARTTLS on port 587.
+
+## 8. Workspace UI
+
+The workspace page uses Chrome Identity for the current Gmail account and sends that identity to the PHP invite API. Supabase OAuth is not required for sending an invitation. The email link opens the public `api/accept-invitation.php` page, where the invitee confirms the receiving email and joins the workspace.
+
+## 9. Verification checklist
 
 - Existing users retain personal data after migration.
 - Unrelated users cannot read another workspace.

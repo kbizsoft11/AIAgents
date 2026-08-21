@@ -7,6 +7,7 @@ const StorageHelper = {
   API_BASE_URL: 'https://extensions.kbizsoft.com/magicaa-extension',
   API_CHECK_USER: 'check_user.php',
   API_GET_CREDIT_TOKEN: 'api_get_credit_token.php',
+  API_GET_MEMBERSHIP_STATUS: 'api_get_membership_status.php',
 
   // Helper to normalize keys on items from local storage
   normalizeItem(item) {
@@ -99,6 +100,32 @@ const StorageHelper = {
       console.error('Error fetching max free credit token:', error);
       return this.DEFAULT_FREE_LIMIT;
     }
+  },
+
+  /**
+   * Fetch whether membership controls should be shown in the extension.
+   * @returns {Promise<boolean>} - Whether membership controls are enabled
+   */
+  async getMembershipSectionEnabled() {
+    try {
+      const response = await fetch(`${this.API_BASE_URL}/${this.API_GET_MEMBERSHIP_STATUS}`);
+      if (!response.ok) {
+        console.warn('Failed to fetch membership section setting, keeping it enabled');
+        return true;
+      }
+
+      const data = await response.json();
+      if (data.success && typeof data.membership_section_enabled === 'boolean') {
+        await chrome.storage.local.set({ membershipSectionEnabled: data.membership_section_enabled });
+        return data.membership_section_enabled;
+      }
+
+      console.warn('Invalid membership section API response, keeping it enabled');
+    } catch (error) {
+      console.error('Error fetching membership section setting:', error);
+    }
+
+    return true;
   },
 
   /**

@@ -10,6 +10,7 @@ class TextBlitzDashboard {
     this.isYearly = false;
     this.premiumModalReturnSection = null;
     this.premiumModalParent = null;
+    this.membershipSectionEnabled = true;
     // Folder selected when a shortcut is created from the sidebar/folder view.
     this.pendingShortcutFolderId = null;
     // Tracks which folder a form should be created in when the form builder
@@ -46,6 +47,7 @@ class TextBlitzDashboard {
     
     // Check user status and load limits BEFORE loading shortcuts
     await StorageHelper.checkUser();
+    this.membershipSectionEnabled = await StorageHelper.getMembershipSectionEnabled();
     
     // Initialize sidebar manager
     await initSidebarManager();
@@ -53,6 +55,7 @@ class TextBlitzDashboard {
     await this.loadShortcuts();
     await this.loadProfileData();
     await this.checkUser(); // This will call updateLimitDisplays()
+    this.applyMembershipSectionVisibility();
     this.render();
     this.renderForms();
   }
@@ -259,9 +262,10 @@ class TextBlitzDashboard {
   }
 
   bindEvents() {
-
-    this.checkUser();
-
+    window.addEventListener('headerReady', () => this.applyMembershipSectionVisibility());
+    window.addEventListener('headerPremiumClick', () => {
+      if (this.membershipSectionEnabled) this.showPremiumModal();
+    });
     window.addEventListener('headerFormsClick', () => {
       this.switchSection('forms');
       this.closeMobileSidebar();
@@ -824,6 +828,12 @@ class TextBlitzDashboard {
       this.updateLimitDisplays();
     }
 
+  }
+
+  applyMembershipSectionVisibility() {
+    document.querySelectorAll('[data-membership-section]').forEach((element) => {
+      element.hidden = !this.membershipSectionEnabled;
+    });
   }
 
   /**

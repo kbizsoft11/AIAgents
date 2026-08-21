@@ -13,6 +13,8 @@
     ],
     "host_permissions": [
         "<all_urls>",
+        "http://localhost/*",
+        "https://extensions.kbizsoft.com/*",
         "https://*.supabase.co/*",
         "https://www.googleapis.com/*"
     ],

@@ -34,6 +34,7 @@ class HeaderModule {
       // Inject HTML into container
       container.innerHTML = html;
       this.normalizeNavigationLinks(container);
+      window.dispatchEvent(new CustomEvent('headerReady'));
       console.log('✅ Header HTML injected');
       return true;
     } catch (error) {
@@ -82,6 +83,13 @@ class HeaderModule {
   }
 
   bindEvents() {
+    const premiumButton = document.querySelector('.topbar-premium-btn');
+    if (premiumButton) {
+      premiumButton.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('headerPremiumClick'));
+      });
+    }
+
     // Brand/Home button - Navigate to home (shortcuts section)
     if (this.brandHome) {
       this.brandHome.addEventListener('click', (event) => {
