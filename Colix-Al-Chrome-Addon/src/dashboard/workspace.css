@@ -50,7 +50,7 @@ h1, h2, p { margin-top: 0; } h1 { margin-bottom: 12px; font-size: clamp(32px, 5v
 .table-action { padding: 6px 9px; color: #a42626; }
 .workspace-secondary-btn:hover, .table-action:hover { background: #f4f8f4; }
 .workspace-primary-btn:disabled, .workspace-secondary-btn:disabled { cursor: wait; opacity: .6; }
-td:last-child { text-align: right; }
+td:last-child { text-align: left; }
 .workspace-share-members { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; }
 .workspace-share-member { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--workspace-line); border-radius: 4px; font: 13px Arial, sans-serif; }
 .workspace-share-member span { display: grid; gap: 4px; min-width: 0; }
@@ -61,3 +61,7 @@ td:last-child { text-align: right; }
 @media (max-width: 640px) { .workspace-page { padding: 36px 18px 56px; } .workspace-heading, .workspace-panel-heading { align-items: start; flex-direction: column; } .workspace-primary-btn { width: 100%; } }
 @media (max-width: 640px) { .invite-form { grid-template-columns: 1fr; } .invite-form-actions { grid-column: auto; justify-content: stretch; } .invite-form-actions button { flex: 1; } }
 @media (max-width: 720px) { .workspace-filters { align-items: stretch; flex-wrap: wrap; } .workspace-filters .workspace-search { flex-basis: 100%; } .workspace-filters label { flex: 1; min-width: 130px; } .workspace-filters .workspace-secondary-btn { align-self: end; } }
+.logo {
+    margin-bottom: 0 !important;
+    font-size: 18px;
+}

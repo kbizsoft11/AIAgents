@@ -17,6 +17,8 @@ class SidebarManager {
     this.shareApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/share-resource.php';
     this.workspaceApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/workspace.php';
     this.canManageSharing = false;
+    this.workspaceRole = 'viewer';
+    this.folderPermissions = new Map();
     this.workspaceMembers = [];
     this.shareResource = null;
   }
@@ -24,11 +26,13 @@ class SidebarManager {
   async init() {
     await this.loadFolders();
     await this.loadActiveFolder();
-    await this.loadSharingContext();
     this.bindElements();
     this.bindEvents();
     this.createContextMenu();
     this.render();
+    this.loadSharingContext()
+      .then(() => this.render())
+      .catch((error) => console.warn('Could not finish sidebar sharing setup:', error));
   }
 
   async loadSharingContext() {
@@ -40,8 +44,17 @@ class SidebarManager {
       const response = await fetch(`${this.workspaceApiUrl}?${params}`, { headers: { 'X-User-Email': identity.email } });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) return;
-      this.canManageSharing = payload.membership?.role === 'owner';
+      this.workspaceRole = payload.membership?.role || 'viewer';
+      this.canManageSharing = ['owner', 'admin'].includes(this.workspaceRole);
       this.workspaceMembers = (payload.items || []).filter((member) => member.status === 'active' && member.user?.email && member.user.email.toLowerCase() !== identity.email.toLowerCase());
+
+      const resourcesResponse = await fetch(`${this.workspaceApiUrl}?tab=resources&resource_type=folder&page=1&per_page=50`, { headers: { 'X-User-Email': identity.email } });
+      const resourcesPayload = await resourcesResponse.json().catch(() => ({}));
+      if (resourcesResponse.ok && resourcesPayload.success) {
+        (resourcesPayload.items || []).forEach((resource) => {
+          this.folderPermissions.set(String(resource.id), resource.permission || 'view');
+        });
+      }
     } catch (error) {
       console.warn('Could not load workspace sharing members:', error);
     }
@@ -88,43 +101,63 @@ class SidebarManager {
   }
 
   async loadFolders() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get({ 
-        folders: [],
-        shortcuts: [],
-        forms: []
-      }, (result) => {
-        this.folders = (result.folders || []).map(f => ({
+    return (async () => {
+        this.folders = (await StorageHelper.getAllFolders()).map(f => ({
           ...f,
           isExpanded: f.isExpanded !== undefined ? f.isExpanded : (f.is_expanded !== undefined ? f.is_expanded : true)
         }));
-        this.shortcuts = (result.shortcuts || []).map(s => ({
+        const legacyUncategorizedFolders = this.folders.filter((folder) =>
+          String(folder.id).toLowerCase() === 'uncategorized' || String(folder.name).toLowerCase() === 'uncategorized'
+        );
+        this.folders = this.folders.filter((folder) => !legacyUncategorizedFolders.includes(folder));
+        this.shortcuts = (await StorageHelper.getAll()).map(s => ({
           ...s,
           folderId: s.folderId !== undefined ? s.folderId : (s.folder_id !== undefined ? s.folder_id : null)
         }));
-        this.forms = (result.forms || []).map(f => ({
+        this.forms = (await StorageHelper.getAllForms()).map(f => ({
           ...f,
           folderId: f.folderId !== undefined ? f.folderId : (f.folder_id !== undefined ? f.folder_id : null)
         }));
         
-        // Migrate existing shortcuts/forms to default folder if needed
+        // Keep every item inside a real folder, including legacy unassigned items.
         if (this.folders.length === 0) {
           this.folders = this.createDefaultFolders();
-          this.saveFolders();
         }
+
+        const defaultFolderId = this.folders[0]?.id;
+        let itemsMigrated = false;
+        this.shortcuts.forEach((shortcut) => {
+          if (!shortcut.folderId || !this.folders.some(folder => String(folder.id) === String(shortcut.folderId))) {
+            shortcut.folderId = defaultFolderId;
+            itemsMigrated = true;
+          }
+        });
+        this.forms.forEach((form) => {
+          if (!form.folderId || !this.folders.some(folder => String(folder.id) === String(form.folderId))) {
+            form.folderId = defaultFolderId;
+            itemsMigrated = true;
+          }
+        });
+
+        if (itemsMigrated) {
+          await this.saveShortcuts();
+          await this.saveForms();
+        }
+        for (const folder of legacyUncategorizedFolders) {
+          await StorageHelper.deleteFolder(folder.id);
+        }
+        await this.saveFolders();
         
-        resolve();
-      });
-    });
+    })();
   }
 
   async enableSharedFolder(notification) {
     const folder = notification?.folder;
     if (!folder?.id) return;
-    if (!this.folders.some((item) => String(item.id) === String(folder.id))) {
-      this.folders.push({ ...folder, isExpanded: true, isShared: true });
-      await this.saveFolders();
-    }
+    const existingFolder = this.folders.find((item) => String(item.id) === String(folder.id));
+    if (existingFolder) Object.assign(existingFolder, folder, { isExpanded: true, isShared: true });
+    else this.folders.push({ ...folder, isExpanded: true, isShared: true });
+    await this.saveActiveFolder(folder.id);
     const existingById = new Map(this.shortcuts.map((item) => [String(item.id), item]));
     const importedShortcuts = (notification.shortcuts || []).map((item) => ({ ...item, type: 'shortcut', folderId: item.folder_id || folder.id, isShared: true }));
     importedShortcuts.forEach((item) => {
@@ -150,7 +183,7 @@ class SidebarManager {
     return [
       {
         id: 'default',
-        name: 'My Snippets',
+        name: 'New Folder',
         isExpanded: true,
         items: []
       }
@@ -158,42 +191,50 @@ class SidebarManager {
   }
 
   async saveFolders() {
-    const folderData = [...this.folders];
-    await StorageHelper.saveAllFolders(folderData);
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ folders: folderData }, resolve);
-    });
+    return this.folders;
   }
 
   async loadActiveFolder() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get({ activeFolder: null }, (result) => {
-        const savedFolder = result.activeFolder;
-
-        if (savedFolder && this.folders.some(folder => folder.id === savedFolder)) {
-          this.activeFolder = savedFolder;
-        } else {
-          this.activeFolder = null;
-        }
-
-        this.updateSnippetButtonState();
-        resolve();
-      });
-    });
+    this.activeFolder = null;
+    this.updateSnippetButtonState();
   }
 
   async saveActiveFolder(folderId) {
     this.activeFolder = folderId;
     this.updateSnippetButtonState();
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ activeFolder: folderId }, resolve);
-    });
+    return folderId;
   }
 
   updateSnippetButtonState() {
     if (this.addSnippetBtn) {
       this.addSnippetBtn.disabled = false;
     }
+  }
+
+  getFolderPermission(folderId) {
+    if (this.canManageSharing) return 'manage';
+    const permission = this.folderPermissions.get(String(folderId)) || null;
+    return permission && this.workspaceRole === 'editor' ? 'edit' : permission;
+  }
+
+  canEditFolder(folderId) {
+    return ['edit', 'manage'].includes(this.getFolderPermission(folderId)) ||
+      (!this.folders.find(folder => String(folder.id) === String(folderId))?.isShared && this.workspaceRole === 'editor');
+  }
+
+  canManageFolder(folderId) {
+    if (this.workspaceRole === 'viewer') return false;
+    return this.getFolderPermission(folderId) === 'manage';
+  }
+
+  canEditItem(item) {
+    return this.canEditFolder(item.folderId);
+  }
+
+  canDeleteItem(item) {
+    if (this.workspaceRole === 'viewer') return false;
+    return this.canManageFolder(item.folderId) ||
+      (!item.isShared && ['owner', 'admin', 'editor'].includes(this.workspaceRole));
   }
 
   render() {
@@ -206,8 +247,6 @@ class SidebarManager {
       this.sidebarTree.appendChild(folderEl);
     });
 
-    // Add "Uncategorized" section for items not in folders
-    this.renderUncategorizedItems();
   }
 
   createFolderElement(folder) {
@@ -298,6 +337,7 @@ class SidebarManager {
     // Drop zone indicator
     const dropZone = document.createElement('div');
     dropZone.className = 'folder-drop-zone';
+    dropZone.hidden = true;
     dropZone.textContent = 'Drop here';
     content.appendChild(dropZone);
 
@@ -340,7 +380,10 @@ class SidebarManager {
     itemDiv.appendChild(triggerSpan);
 
     // Click to edit
-    itemDiv.onclick = () => this.editItem(item);
+    itemDiv.onclick = () => {
+      if (this.canEditItem(item)) this.editItem(item);
+      else window.dashboard?.showToast('You only have view access to this item.', 'error');
+    };
 
     // Right-click context menu for items
     itemDiv.addEventListener('contextmenu', (e) => {
@@ -356,25 +399,9 @@ class SidebarManager {
     return itemDiv;
   }
 
-  /**
-   * Returns the items belonging to a given folder id.
-   *
-   * 'uncategorized' is a UI-only sentinel used by the sidebar tree (see
-   * renderUncategorizedItems) — it is never persisted on an item's
-   * folderId. Items with no real folder are stored with folderId === null
-   * (or undefined), which is exactly what moveSnippetToFolder() and
-   * dashboard.js's saveFromEditor()/handleAddForm() normalize to. So when
-   * asked for the 'uncategorized' bucket we match on "no folderId" rather
-   * than a literal string comparison — keeping this in sync with how items
-   * actually get their folderId set everywhere else.
-   */
   getItemsForFolder(folderId) {
     const items = [];
-    const folderExists = (itemFolderId) => this.folders.some(folder => String(folder.id) === String(itemFolderId));
-    const matches = (itemFolderId) => {
-      if (folderId === 'uncategorized') return !itemFolderId || !folderExists(itemFolderId);
-      return String(itemFolderId) === String(folderId);
-    };
+    const matches = (itemFolderId) => String(itemFolderId) === String(folderId);
 
     // Get shortcuts
     this.shortcuts.forEach(shortcut => {
@@ -397,34 +424,6 @@ class SidebarManager {
     });
 
     return items;
-  }
-
-  renderUncategorizedItems() {
-    // Items without folderId
-    const uncategorized = [];
-    
-    const folderExists = (itemFolderId) => this.folders.some(folder => String(folder.id) === String(itemFolderId));
-
-    this.shortcuts.forEach(s => {
-      // Keep legacy/orphaned shortcuts visible instead of allowing them to
-      // remain stored (and block duplicate triggers) without a sidebar entry.
-      if (!s.folderId || !folderExists(s.folderId)) uncategorized.push({ ...s, type: 'shortcut' });
-    });
-    
-    this.forms.forEach(f => {
-      if (!f.folderId || !folderExists(f.folderId)) uncategorized.push({ ...f, type: 'form' });
-    });
-
-    if (uncategorized.length === 0) return;
-
-    const folder = {
-      id: 'uncategorized',
-      name: 'Uncategorized',
-      isExpanded: true
-    };
-
-    const folderEl = this.createFolderElement(folder);
-    this.sidebarTree.appendChild(folderEl);
   }
 
   toggleFolder(folderId) {
@@ -454,6 +453,10 @@ class SidebarManager {
   }
 
   async createFolder() {
+    if (!['owner', 'admin', 'editor'].includes(this.workspaceRole)) {
+      window.dashboard?.showToast('Viewers cannot create folders.', 'error');
+      return;
+    }
     const doCreate = async (name) => {
       if (!name || !name.trim()) return;
       const newFolder = {
@@ -478,6 +481,16 @@ class SidebarManager {
     }
   }
 
+  async ensureDefaultFolder() {
+    if (this.folders.length > 0) return this.folders[0].id;
+
+    const folder = this.createDefaultFolders()[0];
+    this.folders.push(folder);
+    await this.saveFolders();
+    this.render();
+    return folder.id;
+  }
+
   editFolderName(folderId) {
     const folderEl = document.querySelector(`[data-folder-id="${folderId}"]`);
     if (!folderEl) return;
@@ -491,62 +504,69 @@ class SidebarManager {
   }
 
   async saveFolderName(folderId, newName) {
+    if (!this.canEditFolder(folderId)) {
+      window.dashboard?.showToast('You do not have permission to rename this folder.', 'error');
+      return;
+    }
     const folder = this.folders.find(f => f.id === folderId);
     if (folder && newName.trim()) {
-      folder.name = newName.trim();
-      await StorageHelper.updateFolder(folderId, { name: folder.name });
-      await this.saveFolders();
-      this.render();
+      try {
+        const updatedFolder = await StorageHelper.updateFolder(folderId, { name: newName.trim() });
+        Object.assign(folder, updatedFolder);
+        this.render();
+      } catch (error) {
+        window.dashboard?.showToast(error.message || 'Could not rename this folder.', 'error');
+        this.render();
+      }
     }
   }
 
   async deleteFolder(folderId) {
+    if (!['owner', 'admin'].includes(this.workspaceRole)) {
+      window.dashboard?.showToast('You do not have permission to delete this folder.', 'error');
+      return;
+    }
     const doDelete = async () => {
-      // Move items to uncategorized
-      this.shortcuts.forEach(s => {
-        if (s.folderId === folderId) delete s.folderId;
-      });
-      this.forms.forEach(f => {
-        if (f.folderId === folderId) delete f.folderId;
-      });
+      const deletedShortcuts = this.shortcuts.filter((shortcut) => String(shortcut.folderId) === String(folderId));
+      const deletedForms = this.forms.filter((form) => String(form.folderId) === String(folderId));
+      try {
+        for (const shortcut of deletedShortcuts) await StorageHelper.delete(shortcut.id);
+        for (const form of deletedForms) await StorageHelper.deleteForm(form.id);
+        await StorageHelper.deleteFolder(folderId);
 
-      // Remove folder
-      this.folders = this.folders.filter(f => f.id !== folderId);
-
-      // Clear active folder if it was deleted
-      if (this.activeFolder === folderId) {
-        await this.saveActiveFolder(null);
+        this.shortcuts = this.shortcuts.filter((shortcut) => String(shortcut.folderId) !== String(folderId));
+        this.forms = this.forms.filter((form) => String(form.folderId) !== String(folderId));
+        this.folders = this.folders.filter(f => f.id !== folderId);
+        if (this.activeFolder === folderId) await this.saveActiveFolder(null);
+        this.render();
+        if (window.dashboard) {
+          window.dashboard.shortcuts = this.shortcuts;
+          window.dashboard.forms = this.forms;
+          window.dashboard.render();
+          window.dashboard.renderForms();
+        }
+      } catch (error) {
+        window.dashboard?.showToast(error.message || 'Could not delete this folder.', 'error');
       }
-
-      await StorageHelper.deleteFolder(folderId);
-      await this.saveFolders();
-      await this.saveShortcuts();
-      await this.saveForms();
-      this.render();
-      if (window.dashboard) window.dashboard.render();
     };
 
     if (window.dashboard && typeof window.dashboard.showCustomConfirm === 'function') {
-      window.dashboard.showCustomConfirm('Delete Folder', 'Delete this folder? Items will be moved to Uncategorized.', (confirmed) => {
+      window.dashboard.showCustomConfirm('Delete Folder', 'Delete this folder and all its snippets?', (confirmed) => {
         if (confirmed) doDelete();
       });
     } else {
-      if (confirm('Delete this folder? Items will be moved to Uncategorized.')) {
+      if (confirm('Delete this folder and all its snippets?')) {
         doDelete();
       }
     }
   }
 
   async saveShortcuts() {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ shortcuts: this.shortcuts }, resolve);
-    });
+    return this.shortcuts;
   }
 
   async saveForms() {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ forms: this.forms }, resolve);
-    });
+    return this.forms;
   }
 
   /**
@@ -559,8 +579,16 @@ class SidebarManager {
    *   form FAB — forms are created from the Forms section's own
    *   "+ New Form" button, which calls dashboard.handleAddForm() directly.
    */
-  createSnippet(type, targetFolderId = null) {
+  async createSnippet(type, targetFolderId = null) {
     if (!window.dashboard) return;
+
+    if (!targetFolderId || !this.folders.some(folder => String(folder.id) === String(targetFolderId))) {
+      targetFolderId = await this.ensureDefaultFolder();
+    }
+    if (!this.canEditFolder(targetFolderId)) {
+      window.dashboard.showToast('You do not have permission to add items to this folder.', 'error');
+      return;
+    }
 
     if (type === 'form') {
       window.dashboard.handleAddForm(targetFolderId);
@@ -666,7 +694,7 @@ class SidebarManager {
 
     this.contextMenuTarget = folderId;
     const shareFolder = this.contextMenu.querySelector('[data-action="share-folder"]');
-    if (shareFolder) shareFolder.style.display = this.canManageSharing && folderId !== 'uncategorized' ? 'flex' : 'none';
+    if (shareFolder) shareFolder.style.display = this.canManageSharing ? 'flex' : 'none';
     this.contextMenu.style.display = 'block';
     
     // Position the menu
@@ -696,7 +724,9 @@ class SidebarManager {
 
   handleContextMenuAction(action) {
     const folderId = this.contextMenuTarget;
-    if (!this.canManageSharing && ['rename', 'delete', 'share-folder'].includes(action)) {
+    if ((action === 'share-folder' && !this.canManageSharing) ||
+      (action === 'rename' && !this.canEditFolder(folderId)) ||
+      (action === 'delete' && !this.canManageFolder(folderId))) {
       this.hideContextMenu();
       return;
     }
@@ -808,6 +838,14 @@ class SidebarManager {
   }
 
   handleItemContextMenuAction(action, item) {
+    const lacksPermission = ['edit-item', 'duplicate-item', 'move-to'].includes(action)
+      ? !this.canEditItem(item)
+      : action === 'delete-item' && !this.canDeleteItem(item);
+    if (lacksPermission) {
+      this.hideContextMenu();
+      window.dashboard?.showToast(action === 'delete-item' ? 'You do not have permission to delete this item.' : 'You only have view access to this item.', 'error');
+      return;
+    }
     switch (action) {
       case 'edit-item':
         this.hideContextMenu();
@@ -1101,14 +1139,62 @@ class SidebarManager {
       document.querySelectorAll('.drag-over').forEach(el => {
         el.classList.remove('drag-over');
       });
+      document.querySelectorAll('.drop-target-active').forEach(el => {
+        el.classList.remove('drop-target-active');
+      });
+      document.querySelectorAll('.folder-drop-zone').forEach(el => {
+        el.hidden = true;
+      });
     });
   }
 
   attachDropEvents(dropZone, folderId) {
-    dropZone.addEventListener('dragover', (e) => {
+    const handleSnippetDrop = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.remove('drag-over');
+
+      const folderDropZone = dropZone.querySelector('.folder-drop-zone');
+      if (folderDropZone) folderDropZone.hidden = true;
+      dropZone.classList.remove('drop-target-active');
+
+      if (this.draggedType !== 'snippet' || !this.draggedId) return;
+      await this.moveSnippetToFolder(this.draggedId, folderId);
+      this.render();
+    };
+
+    const setDropTargetVisible = (visible) => {
+      const folderDropZone = dropZone.querySelector('.folder-drop-zone');
+      if (folderDropZone) folderDropZone.hidden = !visible;
+      dropZone.classList.toggle('drop-target-active', visible);
+    };
+
+    const folderDropZone = dropZone.querySelector('.folder-drop-zone');
+    if (folderDropZone) {
+      folderDropZone.addEventListener('dragover', (event) => {
+        if (!this.draggedId || this.draggedType !== 'snippet') return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'move';
+        folderDropZone.classList.add('drag-over');
+      });
+      folderDropZone.addEventListener('drop', handleSnippetDrop);
+    }
+
+    dropZone.addEventListener('dragenter', (e) => {
+      if (!this.draggedId || this.draggedType !== 'snippet') return;
       e.preventDefault();
+      e.stopPropagation();
+      setDropTargetVisible(true);
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      if (!this.draggedId || this.draggedType !== 'snippet') return;
+      e.preventDefault();
+      e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
       dropZone.classList.add('drag-over');
+      setDropTargetVisible(true);
     });
 
     dropZone.addEventListener('dragleave', () => {
@@ -1116,16 +1202,7 @@ class SidebarManager {
     });
 
     dropZone.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-
-      if (!this.draggedId || !this.draggedType) return;
-
-      if (this.draggedType === 'snippet') {
-        await this.moveSnippetToFolder(this.draggedId, folderId);
-      }
-
-      this.render();
+      await handleSnippetDrop(e);
     });
   }
 
@@ -1136,6 +1213,8 @@ class SidebarManager {
       e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
       folderDiv.classList.add('drag-over');
+      const dropZone = folderDiv.querySelector('.folder-drop-zone');
+      if (dropZone) dropZone.hidden = false;
     });
 
     folderDiv.addEventListener('dragleave', () => {
@@ -1147,6 +1226,8 @@ class SidebarManager {
       e.preventDefault();
       e.stopPropagation();
       folderDiv.classList.remove('drag-over');
+      const dropZone = folderDiv.querySelector('.folder-drop-zone');
+      if (dropZone) dropZone.hidden = true;
 
       await this.moveSnippetToFolder(this.draggedId, folderId);
       this.render();
@@ -1188,7 +1269,11 @@ class SidebarManager {
   }
 
   async reorderSnippet(draggedId, targetItemId, position = 'before', targetFolderId = null) {
-    const normalizedFolderId = targetFolderId === 'uncategorized' ? null : targetFolderId;
+    const normalizedFolderId = targetFolderId;
+    if (!this.canEditFolder(normalizedFolderId)) {
+      window.dashboard?.showToast('You do not have permission to edit this folder.', 'error');
+      return;
+    }
     
     let shortcut = this.shortcuts.find(s => s.id === draggedId);
     let form = this.forms.find(f => f.id === draggedId);
@@ -1232,10 +1317,18 @@ class SidebarManager {
   }
 
   async moveSnippetToFolder(itemId, targetFolderId) {
-    const normalizedFolderId = targetFolderId === 'uncategorized' ? null : targetFolderId;
+    const normalizedFolderId = targetFolderId;
+    if (!this.canEditFolder(normalizedFolderId)) {
+      window.dashboard?.showToast('You do not have permission to move items to this folder.', 'error');
+      return;
+    }
 
     const shortcut = this.shortcuts.find(s => s.id === itemId);
     if (shortcut) {
+      if (!this.canEditItem(shortcut)) {
+        window.dashboard?.showToast('You do not have permission to move this item.', 'error');
+        return;
+      }
       const updatedShortcut = {
         ...shortcut,
         folderId: normalizedFolderId,
@@ -1249,6 +1342,10 @@ class SidebarManager {
 
     const form = this.forms.find(f => f.id === itemId);
     if (form) {
+      if (!this.canEditItem(form)) {
+        window.dashboard?.showToast('You do not have permission to move this item.', 'error');
+        return;
+      }
       const updatedForm = {
         ...form,
         folderId: normalizedFolderId,
@@ -1310,7 +1407,7 @@ class SidebarManager {
   }
 
   async sortFolderItems(folderId, sortType) {
-    const isTarget = (item) => folderId === 'uncategorized' ? !item.folderId : item.folderId === folderId;
+    const isTarget = (item) => item.folderId === folderId;
 
     const folderShortcuts = this.shortcuts.filter(s => isTarget(s));
     const otherShortcuts = this.shortcuts.filter(s => !isTarget(s));

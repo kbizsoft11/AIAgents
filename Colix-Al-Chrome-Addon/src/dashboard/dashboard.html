@@ -1,1081 +1,2152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ColixAI — Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="header.css" />
+    <script src="./auth-check.js"></script>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ColixAI — Dashboard</title>
-  <link rel="stylesheet" href="dashboard.css">
-  <link rel="stylesheet" href="header/header.css">
-  <script src="./auth-check.js"></script>
-</head>
+  <body>
+    <div id="header-container"></div>
 
-<body>
-
-  <div id="header-container"></div>
-
-  <!-- Mobile top bar (hidden on desktop) -->
-  <header class="mobile-topbar">
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false"
-      aria-controls="sidebar">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-      </svg>
-    </button>
-    <div class="mobile-topbar-brand">
-      <img src="../icons/logo.png" alt="" style="width: 24px; border-radius: 50%;">
-      <span>ColixAI</span>
-    </div>
-    <div class="mobile-topbar-spacer"></div>
-  </header>
-
-  <div class="dashboard-shell">
-    <!-- Sidebar backdrop (mobile only) -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-brand">
-        <img src="../icons/logo.png" alt="ColixAI" style="width: 32px; border-radius: 50%;">
-        <h1 class="logo">ColixAI</h1>
-      </div>
-      <div class="sidebar-header-actions">
-        <button class="header-action-btn snippet-btn" id="add-snippet-btn" title="New Snippet" aria-label="New snippet">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
-        <button class="header-action-btn folder-btn" id="add-folder-btn" title="New Folder" aria-label="New folder">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            <line x1="12" y1="11" x2="12" y2="17"></line>
-            <line x1="9" y1="14" x2="15" y2="14"></line>
-          </svg>
-        </button>
-      </div>
-      <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
+    <!-- Mobile top bar (hidden on desktop) -->
+    <header class="mobile-topbar">
+      <button
+        class="mobile-menu-btn"
+        id="mobileMenuBtn"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
-    </div>
-
-    <!-- Sidebar Tree with Drag & Drop -->
-    <div class="sidebar-tree-section">
-      <div id="sidebar-tree"></div>
-    </div>
-
-    <div class="sidebar-footer">
-      <!-- Shortcut Limit -->
-      <div class="shortcut-limit">
-        <div class="limit-bar">
-          <div class="limit-fill" id="limitFill"></div>
-        </div>
-        <span class="limit-text" id="limitText">Loading limit...</span>
+      <div class="mobile-topbar-brand">
+        <img
+          src="../icons/logo.png"
+          alt=""
+          style="width: 24px; border-radius: 50%"
+        />
+        <span>ColixAI</span>
       </div>
+      <div class="mobile-topbar-spacer"></div>
+    </header>
 
-      <!-- Go Premium CTA -->
-      <div class="premium-cta" data-membership-section>
-        <div class="premium-cta-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
-            <path d="M3 20h18"></path>
-          </svg>
-        </div>
-        <p class="premium-cta-text">Unlock <strong>unlimited</strong> shortcuts and premium features.</p>
-        <button class="premium-cta-btn" id="upgradeBtn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polygon
-              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-            </polygon>
-          </svg>
-          Upgrade to Premium
-        </button>
-      </div>
+    <div class="dashboard-shell">
+      <!-- Sidebar backdrop (mobile only) -->
+      <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-      <div class="premium-cta-member" data-membership-section>
-        <div class="premium-cta-member-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
-            <path d="M3 20h18"></path>
-          </svg>
-        </div>
-        <p class="premium-cta-member-text">You are already a Premium member. Enjoy all the premium features!</p>
-      </div>
-    </div>
-  </aside>
-
-    <!-- Main Content -->
-    <main class="main">
-    <!-- Editor View (Hidden by default, shown when editing) -->
-    <section class="section editor-view" id="editorView">
-      <div class="editor-container">
-        <!-- Editor Header -->
-        <div class="editor-header">
-          <button class="btn btn-ghost editor-back-btn" id="editorBackBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            Back
-          </button>
-          <div class="editor-header-actions">
-            <button class="btn btn-secondary" id="editorCancelBtn">Cancel</button>
-            <button class="btn btn-primary" id="editorSaveBtn">Save</button>
-          </div>
-        </div>
-
-        <!-- Full-page editor workspace -->
-        <div class="editor-workspace">
-          <div class="editor-content">
-            <div class="editor-field">
-              <label class="editor-label" for="editorLabelInput">Label (describes the snippet)</label>
-              <input type="text" class="editor-input" id="editorLabelInput" placeholder="Demo - Plain text">
-            </div>
-
-            <div class="editor-field">
-              <label class="editor-label" for="editorShortcutInput">Shortcut (typed to insert)</label>
-              <div class="editor-shortcut-group">
-                <input type="text" class="editor-input editor-shortcut-input" id="editorShortcutInput"
-                  placeholder="/sig">
-                <button class="btn btn-secondary" id="editorTryItBtn">Try it</button>
-              </div>
-            </div>
-
-            <div class="editor-field editor-expansion-field">
-              <label class="editor-label" for="editorExpansionInput">Expansion Text</label>
-              <div class="editor-rich-editor-shell">
-                <div class="editor-format-toolbar" role="toolbar" aria-label="Text formatting">
-                  <button class="editor-format-btn" id="editorFmtBold" type="button" title="Bold"><b>B</b></button>
-                  <button class="editor-format-btn" id="editorFmtItalic" type="button" title="Italic"><i>I</i></button>
-                  <button class="editor-format-btn" id="editorFmtUnderline" type="button"
-                    title="Underline"><u>U</u></button>
-                  <span class="editor-toolbar-divider"></span>
-                  <button class="editor-format-btn" id="editorFmtBullet" type="button" title="Bulleted list">•
-                    List</button>
-                  <button class="editor-format-btn" id="editorFmtLineBreak" type="button"
-                    title="Insert line break">↵</button>
-                </div>
-                <div class="editor-rich-editor" id="editorExpansionInput" contenteditable="true"
-                  data-placeholder="Text that will be inserted when the shortcut is typed..." role="textbox"
-                  aria-multiline="true" spellcheck="true"></div>
-                <div class="editor-emoji-controls">
-                  <button class="editor-emoji-btn" id="editorEmojiBtn" type="button" title="Insert emoji"
-                    aria-label="Insert emoji">😊</button>
-                  <div class="editor-emoji-picker" id="editorEmojiPicker" role="menu" aria-label="Emoji picker"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <aside class="editor-commands" aria-label="Dynamic commands">
-            <div class="editor-commands-header">
-              <h3>Dynamic commands</h3>
-              <p>Click a command to insert it into your snippet.</p>
-              <input id="editorCommandSearch" class="editor-command-search" type="search"
-                placeholder="Search commands..." autocomplete="off">
-            </div>
-            <div class="editor-command-section">
-              <div class="editor-command-section-title">Profile</div>
-              <button class="editor-command" type="button" data-editor-token="{{first_name}}"><span
-                  class="editor-command-icon">Aa</span><span><strong>First
-                    name</strong><small>{{first_name}}</small></span></button>
-              <button class="editor-command" type="button" data-editor-token="{{last_name}}"><span
-                  class="editor-command-icon">Aa</span><span><strong>Last
-                    name</strong><small>{{last_name}}</small></span></button>
-              <button class="editor-command" type="button" data-editor-token="{{first_name}} {{last_name}}"><span
-                  class="editor-command-icon">Aa</span><span><strong>Full name</strong><small>{{first_name}}
-                    {{last_name}}</small></span></button>
-              <button class="editor-command" type="button" data-editor-token="{{email}}"><span
-                  class="editor-command-icon">@</span><span><strong>Email</strong><small>{{email}}</small></span></button>
-            </div>
-            <div class="editor-command-section">
-              <div class="editor-command-section-title">Dynamic values</div>
-              <button class="editor-command" type="button" data-editor-token="{{clipboard}}"><span
-                  class="editor-command-icon">▣</span><span><strong>Clipboard</strong></span></button>
-              <button class="editor-command editor-date-time-command" type="button"><span
-                  class="editor-command-icon">▣</span><span><strong>Date/Time field</strong></span></button>
-              <button class="editor-command editor-text-field-command" type="button"><span
-                  class="editor-command-icon">=</span><span><strong>Text field</strong></span></button>
-              <button class="editor-command editor-paragraph-command" type="button"><span
-                  class="editor-command-icon">≡</span><span><strong>Paragraph field</strong></span></button>
-              <button class="editor-command editor-dropdown-command" type="button"><span
-                  class="editor-command-icon">⌄</span><span><strong>Dropdown</strong></span></button>
-              <button class="editor-command editor-radio-command" type="button"><span
-                  class="editor-command-icon">◉</span><span><strong>Radio button</strong></span></button>
-              <button class="editor-command editor-formula-command" type="button"><span
-                  class="editor-command-icon">∑</span><span><strong>Formula</strong></span></button>
-              <div class="editor-datetime-picker" id="editorDateTimePicker" role="dialog"
-                aria-label="Choose date and time format">
-                <div class="editor-datetime-modal">
-                  <div class="editor-datetime-modal-header">
-                    <div>
-
-                      <strong>Date/Time field</strong>
-                      <small>Choose the format to insert into your snippet.</small>
-                    </div>
-                    <button type="button" class="editor-datetime-close" id="editorDateTimeClose"
-                      aria-label="Close">&times;</button>
-                  </div>
-                  <select id="editorDateTimeFormat" class="editor-datetime-select">
-                    <optgroup label="Date">
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="DD-MM-YYYY">DD-MM-YYYY</option>
-                      <option value="MM.DD.YYYY">MM.DD.YYYY</option>
-                      <option value="MMM D, YYYY">MMM D, YYYY</option>
-                      <option value="D MMM YYYY">D MMM YYYY</option>
-                      <option value="dddd, MMMM D, YYYY">dddd, MMMM D, YYYY</option>
-                    </optgroup>
-                    <optgroup label="Time">
-                      <option value="HH:mm">HH:mm</option>
-                      <option value="HH:mm:ss">HH:mm:ss</option>
-                      <option value="hh:mm a">hh:mm a</option>
-                      <option value="hh:mm:ss a">hh:mm:ss a</option>
-                    </optgroup>
-                    <optgroup label="Date and time">
-                      <option value="YYYY-MM-DD HH:mm">YYYY-MM-DD HH:mm</option>
-                      <option value="DD/MM/YYYY HH:mm">DD/MM/YYYY HH:mm</option>
-                      <option value="MMM D, YYYY, hh:mm a">MMM D, YYYY, hh:mm a</option>
-                      <option value="dddd, MMMM D, YYYY at hh:mm a">dddd, MMMM D, YYYY at hh:mm a</option>
-                    </optgroup>
-                  </select>
-                  <div class="editor-datetime-preview"><span>Preview</span><strong id="editorDateTimePreview"></strong>
-                  </div>
-                  <div class="editor-datetime-actions">
-                    <button type="button" class="btn btn-secondary" id="editorDateTimeCancel">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="editorDateTimeInsert">Insert field</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="editor-command-section">
-              <div class="editor-command-section-title">Snippet tools</div>
-              <button class="editor-command editor-import-snippet-command" type="button"><span
-                  class="editor-command-icon">↗</span><span><strong>Import snippet</strong><small>Embed another
-                    snippet</small></span></button>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </section>
-
-    <div class="editor-text-field-picker" id="editorTextFieldPicker" role="dialog" aria-modal="true"
-      aria-label="Insert text field">
-      <div class="editor-text-field-modal">
-        <div class="editor-datetime-modal-header">
-          <div>
-            <strong>Insert text field</strong>
-            <small>Add a value that can be filled when the shortcut is used.</small>
-          </div>
-          <button type="button" class="editor-datetime-close" id="editorTextFieldClose"
-            aria-label="Close">&times;</button>
-        </div>
-        <label class="editor-modal-label" for="editorTextFieldLabel">Name <span>(optional)</span></label>
-        <input class="editor-modal-input" id="editorTextFieldLabel" type="text" placeholder="e.g. Customer name">
-        <label class="editor-modal-label" for="editorTextFieldDefault">Default value <span>(optional)</span></label>
-        <input class="editor-modal-input" id="editorTextFieldDefault" type="text" placeholder="e.g. John">
-        <div class="editor-datetime-actions">
-          <button type="button" class="btn btn-secondary" id="editorTextFieldCancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="editorTextFieldInsert">Insert field</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="editor-text-field-picker" id="editorDropdownPicker" role="dialog" aria-modal="true"
-      aria-label="Insert dropdown field">
-      <div class="editor-text-field-modal">
-        <div class="editor-datetime-modal-header">
-          <div>
-            <strong>Insert dropdown</strong>
-            <small>Add a selectable value to your shortcut.</small>
-          </div>
-          <button type="button" class="editor-datetime-close" id="editorDropdownClose"
-            aria-label="Close">&times;</button>
-        </div>
-        <label class="editor-modal-label" for="editorDropdownLabel">Name <span>(optional)</span></label>
-        <input class="editor-modal-input" id="editorDropdownLabel" type="text" placeholder="e.g. Department">
-        <label class="editor-modal-label" for="editorDropdownOptions">Options <span>(one per line)</span></label>
-        <textarea class="editor-modal-input editor-modal-textarea" id="editorDropdownOptions" rows="5"
-          placeholder="Sales&#10;Marketing&#10;Support"></textarea>
-        <div class="editor-datetime-actions">
-          <button type="button" class="btn btn-secondary" id="editorDropdownCancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="editorDropdownInsert">Insert dropdown</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="editor-text-field-picker" id="editorParagraphPicker" role="dialog" aria-modal="true"
-      aria-label="Insert paragraph field">
-      <div class="editor-text-field-modal">
-        <div class="editor-datetime-modal-header">
-          <div><strong>Insert paragraph field</strong><small>Add a multiline value to your shortcut.</small></div>
-          <button type="button" class="editor-datetime-close" id="editorParagraphClose"
-            aria-label="Close">&times;</button>
-        </div>
-        <label class="editor-modal-label" for="editorParagraphLabel">Name <span>(optional)</span></label>
-        <input class="editor-modal-input" id="editorParagraphLabel" type="text" placeholder="e.g. Message">
-        <label class="editor-modal-label" for="editorParagraphDefault">Default value <span>(optional)</span></label>
-        <textarea class="editor-modal-input editor-modal-textarea" id="editorParagraphDefault" rows="5"
-          placeholder="Enter default text"></textarea>
-        <div class="editor-datetime-actions"><button type="button" class="btn btn-secondary"
-            id="editorParagraphCancel">Cancel</button><button type="button" class="btn btn-primary"
-            id="editorParagraphInsert">Insert field</button></div>
-      </div>
-    </div>
-
-    <div class="editor-text-field-picker" id="editorRadioPicker" role="dialog" aria-modal="true"
-      aria-label="Insert radio button field">
-      <div class="editor-text-field-modal">
-        <div class="editor-datetime-modal-header">
-          <div><strong>Insert radio button</strong><small>Add selectable options to your shortcut.</small></div><button
-            type="button" class="editor-datetime-close" id="editorRadioClose" aria-label="Close">&times;</button>
-        </div>
-        <label class="editor-modal-label" for="editorRadioLabel">Name <span>(optional)</span></label>
-        <input class="editor-modal-input" id="editorRadioLabel" type="text" placeholder="e.g. Priority">
-        <label class="editor-modal-label" for="editorRadioOptions">Options <span>(one per line)</span></label>
-        <textarea class="editor-modal-input editor-modal-textarea" id="editorRadioOptions" rows="5"
-          placeholder="Low&#10;Medium&#10;High"></textarea>
-        <div class="editor-datetime-actions"><button type="button" class="btn btn-secondary"
-            id="editorRadioCancel">Cancel</button><button type="button" class="btn btn-primary"
-            id="editorRadioInsert">Insert radio</button></div>
-      </div>
-    </div>
-
-    <div class="editor-text-field-picker" id="editorFormulaPicker" role="dialog" aria-modal="true"
-      aria-label="Insert formula">
-      <div class="editor-text-field-modal">
-        <div class="editor-datetime-modal-header">
-          <div>
-            <strong>Insert dynamic formula</strong>
-            <small>Use numbers and basic arithmetic operators only.</small>
-          </div>
-          <button type="button" class="editor-datetime-close" id="editorFormulaClose"
-            aria-label="Close">&times;</button>
-        </div>
-        <label class="editor-modal-label" for="editorFormulaInput">Formula</label>
-        <input class="editor-modal-input" id="editorFormulaInput" type="text" inputmode="decimal"
-          placeholder="e.g. 7 * 8">
-        <div id="editorFormulaError" style="display:none;margin-top:6px;color:#c0392b;font-size:12px;">Only numeric
-          expressions are allowed.</div>
-        <label class="editor-modal-label" for="editorFormulaFormat">Format <span>(optional)</span></label>
-        <select class="editor-modal-input" id="editorFormulaFormat">
-          <option value="">Default</option>
-          <option value="integer">Whole number</option>
-          <option value="2-decimals">2 decimal places</option>
-          <option value="currency">Currency</option>
-        </select>
-        <div class="editor-datetime-actions">
-          <button type="button" class="btn btn-secondary" id="editorFormulaCancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="editorFormulaInsert">Insert</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="editor-text-field-picker" id="editorImportSnippetPicker" role="dialog" aria-modal="true"
-      aria-label="Import snippet">
-      <div class="editor-import-modal">
-        <div class="editor-datetime-modal-header">
-          <div><strong>Import snippet</strong><small>Select an existing shortcut to insert its content here.</small>
-          </div>
-          <button type="button" class="editor-datetime-close" id="editorImportSnippetClose"
-            aria-label="Close">&times;</button>
-        </div>
-        <input class="editor-modal-input" id="editorImportSnippetSearch" type="search" placeholder="Search snippets..."
-          autocomplete="off">
-        <div class="editor-import-list" id="editorImportSnippetList"></div>
-        <div class="editor-datetime-actions"><button type="button" class="btn btn-secondary"
-            id="editorImportSnippetCancel">Cancel</button></div>
-      </div>
-    </div>
-
-    <!-- Try It Modal -->
-    <div class="try-it-overlay" id="tryItOverlay" style="display: none;">
-      <div class="try-it-modal" role="dialog" aria-modal="true" aria-labelledby="tryItHeading">
-        <div class="try-it-header">
-          <h3 id="tryItHeading">Try It Out</h3>
-          <button class="btn-close" id="closeTryItBtn" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="try-it-content">
-          <div class="try-it-info">
-            <p class="try-it-label">Trigger: <code id="tryItTrigger"></code></p>
-            <p class="try-it-preview-label">Preview:</p>
-            <div class="try-it-preview" id="tryItPreview"></div>
-          </div>
-        </div>
-        <div class="try-it-footer">
-          <button class="btn btn-secondary" id="closeTryItBtnFooter">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Shortcuts Section -->
-    <section class="section" id="sectionShortcuts">
-
-      <!-- Top Bar -->
-      <div class="top-bar">
-        <div class="top-bar-left">
-          <h2 class="page-title">My Shortcuts</h2>
-          <span class="badge" id="shortcutCount">0</span>
-        </div>
-        <div class="top-bar-right">
-          <button class="btn btn-bulk-delete" id="bulkDeleteBtn" style="display: none;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <span class="btn-label">Delete All</span>
-          </button>
-          <div class="search-container">
-            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            <label for="searchInput" class="sr-only">Search shortcuts</label>
-            <input type="text" class="search-input" id="searchInput" placeholder="Search shortcuts..."
-              autocomplete="off">
-          </div>
-          <button class="btn btn-primary" id="addNewBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <div>
+        <div class="sidebar-header-actions">
+          <button
+            class="header-action-btn snippet-btn"
+            id="add-snippet-btn"
+            title="New Snippet"
+            aria-label="New snippet"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            <span class="btn-label">New Shortcut</span>
+          </button>
+          <button
+            class="header-action-btn folder-btn"
+            id="add-folder-btn"
+            title="New Folder"
+            aria-label="New folder"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              ></path>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="9" y1="14" x2="15" y2="14"></line>
+            </svg>
           </button>
         </div>
       </div>
 
-      <!-- Add/Edit Form Modal -->
-      <div class="form-overlay" id="formOverlay" style="display: none;">
-        <div class="form-modal" role="dialog" aria-modal="true" aria-labelledby="formTitle">
-          <div class="form-modal-header">
-            <h3 class="form-title" id="formTitle">Add New Shortcut</h3>
-            <button class="btn-close" id="closeFormBtn" aria-label="Close">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-
-          <div class="form-body">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="triggerInput">Shortcut Trigger</label>
-                <input type="text" class="form-input" id="triggerInput" placeholder="e.g., -hbd">
-                <span class="form-hint">Start with a symbol like <code>-</code> <code>/</code> <code>;</code></span>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="labelInput">Label <span class="optional">(optional)</span></label>
-                <input type="text" class="form-input" id="labelInput" placeholder="e.g., Birthday Wish">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="expansionInput">Expanded Text</label>
-              <div class="textarea-wrapper">
-                <div class="form-textarea rich-editor" id="expansionInput" contenteditable="true"
-                  data-placeholder="Type the full text that should replace your shortcut..." spellcheck="true"
-                  role="textbox" aria-multiline="true" aria-label="Expanded text"></div>
-                <div id="format-container">
-                  <button class="profile-token-btn" id="profileTokenBtn" type="button" title="Insert profile tokens"
-                    aria-label="Insert profile tokens" aria-haspopup="true" aria-expanded="false">
-                    <img id="editorProfileAvatar" class="profile-avatar" src="" alt="" style="display: none;">
-                    <div id="editorProfileAvatarFallback" class="profile-avatar-fallback">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                    </div>
-                  </button>
-                  <div class="form-texteditor">
-                    <div class="text-format-toolbar" role="toolbar" aria-label="Text formatting">
-                      <button class="fmt-btn" id="fmtBold" type="button" title="Bold" aria-label="Bold">
-                        <b>B</b>
-                      </button>
-                      <button class="fmt-btn" id="fmtItalic" type="button" title="Italic" aria-label="Italic">
-                        <i>I</i>
-                      </button>
-                      <button class="fmt-btn" id="fmtUnderline" type="button" title="Underline" aria-label="Underline">
-                        <u>U</u>
-                      </button>
-                      <button class="fmt-btn fmt-btn-emoji" id="fmtEmoji" type="button" title="Emoji"
-                        aria-label="Insert emoji">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                          <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                          <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="profile-dropdown" id="profileDropdown" style="display: none;" role="menu">
-                    <div class="profile-dropdown-item" data-token="{{first_name}}" role="menuitem" tabindex="0">
-                      <div class="profile-dropdown-item-left">
-                        <span class="profile-dropdown-item-label">First Name</span>
-                        <span class="profile-dropdown-item-preview" id="editorPreviewFirstName"></span>
-                      </div>
-                      <code class="profile-dropdown-token">{{first_name}}</code>
-                    </div>
-                    <div class="profile-dropdown-item" data-token="{{last_name}}" role="menuitem" tabindex="0">
-                      <div class="profile-dropdown-item-left">
-                        <span class="profile-dropdown-item-label">Last Name</span>
-                        <span class="profile-dropdown-item-preview" id="editorPreviewLastName"></span>
-                      </div>
-                      <code class="profile-dropdown-token">{{last_name}}</code>
-                    </div>
-                    <div class="profile-dropdown-item" data-token="{{first_name}} {{last_name}}" role="menuitem"
-                      tabindex="0">
-                      <div class="profile-dropdown-item-left">
-                        <span class="profile-dropdown-item-label">Full name</span>
-                        <span class="profile-dropdown-item-preview" id="editorPreviewFullName"></span>
-                      </div>
-                      <code class="profile-dropdown-token">{{full_name}}</code>
-                    </div>
-                    <div class="profile-dropdown-item" data-token="{{email}}" role="menuitem" tabindex="0">
-                      <div class="profile-dropdown-item-left">
-                        <span class="profile-dropdown-item-label">Email</span>
-                        <span class="profile-dropdown-item-preview" id="editorPreviewEmail"></span>
-                      </div>
-                      <code class="profile-dropdown-token">{{email}}</code>
-                    </div>
-                  </div>
-
-                  <div class="emoji-picker" id="emojiPicker" role="menu" aria-label="Emoji picker"></div>
-                </div>
-              </div>
-              <span class="form-hint">Supports multi-line text. Press <code>Ctrl+Enter</code> to save. Click the profile
-                icon to insert tokens.</span>
-            </div>
-
-            <div class="form-error" id="formError" style="display: none;" role="alert"></div>
-          </div>
-
-          <div class="form-modal-footer">
-            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-            <button class="btn btn-primary" id="saveBtn">Save Shortcut</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bulk Delete Modal -->
-      <div class="form-overlay" id="bulkDeleteOverlay" style="display: none;">
-        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="bulkDeleteTitle">
-          <div class="confirm-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="1.5"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-          </div>
-          <h3 class="confirm-title" id="bulkDeleteTitle">Delete All Shortcuts?</h3>
-          <p class="confirm-message">
-            This will permanently delete <strong id="bulkDeleteCount">0</strong> shortcut(s).
-            This action cannot be undone.
-          </p>
-          <div class="confirm-actions">
-            <button class="btn btn-secondary" id="bulkDeleteCancelBtn">Cancel</button>
-            <button class="btn btn-danger" id="bulkDeleteConfirmBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-              Yes, Delete All
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Premium Upgrade Modal -->
-      <div class="form-overlay" id="premiumOverlay" data-membership-section style="display: none;">
-        <div class="premium-modal" role="dialog" aria-modal="true" aria-labelledby="premiumTitle">
-          <button class="btn-close premium-close" id="closePremiumBtn" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header" style="padding: 0">
+          <button
+            class="sidebar-close-btn"
+            id="sidebarCloseBtn"
+            aria-label="Close menu"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
-
-          <!-- Premium Header -->
-          <div class="premium-header">
-            <!-- <div class="premium-badge">👑</div> -->
-            <h2 class="premium-title" id="premiumTitle">Upgrade to Premium</h2>
-            <p class="premium-subtitle">Unlock the full power of ColixAI</p>
-          </div>
-
-          <!-- Billing Toggle -->
-          <div class="billing-toggle">
-            <span class="billing-option" id="billingMonthlyLabel">Monthly</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="billingToggle" aria-label="Toggle yearly billing">
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="billing-option" id="billingYearlyLabel">
-              Yearly
-              <span class="save-badge">Save 15%</span>
-            </span>
-          </div>
-
-          <!-- Pricing Card -->
-          <div class="pricing-card">
-            <div class="pricing-card-header">
-              <span class="pricing-plan">Premium</span>
-              <div class="pricing-amount">
-                <span class="pricing-currency">$</span>
-                <span class="pricing-price" id="pricingPrice">5.99</span>
-                <span class="pricing-period" id="pricingPeriod">/month</span>
-              </div>
-            </div>
-
-            <div class="pricing-features">
-              <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Unlimited shortcut creation</span>
-              </div>
-              <div class="pricing-feature">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Priority support</span>
-              </div>
-            </div>
-
-            <button class="pricing-cta" id="premiumBuyBtn">
-              Get Premium Now
-            </button>
-
-            <p class="pricing-note">Cancel anytime. 7-day money-back guarantee.</p>
-          </div>
-
-          <!-- Free Plan Comparison -->
-          <div class="free-comparison">
-            <span class="free-comparison-label">Currently on Free Plan</span>
-            <span class="free-comparison-detail" id="free-plan-limit-display">5 shortcuts • Basic features</span>
-          </div>
         </div>
-      </div>
 
-      <!-- Info details -->
-      <div class="magicaa-notification-bar" data-membership-section>
-        <div class="magicaa-notification-content">
-          <span class="magicaa-notification-text">
-            Maximum of <strong id="shortcut-limit-display">10 Shortcuts</strong> can be added in the Trial Version.
-            <a href="#" id="magicaa-upgrade-link">Upgrade Now</a>
-            to unlock unlimited shortcuts.
-          </span>
+        <!-- Sidebar Tree with Drag & Drop -->
+        <div class="sidebar-tree-section">
+          <div id="sidebar-tree"></div>
         </div>
-      </div>
 
-      <!-- Welcome View (Default when no folder or all shortcuts view) -->
-      <div id="welcomeView" class="view-container">
-        <div class="view-main">
-          <h1 class="welcome-title">Welcome to ColixAI</h1>
-          <p class="welcome-subtitle">
-            Type a shortcut trigger below (or try typing <code>-ty</code> or <code>/sig</code>). It will instantly
-            expand into text!
-          </p>
-
-          <div class="playground-card">
-            <label for="welcomePlayground" class="sr-only">Test Area</label>
-            <textarea id="welcomePlayground" class="welcome-playground"
-              placeholder="Type here to test your shortcuts live... (e.g. -ty)"></textarea>
+        <div class="sidebar-footer">
+          <!-- Shortcut Limit -->
+          <div class="shortcut-limit" data-membership-section hidden>
+            <div class="limit-bar">
+              <div class="limit-fill" id="limitFill"></div>
+            </div>
+            <span class="limit-text" id="limitText">Loading limit...</span>
           </div>
 
-          <p class="welcome-info-text">
-            Your shortcuts insert snippets
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-              style="vertical-align: middle; display: inline-block;">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            and will work on any website. You can also right-click on text boxes to select a snippet from the context
-            menu.
-          </p>
-
-          <div class="welcome-quick-actions">
-            <span class="quick-actions-label">Quick Actions:</span>
-            <button class="btn btn-primary" id="welcomeNewSnippetBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
+          <!-- Go Premium CTA -->
+          <div class="premium-cta" data-membership-section hidden>
+            <div class="premium-cta-icon">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#1dac4b"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+                <path d="M3 20h18"></path>
               </svg>
-              New snippet
-            </button>
-            <button class="btn btn-secondary" id="welcomeNewFolderBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                <line x1="12" y1="11" x2="12" y2="17"></line>
-                <line x1="9" y1="14" x2="15" y2="14"></line>
+            </div>
+            <p class="premium-cta-text">
+              Unlock <strong>unlimited</strong> shortcuts and premium features.
+            </p>
+            <button class="premium-cta-btn" id="upgradeBtn">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                ></polygon>
               </svg>
-              + New folder
+              Upgrade to Premium
             </button>
+          </div>
+
+          <div class="premium-cta-member" data-membership-section hidden>
+            <div class="premium-cta-member-icon">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#1dac4b"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+                <path d="M3 20h18"></path>
+              </svg>
+            </div>
+            <p class="premium-cta-member-text">
+              You are already a Premium member. Enjoy all the premium features!
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main">
+        <!-- Editor View (Hidden by default, shown when editing) -->
+        <section class="section editor-view" id="editorView">
+          <div class="editor-container">
+            <!-- Editor Header -->
+            <div class="editor-header">
+              <button class="btn btn-ghost editor-back-btn" id="editorBackBtn">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+              </button>
+              <div class="editor-header-actions">
+                <button class="btn btn-secondary" id="editorCancelBtn">
+                  Cancel
+                </button>
+                <button class="btn btn-primary" id="editorSaveBtn">Save</button>
+              </div>
+            </div>
+
+            <!-- Full-page editor workspace -->
+            <div class="editor-workspace">
+              <div class="editor-content">
+                <div class="editor-field">
+                  <label class="editor-label" for="editorLabelInput"
+                    >Label (describes the snippet)</label
+                  >
+                  <input
+                    type="text"
+                    class="editor-input"
+                    id="editorLabelInput"
+                    placeholder="Demo - Plain text"
+                  />
+                </div>
+
+                <div class="editor-field">
+                  <label class="editor-label" for="editorShortcutInput"
+                    >Shortcut (typed to insert)</label
+                  >
+                  <div class="editor-shortcut-group">
+                    <input
+                      type="text"
+                      class="editor-input editor-shortcut-input"
+                      id="editorShortcutInput"
+                      placeholder="/sig"
+                    />
+                    <button class="btn btn-secondary" id="editorTryItBtn">
+                      Try it
+                    </button>
+                  </div>
+                </div>
+
+                <div class="editor-field editor-expansion-field">
+                  <label class="editor-label" for="editorExpansionInput"
+                    >Expansion Text</label
+                  >
+                  <div class="editor-rich-editor-shell">
+                    <div
+                      class="editor-format-toolbar"
+                      role="toolbar"
+                      aria-label="Text formatting"
+                    >
+                      <button
+                        class="editor-format-btn"
+                        id="editorFmtBold"
+                        type="button"
+                        title="Bold"
+                      >
+                        <b>B</b>
+                      </button>
+                      <button
+                        class="editor-format-btn"
+                        id="editorFmtItalic"
+                        type="button"
+                        title="Italic"
+                      >
+                        <i>I</i>
+                      </button>
+                      <button
+                        class="editor-format-btn"
+                        id="editorFmtUnderline"
+                        type="button"
+                        title="Underline"
+                      >
+                        <u>U</u>
+                      </button>
+                      <span class="editor-toolbar-divider"></span>
+                      <button
+                        class="editor-format-btn"
+                        id="editorFmtBullet"
+                        type="button"
+                        title="Bulleted list"
+                      >
+                        • List
+                      </button>
+                      <button
+                        class="editor-format-btn"
+                        id="editorFmtLineBreak"
+                        type="button"
+                        title="Insert line break"
+                      >
+                        ↵
+                      </button>
+                    </div>
+                    <div
+                      class="editor-rich-editor"
+                      id="editorExpansionInput"
+                      contenteditable="true"
+                      data-placeholder="Text that will be inserted when the shortcut is typed..."
+                      role="textbox"
+                      aria-multiline="true"
+                      spellcheck="true"
+                    ></div>
+                    <div class="editor-emoji-controls">
+                      <button
+                        class="editor-emoji-btn"
+                        id="editorEmojiBtn"
+                        type="button"
+                        title="Insert emoji"
+                        aria-label="Insert emoji"
+                      >
+                        😊
+                      </button>
+                      <div
+                        class="editor-emoji-picker"
+                        id="editorEmojiPicker"
+                        role="menu"
+                        aria-label="Emoji picker"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="editor-commands" aria-label="Dynamic commands">
+                <div class="editor-commands-header">
+                  <h3>Dynamic commands</h3>
+                  <p>Click a command to insert it into your snippet.</p>
+                  <input
+                    id="editorCommandSearch"
+                    class="editor-command-search"
+                    type="search"
+                    placeholder="Search commands..."
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="editor-command-section">
+                  <div class="editor-command-section-title">Profile</div>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{first_name}}"
+                  >
+                    <span class="editor-command-icon">Aa</span
+                    ><span
+                      ><strong>First name</strong
+                      ><small>{{first_name}}</small></span
+                    >
+                  </button>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{last_name}}"
+                  >
+                    <span class="editor-command-icon">Aa</span
+                    ><span
+                      ><strong>Last name</strong
+                      ><small>{{last_name}}</small></span
+                    >
+                  </button>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{first_name}} {{last_name}}"
+                  >
+                    <span class="editor-command-icon">Aa</span
+                    ><span
+                      ><strong>Full name</strong
+                      ><small>{{first_name}} {{last_name}}</small></span
+                    >
+                  </button>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{email}}"
+                  >
+                    <span class="editor-command-icon">@</span
+                    ><span><strong>Email</strong><small>{{email}}</small></span>
+                  </button>
+                </div>
+                <div class="editor-command-section">
+                  <div class="editor-command-section-title">Dynamic values</div>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{clipboard}}"
+                  >
+                    <span class="editor-command-icon">▣</span
+                    ><span><strong>Clipboard</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-date-time-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">▣</span
+                    ><span><strong>Date/Time field</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-text-field-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">=</span
+                    ><span><strong>Text field</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-paragraph-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">≡</span
+                    ><span><strong>Paragraph field</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-dropdown-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">⌄</span
+                    ><span><strong>Dropdown</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-radio-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">◉</span
+                    ><span><strong>Radio button</strong></span>
+                  </button>
+                  <button
+                    class="editor-command editor-formula-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">∑</span
+                    ><span><strong>Formula</strong></span>
+                  </button>
+                  <div
+                    class="editor-datetime-picker"
+                    id="editorDateTimePicker"
+                    role="dialog"
+                    aria-label="Choose date and time format"
+                  >
+                    <div class="editor-datetime-modal">
+                      <div class="editor-datetime-modal-header">
+                        <div>
+                          <strong>Date/Time field</strong>
+                          <small
+                            >Choose the format to insert into your
+                            snippet.</small
+                          >
+                        </div>
+                        <button
+                          type="button"
+                          class="editor-datetime-close"
+                          id="editorDateTimeClose"
+                          aria-label="Close"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <select
+                        id="editorDateTimeFormat"
+                        class="editor-datetime-select"
+                      >
+                        <optgroup label="Date">
+                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                          <option value="DD-MM-YYYY">DD-MM-YYYY</option>
+                          <option value="MM.DD.YYYY">MM.DD.YYYY</option>
+                          <option value="MMM D, YYYY">MMM D, YYYY</option>
+                          <option value="D MMM YYYY">D MMM YYYY</option>
+                          <option value="dddd, MMMM D, YYYY">
+                            dddd, MMMM D, YYYY
+                          </option>
+                        </optgroup>
+                        <optgroup label="Time">
+                          <option value="HH:mm">HH:mm</option>
+                          <option value="HH:mm:ss">HH:mm:ss</option>
+                          <option value="hh:mm a">hh:mm a</option>
+                          <option value="hh:mm:ss a">hh:mm:ss a</option>
+                        </optgroup>
+                        <optgroup label="Date and time">
+                          <option value="YYYY-MM-DD HH:mm">
+                            YYYY-MM-DD HH:mm
+                          </option>
+                          <option value="DD/MM/YYYY HH:mm">
+                            DD/MM/YYYY HH:mm
+                          </option>
+                          <option value="MMM D, YYYY, hh:mm a">
+                            MMM D, YYYY, hh:mm a
+                          </option>
+                          <option value="dddd, MMMM D, YYYY at hh:mm a">
+                            dddd, MMMM D, YYYY at hh:mm a
+                          </option>
+                        </optgroup>
+                      </select>
+                      <div class="editor-datetime-preview">
+                        <span>Preview</span
+                        ><strong id="editorDateTimePreview"></strong>
+                      </div>
+                      <div class="editor-datetime-actions">
+                        <button
+                          type="button"
+                          class="btn btn-secondary"
+                          id="editorDateTimeCancel"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-primary"
+                          id="editorDateTimeInsert"
+                        >
+                          Insert field
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="editor-command-section">
+                  <div class="editor-command-section-title">Snippet tools</div>
+                  <button
+                    class="editor-command editor-import-snippet-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">↗</span
+                    ><span
+                      ><strong>Import snippet</strong
+                      ><small>Embed another snippet</small></span
+                    >
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorTextFieldPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert text field"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert text field</strong>
+                <small
+                  >Add a value that can be filled when the shortcut is
+                  used.</small
+                >
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorTextFieldClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorTextFieldLabel"
+              >Name <span>(optional)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorTextFieldLabel"
+              type="text"
+              placeholder="e.g. Customer name"
+            />
+            <label class="editor-modal-label" for="editorTextFieldDefault"
+              >Default value <span>(optional)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorTextFieldDefault"
+              type="text"
+              placeholder="e.g. John"
+            />
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorTextFieldCancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="editorTextFieldInsert"
+              >
+                Insert field
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Right Side Panel: Want to learn more? -->
-        <aside class="view-sidebar">
-          <div class="sidebar-card">
-            <h3 class="sidebar-card-title">Want to learn more?</h3>
-            <ul class="sidebar-links-list">
-              <li>
-                <a href="#" class="sidebar-link" id="linkDocs">
-                  <div class="sidebar-link-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>ColixAI Documentation</strong>
-                    <span>Guides and references</span>
-                  </div>
-                </a>
-              </li>
-              <li>
-                <a href="#" class="sidebar-link" id="linkFaq">
-                  <div class="sidebar-link-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>ColixAI FAQ</strong>
-                    <span>Frequently asked questions</span>
-                  </div>
-                </a>
-              </li>
-              <li>
-                <a href="#" class="sidebar-link" id="linkCommunity">
-                  <div class="sidebar-link-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>Community Forums</strong>
-                    <span>Ask questions and suggest features</span>
-                  </div>
-                </a>
-              </li>
-              <li>
-                <a href="#" class="sidebar-link" id="linkSupport">
-                  <div class="sidebar-link-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-                      stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                      <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                  </div>
-                  <div>
-                    <strong>Email the team</strong>
-                    <span>support@kbizsoft.com</span>
-                  </div>
-                </a>
-              </li>
-            </ul>
-            <div class="sidebar-mascot">
-              <img src="../icons/logo.png" alt="ColixAI Mascot" class="mascot-img">
+        <div
+          class="editor-text-field-picker"
+          id="editorDropdownPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert dropdown field"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert dropdown</strong>
+                <small>Add a selectable value to your shortcut.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorDropdownClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorDropdownLabel"
+              >Name <span>(optional)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorDropdownLabel"
+              type="text"
+              placeholder="e.g. Department"
+            />
+            <label class="editor-modal-label" for="editorDropdownOptions"
+              >Options <span>(one per line)</span></label
+            >
+            <textarea
+              class="editor-modal-input editor-modal-textarea"
+              id="editorDropdownOptions"
+              rows="5"
+              placeholder="Sales&#10;Marketing&#10;Support"
+            ></textarea>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorDropdownCancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="editorDropdownInsert"
+              >
+                Insert dropdown
+              </button>
             </div>
           </div>
-        </aside>
-      </div>
+        </div>
 
-      <!-- Folder Detail View (Shown when a folder is selected) -->
-      <div id="folderView" class="view-container" style="display: none;">
-        <div class="view-main">
-          <!-- Folder Header -->
-          <div class="folder-header-card">
-            <div class="folder-header-top">
-              <div class="folder-title-wrapper">
-                <span class="folder-header-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        <div
+          class="editor-text-field-picker"
+          id="editorParagraphPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert paragraph field"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert paragraph field</strong
+                ><small>Add a multiline value to your shortcut.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorParagraphClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorParagraphLabel"
+              >Name <span>(optional)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorParagraphLabel"
+              type="text"
+              placeholder="e.g. Message"
+            />
+            <label class="editor-modal-label" for="editorParagraphDefault"
+              >Default value <span>(optional)</span></label
+            >
+            <textarea
+              class="editor-modal-input editor-modal-textarea"
+              id="editorParagraphDefault"
+              rows="5"
+              placeholder="Enter default text"
+            ></textarea>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorParagraphCancel"
+              >
+                Cancel</button
+              ><button
+                type="button"
+                class="btn btn-primary"
+                id="editorParagraphInsert"
+              >
+                Insert field
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorRadioPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert radio button field"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert radio button</strong
+                ><small>Add selectable options to your shortcut.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorRadioClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorRadioLabel"
+              >Name <span>(optional)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorRadioLabel"
+              type="text"
+              placeholder="e.g. Priority"
+            />
+            <label class="editor-modal-label" for="editorRadioOptions"
+              >Options <span>(one per line)</span></label
+            >
+            <textarea
+              class="editor-modal-input editor-modal-textarea"
+              id="editorRadioOptions"
+              rows="5"
+              placeholder="Low&#10;Medium&#10;High"
+            ></textarea>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorRadioCancel"
+              >
+                Cancel</button
+              ><button
+                type="button"
+                class="btn btn-primary"
+                id="editorRadioInsert"
+              >
+                Insert radio
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorFormulaPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert formula"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert dynamic formula</strong>
+                <small>Use numbers and basic arithmetic operators only.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorFormulaClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorFormulaInput"
+              >Formula</label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorFormulaInput"
+              type="text"
+              inputmode="decimal"
+              placeholder="e.g. 7 * 8"
+            />
+            <div
+              id="editorFormulaError"
+              style="
+                display: none;
+                margin-top: 6px;
+                color: #c0392b;
+                font-size: 12px;
+              "
+            >
+              Only numeric expressions are allowed.
+            </div>
+            <label class="editor-modal-label" for="editorFormulaFormat"
+              >Format <span>(optional)</span></label
+            >
+            <select class="editor-modal-input" id="editorFormulaFormat">
+              <option value="">Default</option>
+              <option value="integer">Whole number</option>
+              <option value="2-decimals">2 decimal places</option>
+              <option value="currency">Currency</option>
+            </select>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorFormulaCancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="editorFormulaInsert"
+              >
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorImportSnippetPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Import snippet"
+        >
+          <div class="editor-import-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Import snippet</strong
+                ><small
+                  >Select an existing shortcut to insert its content
+                  here.</small
+                >
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorImportSnippetClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <input
+              class="editor-modal-input"
+              id="editorImportSnippetSearch"
+              type="search"
+              placeholder="Search snippets..."
+              autocomplete="off"
+            />
+            <div class="editor-import-list" id="editorImportSnippetList"></div>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorImportSnippetCancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Try It Modal -->
+        <div class="try-it-overlay" id="tryItOverlay" style="display: none">
+          <div
+            class="try-it-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tryItHeading"
+          >
+            <div class="try-it-header">
+              <h3 id="tryItHeading">Try It Out</h3>
+              <button class="btn-close" id="closeTryItBtn" aria-label="Close">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="try-it-content">
+              <div class="try-it-info">
+                <p class="try-it-label">
+                  Trigger: <code id="tryItTrigger"></code>
+                </p>
+                <p class="try-it-preview-label">Preview:</p>
+                <div class="try-it-preview" id="tryItPreview"></div>
+              </div>
+            </div>
+            <div class="try-it-footer">
+              <button class="btn btn-secondary" id="closeTryItBtnFooter">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shortcuts Section -->
+        <section class="section" id="sectionShortcuts">
+          <!-- Top Bar -->
+          <div class="top-bar">
+            <div class="top-bar-left">
+              <h2 class="page-title">My Shortcuts</h2>
+              <span class="badge" id="shortcutCount">0</span>
+            </div>
+            <div class="top-bar-right">
+              <button
+                class="btn btn-bulk-delete"
+                id="bulkDeleteBtn"
+                style="display: none"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  ></path>
+                </svg>
+                <span class="btn-label">Delete All</span>
+              </button>
+              <div class="search-container">
+                <svg
+                  class="search-icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <label for="searchInput" class="sr-only"
+                  >Search shortcuts</label
+                >
+                <input
+                  type="text"
+                  class="search-input"
+                  id="searchInput"
+                  placeholder="Search shortcuts..."
+                  autocomplete="off"
+                />
+              </div>
+              <button class="btn btn-primary" id="addNewBtn">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span class="btn-label">New Shortcut</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Add/Edit Form Modal -->
+          <div class="form-overlay" id="formOverlay" style="display: none">
+            <div
+              class="form-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="formTitle"
+            >
+              <div class="form-modal-header">
+                <h3 class="form-title" id="formTitle">Add New Shortcut</h3>
+                <button class="btn-close" id="closeFormBtn" aria-label="Close">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
-                </span>
-                <input type="text" class="folder-title-input" id="folderViewTitle" value="Folder Name">
+                </button>
               </div>
-              <div class="folder-header-actions">
-                <button class="btn btn-primary" id="folderNewSnippetBtn">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+
+              <div class="form-body">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="triggerInput"
+                      >Shortcut Trigger</label
+                    >
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="triggerInput"
+                      placeholder="e.g., -hbd"
+                    />
+                    <span class="form-hint"
+                      >Start with a symbol like <code>-</code> <code>/</code>
+                      <code>;</code></span
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="labelInput"
+                      >Label <span class="optional">(optional)</span></label
+                    >
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="labelInput"
+                      placeholder="e.g., Birthday Wish"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="expansionInput"
+                    >Expanded Text</label
+                  >
+                  <div class="textarea-wrapper">
+                    <div
+                      class="form-textarea rich-editor"
+                      id="expansionInput"
+                      contenteditable="true"
+                      data-placeholder="Type the full text that should replace your shortcut..."
+                      spellcheck="true"
+                      role="textbox"
+                      aria-multiline="true"
+                      aria-label="Expanded text"
+                    ></div>
+                    <div id="format-container">
+                      <button
+                        class="profile-token-btn"
+                        id="profileTokenBtn"
+                        type="button"
+                        title="Insert profile tokens"
+                        aria-label="Insert profile tokens"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                      >
+                        <img
+                          id="editorProfileAvatar"
+                          class="profile-avatar"
+                          src=""
+                          alt=""
+                          style="display: none"
+                        />
+                        <div
+                          id="editorProfileAvatarFallback"
+                          class="profile-avatar-fallback"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path
+                              d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                            ></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                        </div>
+                      </button>
+                      <div class="form-texteditor">
+                        <div
+                          class="text-format-toolbar"
+                          role="toolbar"
+                          aria-label="Text formatting"
+                        >
+                          <button
+                            class="fmt-btn"
+                            id="fmtBold"
+                            type="button"
+                            title="Bold"
+                            aria-label="Bold"
+                          >
+                            <b>B</b>
+                          </button>
+                          <button
+                            class="fmt-btn"
+                            id="fmtItalic"
+                            type="button"
+                            title="Italic"
+                            aria-label="Italic"
+                          >
+                            <i>I</i>
+                          </button>
+                          <button
+                            class="fmt-btn"
+                            id="fmtUnderline"
+                            type="button"
+                            title="Underline"
+                            aria-label="Underline"
+                          >
+                            <u>U</u>
+                          </button>
+                          <button
+                            class="fmt-btn fmt-btn-emoji"
+                            id="fmtEmoji"
+                            type="button"
+                            title="Emoji"
+                            aria-label="Insert emoji"
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        class="profile-dropdown"
+                        id="profileDropdown"
+                        style="display: none"
+                        role="menu"
+                      >
+                        <div
+                          class="profile-dropdown-item"
+                          data-token="{{first_name}}"
+                          role="menuitem"
+                          tabindex="0"
+                        >
+                          <div class="profile-dropdown-item-left">
+                            <span class="profile-dropdown-item-label"
+                              >First Name</span
+                            >
+                            <span
+                              class="profile-dropdown-item-preview"
+                              id="editorPreviewFirstName"
+                            ></span>
+                          </div>
+                          <code class="profile-dropdown-token"
+                            >{{first_name}}</code
+                          >
+                        </div>
+                        <div
+                          class="profile-dropdown-item"
+                          data-token="{{last_name}}"
+                          role="menuitem"
+                          tabindex="0"
+                        >
+                          <div class="profile-dropdown-item-left">
+                            <span class="profile-dropdown-item-label"
+                              >Last Name</span
+                            >
+                            <span
+                              class="profile-dropdown-item-preview"
+                              id="editorPreviewLastName"
+                            ></span>
+                          </div>
+                          <code class="profile-dropdown-token"
+                            >{{last_name}}</code
+                          >
+                        </div>
+                        <div
+                          class="profile-dropdown-item"
+                          data-token="{{first_name}} {{last_name}}"
+                          role="menuitem"
+                          tabindex="0"
+                        >
+                          <div class="profile-dropdown-item-left">
+                            <span class="profile-dropdown-item-label"
+                              >Full name</span
+                            >
+                            <span
+                              class="profile-dropdown-item-preview"
+                              id="editorPreviewFullName"
+                            ></span>
+                          </div>
+                          <code class="profile-dropdown-token"
+                            >{{full_name}}</code
+                          >
+                        </div>
+                        <div
+                          class="profile-dropdown-item"
+                          data-token="{{email}}"
+                          role="menuitem"
+                          tabindex="0"
+                        >
+                          <div class="profile-dropdown-item-left">
+                            <span class="profile-dropdown-item-label"
+                              >Email</span
+                            >
+                            <span
+                              class="profile-dropdown-item-preview"
+                              id="editorPreviewEmail"
+                            ></span>
+                          </div>
+                          <code class="profile-dropdown-token">{{email}}</code>
+                        </div>
+                      </div>
+
+                      <div
+                        class="emoji-picker"
+                        id="emojiPicker"
+                        role="menu"
+                        aria-label="Emoji picker"
+                      ></div>
+                    </div>
+                  </div>
+                  <span class="form-hint"
+                    >Supports multi-line text. Press <code>Ctrl+Enter</code> to
+                    save. Click the profile icon to insert tokens.</span
+                  >
+                </div>
+
+                <div
+                  class="form-error"
+                  id="formError"
+                  style="display: none"
+                  role="alert"
+                ></div>
+              </div>
+
+              <div class="form-modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">
+                  Save Shortcut
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulk Delete Modal -->
+          <div
+            class="form-overlay"
+            id="bulkDeleteOverlay"
+            style="display: none"
+          >
+            <div
+              class="confirm-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="bulkDeleteTitle"
+            >
+              <div class="confirm-icon">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#e74c3c"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <h3 class="confirm-title" id="bulkDeleteTitle">
+                Delete All Shortcuts?
+              </h3>
+              <p class="confirm-message">
+                This will permanently delete
+                <strong id="bulkDeleteCount">0</strong> shortcut(s). This action
+                cannot be undone.
+              </p>
+              <div class="confirm-actions">
+                <button class="btn btn-secondary" id="bulkDeleteCancelBtn">
+                  Cancel
+                </button>
+                <button class="btn btn-danger" id="bulkDeleteConfirmBtn">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    ></path>
+                  </svg>
+                  Yes, Delete All
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Premium Upgrade Modal -->
+          <div
+            class="form-overlay"
+            id="premiumOverlay"
+            data-membership-section
+            style="display: none"
+          >
+            <div
+              class="premium-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="premiumTitle"
+            >
+              <button
+                class="btn-close premium-close"
+                id="closePremiumBtn"
+                aria-label="Close"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <!-- Premium Header -->
+              <div class="premium-header">
+                <!-- <div class="premium-badge">👑</div> -->
+                <h2 class="premium-title" id="premiumTitle">
+                  Upgrade to Premium
+                </h2>
+                <p class="premium-subtitle">Unlock the full power of ColixAI</p>
+              </div>
+
+              <!-- Billing Toggle -->
+              <div class="billing-toggle">
+                <span class="billing-option" id="billingMonthlyLabel"
+                  >Monthly</span
+                >
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    id="billingToggle"
+                    aria-label="Toggle yearly billing"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="billing-option" id="billingYearlyLabel">
+                  Yearly
+                  <span class="save-badge">Save 15%</span>
+                </span>
+              </div>
+
+              <!-- Pricing Card -->
+              <div class="pricing-card">
+                <div class="pricing-card-header">
+                  <span class="pricing-plan">Premium</span>
+                  <div class="pricing-amount">
+                    <span class="pricing-currency">$</span>
+                    <span class="pricing-price" id="pricingPrice">5.99</span>
+                    <span class="pricing-period" id="pricingPeriod"
+                      >/month</span
+                    >
+                  </div>
+                </div>
+
+                <div class="pricing-features">
+                  <div class="pricing-feature">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#2ecc71"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Unlimited shortcut creation</span>
+                  </div>
+                  <div class="pricing-feature">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#2ecc71"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Priority support</span>
+                  </div>
+                </div>
+
+                <button class="pricing-cta" id="premiumBuyBtn">
+                  Get Premium Now
+                </button>
+
+                <p class="pricing-note">
+                  Cancel anytime. 7-day money-back guarantee.
+                </p>
+              </div>
+
+              <!-- Free Plan Comparison -->
+              <div class="free-comparison">
+                <span class="free-comparison-label"
+                  >Currently on Free Plan</span
+                >
+                <span
+                  class="free-comparison-detail"
+                  id="free-plan-limit-display"
+                  >5 shortcuts • Basic features</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Info details -->
+          <div class="magicaa-notification-bar" data-membership-section hidden>
+            <div class="magicaa-notification-content">
+              <span class="magicaa-notification-text">
+                Maximum of
+                <strong id="shortcut-limit-display">10 Shortcuts</strong> can be
+                added in the Trial Version.
+                <a href="#" id="magicaa-upgrade-link">Upgrade Now</a>
+                to unlock unlimited shortcuts.
+              </span>
+            </div>
+          </div>
+
+          <!-- Welcome View (Default when no folder or all shortcuts view) -->
+          <div id="welcomeView" class="view-container">
+            <div class="view-main">
+              <h1 class="welcome-title">Welcome to ColixAI</h1>
+              <p class="welcome-subtitle">
+                Type a shortcut trigger below (or try typing <code>-ty</code> or
+                <code>/sig</code>). It will instantly expand into text!
+              </p>
+
+              <div class="playground-card">
+                <label for="welcomePlayground" class="sr-only">Test Area</label>
+                <textarea
+                  id="welcomePlayground"
+                  class="welcome-playground"
+                  placeholder="Type here to test your shortcuts live... (e.g. -ty)"
+                ></textarea>
+              </div>
+
+              <p class="welcome-info-text">
+                Your shortcuts insert snippets
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1dac4b"
+                  stroke-width="2"
+                  style="vertical-align: middle; display: inline-block"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                and will work on any website. You can also right-click on text
+                boxes to select a snippet from the context menu.
+              </p>
+
+              <div class="welcome-quick-actions">
+                <span class="quick-actions-label">Quick Actions:</span>
+                <button class="btn btn-primary" id="welcomeNewSnippetBtn">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
-                  New Snippet
+                  New snippet
+                </button>
+                <button class="btn btn-secondary" id="welcomeNewFolderBtn">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                    ></path>
+                    <line x1="12" y1="11" x2="12" y2="17"></line>
+                    <line x1="9" y1="14" x2="15" y2="14"></line>
+                  </svg>
+                  + New folder
                 </button>
               </div>
             </div>
 
-            <!-- Editable Description Box -->
-            <div class="folder-description-box">
-              <textarea id="folderViewDescription" class="folder-description-textarea"
-                placeholder="These are some sample snippets to get you started. You can edit these snippets or create new ones."></textarea>
-            </div>
+            <!-- Right Side Panel: Want to learn more? -->
+            <aside class="view-sidebar">
+              <div class="sidebar-card">
+                <h3 class="sidebar-card-title">Want to learn more?</h3>
+                <ul class="sidebar-links-list">
+                  <li>
+                    <a href="#" class="sidebar-link" id="linkDocs">
+                      <div class="sidebar-link-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#1dac4b"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong>ColixAI Documentation</strong>
+                        <span>Guides and references</span>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="sidebar-link" id="linkFaq">
+                      <div class="sidebar-link-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#1dac4b"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong>ColixAI FAQ</strong>
+                        <span>Frequently asked questions</span>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="sidebar-link" id="linkCommunity">
+                      <div class="sidebar-link-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#1dac4b"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                          ></path>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong>Community Forums</strong>
+                        <span>Ask questions and suggest features</span>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" class="sidebar-link" id="linkSupport">
+                      <div class="sidebar-link-icon">
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#1dac4b"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path
+                            d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                          ></path>
+                          <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                      </div>
+                      <div>
+                        <strong>Email the team</strong>
+                        <span>support@kbizsoft.com</span>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+                <div class="sidebar-mascot">
+                  <img
+                    src="../icons/logo.png"
+                    alt="ColixAI Mascot"
+                    class="mascot-img"
+                  />
+                </div>
+              </div>
+            </aside>
           </div>
 
-          <!-- Folder Snippets Grid -->
-          <div class="shortcuts-grid" id="folderItemsList"></div>
+          <!-- Folder Detail View (Shown when a folder is selected) -->
+          <div id="folderView" class="view-container" style="display: none">
+            <div class="view-main">
+              <!-- Folder Header -->
+              <div class="folder-header-card">
+                <div class="folder-header-top">
+                  <div class="folder-title-wrapper">
+                    <span class="folder-header-icon">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#1dac4b"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path
+                          d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                        ></path>
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      class="folder-title-input"
+                      id="folderViewTitle"
+                      value="Folder Name"
+                    />
+                  </div>
+                  <div class="folder-header-actions">
+                    <button class="btn btn-primary" id="folderNewSnippetBtn">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                      >
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      New Snippet
+                    </button>
+                  </div>
+                </div>
 
-          <!-- Empty Folder State -->
-          <div class="empty-state" id="folderEmptyState" style="display: none;">
+                <!-- Editable Description Box -->
+                <div class="folder-description-box">
+                  <textarea
+                    id="folderViewDescription"
+                    class="folder-description-textarea"
+                    placeholder="These are some sample snippets to get you started. You can edit these snippets or create new ones."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Folder Snippets Grid -->
+              <div class="shortcuts-grid" id="folderItemsList"></div>
+
+              <!-- Empty Folder State -->
+              <div
+                class="empty-state"
+                id="folderEmptyState"
+                style="display: none"
+              >
+                <div class="empty-illustration">
+                  <svg
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ccc"
+                    stroke-width="1.5"
+                  >
+                    <path
+                      d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                    ></path>
+                  </svg>
+                </div>
+                <h3>This folder is empty</h3>
+                <p>Add snippets or forms to keep your shortcuts organized.</p>
+                <button class="btn btn-primary" id="folderEmptyAddBtn">
+                  + Create Snippet in Folder
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Side Panel: Folder Options -->
+            <aside class="view-sidebar">
+              <div class="sidebar-card">
+                <h3 class="sidebar-card-title">Folder options</h3>
+
+                <div class="folder-option-group">
+                  <label class="folder-option-label">Snippets trigger</label>
+                  <select class="folder-option-select" id="folderOptionTrigger">
+                    <option value="word_break">Started by word break</option>
+                    <option value="anywhere">Trigger anywhere</option>
+                  </select>
+                </div>
+
+                <hr class="sidebar-divider" />
+
+                <button class="sidebar-action-btn danger" id="folderDeleteBtn">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    ></path>
+                  </svg>
+                  <span>Delete folder...</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Shortcuts Grid Loader / Search No Results -->
+          <div class="empty-state" id="noResults" style="display: none">
             <div class="empty-illustration">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              <svg
+                width="80"
+                height="80"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#ddd"
+                stroke-width="1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
             </div>
-            <h3>This folder is empty</h3>
-            <p>Add snippets or forms to keep your shortcuts organized.</p>
-            <button class="btn btn-primary" id="folderEmptyAddBtn">+ Create Snippet in Folder</button>
+            <h3>No results found</h3>
+            <p>Try a different search term.</p>
           </div>
-        </div>
+        </section>
 
-        <!-- Right Side Panel: Folder Options -->
-        <aside class="view-sidebar">
-          <div class="sidebar-card">
-            <h3 class="sidebar-card-title">Folder options</h3>
-
-            <div class="folder-option-group">
-              <label class="folder-option-label">Snippets trigger</label>
-              <select class="folder-option-select" id="folderOptionTrigger">
-                <option value="word_break">Started by word break</option>
-                <option value="anywhere">Trigger anywhere</option>
-              </select>
+        <!-- Forms Section -->
+        <section class="section" id="sectionForms" style="display: none">
+          <div class="top-bar">
+            <div class="top-bar-left">
+              <h2 class="page-title">My Forms</h2>
+              <span class="badge" id="formCount">0</span>
             </div>
+            <div class="top-bar-right">
+              <button class="btn btn-primary" id="addFormBtn">
+                + New Form
+              </button>
+            </div>
+          </div>
 
-            <hr class="sidebar-divider">
+          <div class="magicaa-notification-bar" data-membership-section hidden>
+            <div class="magicaa-notification-content">
+              <span class="magicaa-notification-text">
+                Maximum of <strong id="form-limit-display">10 Forms</strong> can
+                be added in the Trial Version.
+                <a href="#" id="magicaa-forms-upgrade-link">Upgrade Now</a>
+                to unlock unlimited forms.
+              </span>
+            </div>
+          </div>
 
-            <button class="sidebar-action-btn danger" id="folderDeleteBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <div
+            class="form-overlay"
+            id="formBuilderOverlay"
+            style="display: none"
+          >
+            <div
+              class="form-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="formBuilderTitle"
+            >
+              <div class="form-modal-header">
+                <h3 class="form-title" id="formBuilderTitle">
+                  Create Form Shortcut
+                </h3>
+                <button
+                  class="btn-close"
+                  id="closeFormBuilderBtn"
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+              </div>
+              <div class="form-body">
+                <div class="form-group">
+                  <label class="form-label">Choose a Form Template</label>
+                  <div id="formTemplateCards" class="form-template-cards"></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="formTriggerInput"
+                      >Form Trigger</label
+                    >
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="formTriggerInput"
+                      placeholder="e.g., /contact"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="formLabelInput"
+                      >Label <span class="optional">(optional)</span></label
+                    >
+                    <input
+                      type="text"
+                      class="form-input"
+                      id="formLabelInput"
+                      placeholder="e.g., Client Contact"
+                    />
+                  </div>
+                </div>
+                <div class="form-hint" id="formFieldsPreview"></div>
+                <div
+                  class="form-error"
+                  id="formBuilderError"
+                  style="display: none"
+                  role="alert"
+                ></div>
+              </div>
+              <div class="form-modal-footer">
+                <button class="btn btn-secondary" id="cancelFormBuilderBtn">
+                  Cancel
+                </button>
+                <button class="btn btn-primary" id="saveFormBtn">
+                  Save Form
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="shortcuts-grid" id="formsList"></div>
+          <div class="empty-state" id="formsEmptyState" style="display: none">
+            <div class="empty-illustration">
+              <svg
+                width="64"
+                height="64"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#1dac4b"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
               </svg>
-              <span>Delete folder...</span>
+            </div>
+            <h3>No forms yet</h3>
+            <p>
+              Create a reusable form that can be filled while you type on a
+              rich-text editor.
+            </p>
+            <button class="btn btn-primary" id="emptyAddFormBtn">
+              Create First Form
             </button>
           </div>
-        </aside>
-      </div>
+        </section>
 
-      <!-- Shortcuts Grid Loader / Search No Results -->
-      <div class="empty-state" id="noResults" style="display: none;">
-        <div class="empty-illustration">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1"
-            stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </div>
-        <h3>No results found</h3>
-        <p>Try a different search term.</p>
-      </div>
-
-    </section>
-
-    <!-- Forms Section -->
-    <section class="section" id="sectionForms" style="display: none;">
-      <div class="top-bar">
-        <div class="top-bar-left">
-          <h2 class="page-title">My Forms</h2>
-          <span class="badge" id="formCount">0</span>
-        </div>
-        <div class="top-bar-right">
-          <button class="btn btn-primary" id="addFormBtn">+ New Form</button>
-        </div>
-      </div>
-
-      <div class="magicaa-notification-bar" data-membership-section>
-        <div class="magicaa-notification-content">
-          <span class="magicaa-notification-text">
-            Maximum of <strong id="form-limit-display">10 Forms</strong> can be added in the Trial Version.
-            <a href="#" id="magicaa-forms-upgrade-link">Upgrade Now</a>
-            to unlock unlimited forms.
-          </span>
-        </div>
-      </div>
-
-      <div class="form-overlay" id="formBuilderOverlay" style="display: none;">
-        <div class="form-modal" role="dialog" aria-modal="true" aria-labelledby="formBuilderTitle">
-          <div class="form-modal-header">
-            <h3 class="form-title" id="formBuilderTitle">Create Form Shortcut</h3>
-            <button class="btn-close" id="closeFormBuilderBtn" aria-label="Close">&times;</button>
+        <!-- Help Section -->
+        <section class="section" id="sectionHelp" style="display: none">
+          <div class="top-bar">
+            <h2 class="page-title">How to Use ColixAI</h2>
           </div>
-          <div class="form-body">
-            <div class="form-group">
-              <label class="form-label">Choose a Form Template</label>
-              <div id="formTemplateCards" class="form-template-cards"></div>
+
+          <div class="help-content">
+            <div class="help-card">
+              <div class="help-step">1</div>
+              <h4>Create a Shortcut</h4>
+              <p>
+                Click "New Shortcut" and set a trigger like
+                <code>-hbd</code> and the text it should expand to.
+              </p>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label" for="formTriggerInput">Form Trigger</label>
-                <input type="text" class="form-input" id="formTriggerInput" placeholder="e.g., /contact">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="formLabelInput">Label <span class="optional">(optional)</span></label>
-                <input type="text" class="form-input" id="formLabelInput" placeholder="e.g., Client Contact">
-              </div>
+            <div class="help-card">
+              <div class="help-step">2</div>
+              <h4>Type Anywhere</h4>
+              <p>
+                Go to any website and type your trigger in any text field,
+                textarea, or editable area.
+              </p>
             </div>
-            <div class="form-hint" id="formFieldsPreview"></div>
-            <div class="form-error" id="formBuilderError" style="display: none;" role="alert"></div>
+            <div class="help-card">
+              <div class="help-step">3</div>
+              <h4>Instant Expansion</h4>
+              <p>
+                Your shortcut is instantly replaced with the full text. No extra
+                keys needed!
+              </p>
+            </div>
+            <div class="help-card">
+              <div class="help-step">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1dac4b"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M8.5 14.5A2.5 2.5 0 0 0 11 17h2a2.5 2.5 0 0 0 2.5-2.5c0-1.3-.8-2.4-2-2.8L12 11"
+                  ></path>
+                  <line x1="12" y1="9" x2="12.01" y2="9"></line>
+                  <path d="M9 18h6"></path>
+                  <path d="M10 22h4"></path>
+                </svg>
+              </div>
+              <h4>Tips</h4>
+              <ul>
+                <li>
+                  Start triggers with <code>-</code> <code>/</code>
+                  <code>;</code> or <code>!</code> to avoid accidental triggers
+                </li>
+                <li>
+                  Type <code>//</code> in any field to open the shortcut picker
+                  menu
+                </li>
+                <li>
+                  Use <code>{{first_name}}</code>, <code>{{last_name}}</code>,
+                  <code>{{email}}</code> for dynamic tokens
+                </li>
+                <li>Use multi-line text for email templates and signatures</li>
+                <li>
+                  Triggers are case-sensitive: <code>-HBD</code> ≠
+                  <code>-hbd</code>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div class="form-modal-footer">
-            <button class="btn btn-secondary" id="cancelFormBuilderBtn">Cancel</button>
-            <button class="btn btn-primary" id="saveFormBtn">Save Form</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="shortcuts-grid" id="formsList"></div>
-      <div class="empty-state" id="formsEmptyState" style="display: none;">
-        <div class="empty-illustration">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="1.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-        </div>
-        <h3>No forms yet</h3>
-        <p>Create a reusable form that can be filled while you type on a rich-text editor.</p>
-        <button class="btn btn-primary" id="emptyAddFormBtn">Create First Form</button>
-      </div>
-    </section>
-
-    <!-- Help Section -->
-    <section class="section" id="sectionHelp" style="display: none;">
-      <div class="top-bar">
-        <h2 class="page-title">How to Use ColixAI</h2>
-      </div>
-
-      <div class="help-content">
-        <div class="help-card">
-          <div class="help-step">1</div>
-          <h4>Create a Shortcut</h4>
-          <p>Click "New Shortcut" and set a trigger like <code>-hbd</code> and the text it should expand to.</p>
-        </div>
-        <div class="help-card">
-          <div class="help-step">2</div>
-          <h4>Type Anywhere</h4>
-          <p>Go to any website and type your trigger in any text field, textarea, or editable area.</p>
-        </div>
-        <div class="help-card">
-          <div class="help-step">3</div>
-          <h4>Instant Expansion</h4>
-          <p>Your shortcut is instantly replaced with the full text. No extra keys needed!</p>
-        </div>
-        <div class="help-card">
-          <div class="help-step">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 17h2a2.5 2.5 0 0 0 2.5-2.5c0-1.3-.8-2.4-2-2.8L12 11"></path>
-              <line x1="12" y1="9" x2="12.01" y2="9"></line>
-              <path d="M9 18h6"></path>
-              <path d="M10 22h4"></path>
-            </svg>
-          </div>
-          <h4>Tips</h4>
-          <ul>
-            <li>Start triggers with <code>-</code> <code>/</code> <code>;</code> or <code>!</code> to avoid accidental
-              triggers</li>
-            <li>Type <code>//</code> in any field to open the shortcut picker menu</li>
-            <li>Use <code>{{first_name}}</code>, <code>{{last_name}}</code>, <code>{{email}}</code> for dynamic tokens
-            </li>
-            <li>Use multi-line text for email templates and signatures</li>
-            <li>Triggers are case-sensitive: <code>-HBD</code> ≠ <code>-hbd</code></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    </main>
-  </div>
-
-  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- Custom Dialog Overlay (Replacing browser alert/prompt/confirm) -->
-  <div class="form-overlay" id="customDialogOverlay" style="display: none;">
-    <div class="form-modal custom-dialog-modal" role="dialog" aria-modal="true">
-      <div class="form-modal-header">
-        <h3 class="form-title" id="customDialogTitle">Title</h3>
-        <button class="btn-close" id="customDialogCloseBtn" aria-label="Close">&times;</button>
-      </div>
-      <div class="form-body">
-        <p id="customDialogMessage" class="custom-dialog-message"></p>
-        <div id="customDialogInputGroup" class="form-group" style="display: none; margin-top: 12px;">
-          <input type="text" id="customDialogInput" class="form-input" placeholder="Type here...">
-        </div>
-      </div>
-      <div class="form-modal-footer">
-        <button class="btn btn-secondary" id="customDialogCancelBtn">Cancel</button>
-        <button class="btn btn-primary" id="customDialogConfirmBtn">OK</button>
-      </div>
+        </section>
+      </main>
     </div>
-  </div>
 
-  <div class="form-overlay" id="shareResourceOverlay" style="display: none;">
-    <div class="form-modal share-resource-modal" role="dialog" aria-modal="true" aria-labelledby="shareResourceTitle">
-      <div class="form-modal-header">
-        <div>
-          <h2 id="shareResourceTitle">Share resource</h2>
-          <p id="shareResourceDescription">Choose workspace members who can access this resource.</p>
+    <div
+      id="toastContainer"
+      class="toast-container"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <!-- Custom Dialog Overlay (Replacing browser alert/prompt/confirm) -->
+    <div class="form-overlay" id="customDialogOverlay" style="display: none">
+      <div
+        class="form-modal custom-dialog-modal"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="form-modal-header">
+          <h3 class="form-title" id="customDialogTitle">Title</h3>
+          <button
+            class="btn-close"
+            id="customDialogCloseBtn"
+            aria-label="Close"
+          >
+            &times;
+          </button>
         </div>
-        <button class="btn-close" id="closeShareResourceBtn" type="button" aria-label="Close">&times;</button>
-      </div>
-      <form id="shareResourceForm">
-        <input class="share-resource-search" id="shareResourceMemberSearch" type="search" placeholder="Search workspace members..." autocomplete="off">
-        <div class="share-resource-members" id="shareResourceMembers"></div>
-        <p class="share-resource-error" id="shareResourceError" role="alert"></p>
+        <div class="form-body">
+          <p id="customDialogMessage" class="custom-dialog-message"></p>
+          <div
+            id="customDialogInputGroup"
+            class="form-group"
+            style="display: none; margin-top: 12px"
+          >
+            <input
+              type="text"
+              id="customDialogInput"
+              class="form-input"
+              placeholder="Type here..."
+            />
+          </div>
+        </div>
         <div class="form-modal-footer">
-          <button class="btn btn-secondary" id="cancelShareResourceBtn" type="button">Cancel</button>
-          <button class="btn btn-primary" type="submit">Share resource</button>
+          <button class="btn btn-secondary" id="customDialogCancelBtn">
+            Cancel
+          </button>
+          <button class="btn btn-primary" id="customDialogConfirmBtn">
+            OK
+          </button>
         </div>
-      </form>
+      </div>
     </div>
-  </div>
 
-  <script src="../utils/supabase-config.js"></script>
-  <script src="../utils/supabase-client.js"></script>
-  <script src="../utils/auth-manager.js"></script>
-  <script src="../utils/sync-manager.js"></script>
-  <script src="../utils/storage.js"></script>
-  <script src="header/header.js"></script>
-  <script src="sidebar-manager.js"></script>
-  <script src="dashboard.js"></script>
-</body>
+    <div class="form-overlay" id="shareResourceOverlay" style="display: none">
+      <div
+        class="form-modal share-resource-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shareResourceTitle"
+      >
+        <div class="form-modal-header">
+          <div>
+            <h2 id="shareResourceTitle">Share resource</h2>
+            <p id="shareResourceDescription">
+              Choose workspace members who can access this resource.
+            </p>
+          </div>
+          <button
+            class="btn-close"
+            id="closeShareResourceBtn"
+            type="button"
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
+        <form id="shareResourceForm">
+          <input
+            class="share-resource-search"
+            id="shareResourceMemberSearch"
+            type="search"
+            placeholder="Search workspace members..."
+            autocomplete="off"
+          />
+          <div class="share-resource-members" id="shareResourceMembers"></div>
+          <p
+            class="share-resource-error"
+            id="shareResourceError"
+            role="alert"
+          ></p>
+          <div class="form-modal-footer">
+            <button
+              class="btn btn-secondary"
+              id="cancelShareResourceBtn"
+              type="button"
+            >
+              Cancel
+            </button>
+            <button class="btn btn-primary" type="submit">
+              Share resource
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
+    <script src="../utils/supabase-config.js"></script>
+    <script src="../utils/supabase-client.js"></script>
+    <script src="../utils/auth-manager.js"></script>
+    <script src="../utils/sync-manager.js"></script>
+    <script src="../utils/storage.js"></script>
+    <script src="header.js"></script>
+    <script src="sidebar-manager.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
 </html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ColixAI - Workspace</title>
   <link rel="stylesheet" href="workspace.css">
-  <link rel="stylesheet" href="../header/header.css">
+  <link rel="stylesheet" href="header.css">
 </head>
 <body>
   <div id="header-container"></div>
@@ -16,7 +16,15 @@
         <h1>Members and access</h1>
         <p class="workspace-intro">Invite people to collaborate on shared snippets, forms, and folders.</p>
       </div>
-      <button class="workspace-primary-btn" id="inviteUserBtn" type="button" hidden>Invite user</button>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#4e5d57;">
+          <span>Workspace</span>
+          <select id="workspaceSelector" style="min-width:220px; padding:8px 10px; border:1px solid #d8e1dd; border-radius:8px; background:#fff; font:inherit;">
+            <option value="">Loading...</option>
+          </select>
+        </label>
+        <button class="workspace-primary-btn" id="inviteUserBtn" type="button" hidden>Invite user</button>
+      </div>
     </header>
     <section class="workspace-notice" id="workspaceNotice" role="status" aria-live="polite"></section>
     <section class="workspace-panel invite-panel" id="invitePanel" hidden>
@@ -55,7 +63,7 @@
       <div class="workspace-pagination" aria-label="Pagination"><button class="workspace-secondary-btn" id="workspacePrevious" type="button">Previous</button><span id="workspacePageSummary">Page 1 of 1</span><button class="workspace-secondary-btn" id="workspaceNext" type="button">Next</button></div>
     </section>
   </main>
-  <script src="../header/header.js"></script>
+  <script src="header.js"></script>
   <div class="workspace-modal-backdrop" id="workspaceShareModal" hidden>
     <section class="workspace-modal" role="dialog" aria-modal="true" aria-labelledby="workspaceShareTitle">
       <div class="workspace-modal-heading"><div><h2 id="workspaceShareTitle">Edit folder access</h2><p id="workspaceShareName"></p></div><button class="workspace-modal-close" id="closeWorkspaceShare" type="button" aria-label="Close">&times;</button></div>

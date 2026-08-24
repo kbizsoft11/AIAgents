@@ -9,7 +9,7 @@ const StorageHelper = {
   API_GET_CREDIT_TOKEN: 'api_get_credit_token.php',
   API_GET_MEMBERSHIP_STATUS: 'api_get_membership_status.php',
 
-  // Helper to normalize keys on items from local storage
+  // Helper to normalize keys returned by the workspace API
   normalizeItem(item) {
     if (!item || typeof item !== 'object') return item;
     const normalized = { ...item };
@@ -36,36 +36,19 @@ const StorageHelper = {
 
   // Get all shortcuts
   async getAll() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get({ shortcuts: [] }, (result) => {
-        const shortcuts = (result.shortcuts || []).map(s => this.normalizeItem(s));
-        resolve(shortcuts);
-      });
-    });
+    return (await getSyncManager().getLocalShortcuts()).map(s => this.normalizeItem(s));
   },
 
   async getAllForms() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get({ forms: [] }, (result) => {
-        const forms = (result.forms || []).map(f => this.normalizeItem(f));
-        resolve(forms);
-      });
-    });
+    return (await getSyncManager().getLocalForms()).map(f => this.normalizeItem(f));
   },
 
   async getAllFolders() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get({ folders: [] }, (result) => {
-        const folders = (result.folders || []).map(f => this.normalizeItem(f));
-        resolve(folders);
-      });
-    });
+    return (await getSyncManager().getLocalFolders()).map(f => this.normalizeItem(f));
   },
 
   async saveAllFolders(folders) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ folders }, resolve);
-    });
+    return folders;
   },
 
   /**
@@ -110,22 +93,21 @@ const StorageHelper = {
     try {
       const response = await fetch(`${this.API_BASE_URL}/${this.API_GET_MEMBERSHIP_STATUS}`);
       if (!response.ok) {
-        console.warn('Failed to fetch membership section setting, keeping it enabled');
-        return true;
+        throw new Error(`Membership status request failed: ${response.status}`);
       }
 
       const data = await response.json();
       if (data.success && typeof data.membership_section_enabled === 'boolean') {
-        await chrome.storage.local.set({ membershipSectionEnabled: data.membership_section_enabled });
+        this.membershipSectionEnabled = data.membership_section_enabled;
         return data.membership_section_enabled;
       }
 
-      console.warn('Invalid membership section API response, keeping it enabled');
+      throw new Error('Invalid membership status API response');
     } catch (error) {
       console.error('Error fetching membership section setting:', error);
     }
 
-    return true;
+    return this.membershipSectionEnabled !== false;
   },
 
   /**
@@ -158,25 +140,12 @@ const StorageHelper = {
         // console.log(`✅ Free user detected - Limit set to ${freeLimitToken} shortcuts`);
       }
 
-      // Store the limit in chrome storage for reference
-      await chrome.storage.local.set({
-        maxShortcutsLimit: this.MAX_SHORTCUTS,
-        isPremiumUser: isPremium,
-        freeLimitToken: freeLimitToken,
-        lastLimitCheck: new Date().toISOString()
-      });
+      this.isPremiumUser = isPremium;
+      this.freeLimitToken = freeLimitToken;
 
     } catch (e) {
       console.error('Error checking user status:', e);
-      // Fallback to stored limit or default
-      const stored = await chrome.storage.local.get(['maxShortcutsLimit', 'freeLimitToken']);
-      if (stored.maxShortcutsLimit) {
-        this.MAX_SHORTCUTS = stored.maxShortcutsLimit;
-      } else if (stored.freeLimitToken) {
-        this.MAX_SHORTCUTS = stored.freeLimitToken;
-      } else {
-        this.MAX_SHORTCUTS = this.DEFAULT_FREE_LIMIT;
-      }
+      this.MAX_SHORTCUTS = this.DEFAULT_FREE_LIMIT;
       console.warn(`⚠️ Using fallback limit: ${this.MAX_SHORTCUTS}`);
     }
 
@@ -185,15 +154,19 @@ const StorageHelper = {
 
   // Save all shortcuts
   async saveAll(shortcuts) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ shortcuts }, resolve);
-    });
+    if (shortcuts.length === 0) {
+      const current = await this.getAll();
+      await Promise.all(current.map(shortcut => getSyncManager().queueSync('delete', 'shortcut', shortcut.id, null)));
+    }
+    return shortcuts;
   },
 
   async saveAllForms(forms) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ forms }, resolve);
-    });
+    if (forms.length === 0) {
+      const current = await this.getAllForms();
+      await Promise.all(current.map(form => getSyncManager().queueSync('delete', 'form', form.id, null)));
+    }
+    return forms;
   },
 
   // Check if limit reached
@@ -266,12 +239,6 @@ const StorageHelper = {
       updatedAt: new Date().toISOString()
     };
 
-    shortcuts[index] = {
-      ...shortcuts[index],
-      ...nextUpdates
-    };
-    await this.saveAll(shortcuts);
-
     // Queue and sync to Supabase
     try {
       const syncMgr = getSyncManager();
@@ -279,9 +246,10 @@ const StorageHelper = {
       await syncMgr.syncAll(); // Sync immediately
     } catch (error) {
       console.warn('Could not sync:', error);
+      throw error;
     }
 
-    return shortcuts[index];
+    return { ...shortcuts[index], ...nextUpdates };
   },
 
   async updateForm(id, updates) {
@@ -294,21 +262,16 @@ const StorageHelper = {
       updatedAt: new Date().toISOString()
     };
 
-    forms[index] = {
-      ...forms[index],
-      ...nextUpdates
-    };
-    await this.saveAllForms(forms);
-
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('update', 'form', id, nextUpdates);
       await syncMgr.syncAll();
     } catch (error) {
       console.warn('Could not sync:', error);
+      throw error;
     }
 
-    return forms[index];
+    return { ...forms[index], ...nextUpdates };
   },
 
   // Delete a shortcut
@@ -324,6 +287,7 @@ const StorageHelper = {
       await syncMgr.syncAll(); // Sync immediately
     } catch (error) {
       console.warn('Could not sync:', error);
+      throw error;
     }
 
     return filtered;
@@ -430,21 +394,16 @@ const StorageHelper = {
       updatedAt: new Date().toISOString()
     };
 
-    folders[index] = {
-      ...folders[index],
-      ...nextUpdates
-    };
-    await this.saveAllFolders(folders);
-
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('update', 'folder', id, nextUpdates);
       await syncMgr.syncAll();
     } catch (error) {
       console.warn('Could not sync folder update:', error);
+      throw error;
     }
 
-    return folders[index];
+    return { ...folders[index], ...nextUpdates };
   },
 
   async deleteFolder(id) {
@@ -458,6 +417,7 @@ const StorageHelper = {
       await syncMgr.syncAll();
     } catch (error) {
       console.warn('Could not sync folder delete:', error);
+      throw error;
     }
 
     return filtered;
@@ -475,6 +435,7 @@ const StorageHelper = {
       await syncMgr.syncAll(); // Sync immediately
     } catch (error) {
       console.warn('Could not sync:', error);
+      throw error;
     }
 
     return filtered;

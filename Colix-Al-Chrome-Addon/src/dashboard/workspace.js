@@ -7,7 +7,10 @@ class WorkspacePage {
     this.inviteForm = document.getElementById('inviteForm');
     this.results = document.getElementById('workspaceResults');
     this.tableHead = document.getElementById('workspaceTableHead');
+    this.workspaceSelector = document.getElementById('workspaceSelector');
     this.state = { tab: 'members', search: '', role: '', status: '', resource_type: '', page: 1, per_page: 10, pages: 1, total: 0 };
+    this.availableWorkspaces = [];
+    this.activeWorkspaceId = null;
     this.bindEvents();
     this.initialize();
   }
@@ -60,6 +63,15 @@ class WorkspacePage {
     document.getElementById('workspaceNext')?.addEventListener('click', () => { if (this.state.page < this.state.pages) { this.state.page++; this.loadResults(); } });
     document.getElementById('inviteUserBtn')?.addEventListener('click', () => { this.invitePanel.hidden = false; document.getElementById('inviteEmail')?.focus(); });
     document.getElementById('cancelInviteBtn')?.addEventListener('click', () => { this.invitePanel.hidden = true; });
+    this.workspaceSelector?.addEventListener('change', (event) => {
+      const workspaceId = event.target.value;
+      if (!workspaceId) return;
+      const params = new URLSearchParams(window.location.search);
+      params.set('workspace_id', workspaceId);
+      const url = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', url);
+      this.loadResults();
+    });
     this.inviteForm?.addEventListener('submit', (event) => this.submitInvitation(event));
     document.getElementById('closeWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
     document.getElementById('cancelWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
@@ -98,12 +110,17 @@ class WorkspacePage {
   async loadResults() {
     this.showLoading();
     const params = new URLSearchParams({ ...this.state, page: String(this.state.page), per_page: String(this.state.per_page) });
+    const selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace_id');
+    if (selectedWorkspaceId) params.set('workspace_id', selectedWorkspaceId);
     try {
       const response = await fetch(`${this.workspaceApiUrl}?${params}`, { headers: { 'X-User-Email': this.identityEmail } });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.error || `Could not load workspace (${response.status}).`);
       this.state = { ...this.state, ...payload.pagination };
-      this.canManageMembers = payload.membership.role === 'owner';
+      this.activeWorkspaceId = payload.selected_workspace_id || payload.workspace?.id || this.activeWorkspaceId;
+      this.availableWorkspaces = Array.isArray(payload.workspaces) && payload.workspaces.length ? payload.workspaces : [payload.workspace || { id: this.activeWorkspaceId, name: 'Your workspace' }];
+      this.renderWorkspaceSwitcher();
+      this.canManageMembers = ['owner', 'admin'].includes(payload.membership.role);
       if (!this.canManageMembers && this.state.tab === 'invitations') {
         this.state.tab = 'members';
         this.state.page = 1;
@@ -121,6 +138,18 @@ class WorkspacePage {
     } catch (error) {
       console.error('Could not load workspace results:', error);
       this.renderError(error.message || 'Could not load workspace data.');
+    }
+  }
+
+  renderWorkspaceSwitcher() {
+    if (!this.workspaceSelector) return;
+    this.workspaceSelector.innerHTML = this.availableWorkspaces.map((workspace) => {
+      const id = workspace?.id || '';
+      const name = workspace?.name || 'Workspace';
+      return `<option value="${this.escapeAttribute(id)}" ${id === this.activeWorkspaceId ? 'selected' : ''}>${this.escape(name)}</option>`;
+    }).join('') || '<option value="">No workspaces</option>';
+    if (this.activeWorkspaceId) {
+      this.workspaceSelector.value = this.activeWorkspaceId;
     }
   }
 
@@ -215,6 +244,7 @@ class WorkspacePage {
   showNotice(message, isError = false) { this.notice.textContent = message; this.notice.classList.toggle('is-error', isError); }
   formatDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : 'Not available'; }
   escape(value) { const element = document.createElement('span'); element.textContent = value ?? ''; return element.innerHTML; }
+  escapeAttribute(value) { return this.escape(value).replace(/"/g, '&quot;'); }
   async getIdentity() { return chrome.identity.getProfileUserInfo(); }
 }
 

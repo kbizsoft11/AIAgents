@@ -11,6 +11,7 @@ class TextBlitzDashboard {
     this.premiumModalReturnSection = null;
     this.premiumModalParent = null;
     this.membershipSectionEnabled = true;
+    this.isPremiumUser = false;
     // Folder selected when a shortcut is created from the sidebar/folder view.
     this.pendingShortcutFolderId = null;
     // Tracks which folder a form should be created in when the form builder
@@ -45,16 +46,30 @@ class TextBlitzDashboard {
     this.bindElements();
     this.bindEvents();
     
-    // Check user status and load limits BEFORE loading shortcuts
-    await StorageHelper.checkUser();
-    this.membershipSectionEnabled = await StorageHelper.getMembershipSectionEnabled();
+    // Load independent account metadata together before rendering controls.
+    const [, membershipSectionEnabled] = await Promise.all([
+      StorageHelper.checkUser(),
+      StorageHelper.getMembershipSectionEnabled()
+    ]);
+    this.membershipSectionEnabled = membershipSectionEnabled;
+    this.applyMembershipSectionVisibility();
     
     // Initialize sidebar manager
     await initSidebarManager();
+    const folderId = new URLSearchParams(window.location.search).get('folder_id');
+    if (folderId) {
+      const sidebarMgr = getSidebarManager();
+      if (sidebarMgr?.folders.some((folder) => String(folder.id) === String(folderId))) {
+        await sidebarMgr.setActiveFolder(folderId);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     
     await this.loadShortcuts();
+    this.render();
+    this.renderForms();
     await this.loadProfileData();
-    await this.checkUser(); // This will call updateLimitDisplays()
+    await this.checkUser(); // This updates premium state and limit displays.
     this.applyMembershipSectionVisibility();
     this.render();
     this.renderForms();
@@ -275,6 +290,10 @@ class TextBlitzDashboard {
     window.addEventListener('headerBrandClick', () => {
       this.switchSection('shortcuts');
       this.closeMobileSidebar();
+    });
+    window.addEventListener('openFolder', (event) => {
+      const folderId = event.detail?.folderId;
+      if (folderId) this.openFolder(folderId);
     });
 
     const params = new URLSearchParams(window.location.search);
@@ -768,17 +787,6 @@ class TextBlitzDashboard {
       });
     }
 
-    // Storage changes
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local' && changes.shortcuts) {
-        this.shortcuts = changes.shortcuts.newValue || [];
-        this.render();
-      }
-      if (namespace === 'local' && changes.forms) {
-        this.forms = changes.forms.newValue || [];
-        this.renderForms();
-      }
-    });
   }
 
   // =============================================
@@ -806,25 +814,28 @@ class TextBlitzDashboard {
     const email = profileUserInfo.email || '';
 
     try {
-      const data = await fetch(`https://extensions.kbizsoft.com/magicaa-extension/check_user.php?email=${email}`)
+      const data = await fetch(`${StorageHelper.API_BASE_URL}/${StorageHelper.API_CHECK_USER}?email=${encodeURIComponent(email)}`);
+      if (!data.ok) throw new Error(`User status request failed: ${data.status}`);
+
       const response = await data.json();
-      // console.log(response)
-      const premiumValue = response.user && response.user.is_premium;
-      const isPremium = premiumValue === true || premiumValue === 1 || premiumValue === '1' || premiumValue === 'true';
-      if (response.success && response.user && isPremium) {
-        this.premiumBox.style.display = "none"
-        this.premiumBoxMember.style.display = "block"
-      }
-      else {
-        this.premiumBox.style.display = "block"
-        this.premiumBoxMember.style.display = "none"
-      }
-      
+      const premiumValue = response.user?.is_premium;
+      this.isPremiumUser = response.success && (
+        premiumValue === true ||
+        premiumValue === 1 ||
+        premiumValue === '1' ||
+        premiumValue === 'true'
+      );
+
+      this.applyMembershipSectionVisibility();
+
       // Update dynamic limit displays after checking user
       this.updateLimitDisplays();
     }
     catch (e) {
       console.error(e)
+      this.isPremiumUser = false;
+      this.applyMembershipSectionVisibility();
+
       // Still update displays with fallback values
       this.updateLimitDisplays();
     }
@@ -832,9 +843,18 @@ class TextBlitzDashboard {
   }
 
   applyMembershipSectionVisibility() {
+    const shouldShowMembership = this.membershipSectionEnabled === true;
+
     document.querySelectorAll('[data-membership-section]').forEach((element) => {
-      element.hidden = !this.membershipSectionEnabled;
+      element.hidden = !shouldShowMembership;
     });
+
+    if (this.premiumBox) {
+      this.premiumBox.style.display = shouldShowMembership && !this.isPremiumUser ? 'block' : 'none';
+    }
+    if (this.premiumBoxMember) {
+      this.premiumBoxMember.style.display = shouldShowMembership && this.isPremiumUser ? 'block' : 'none';
+    }
   }
 
   /**
@@ -1314,6 +1334,14 @@ class TextBlitzDashboard {
     }
   }
 
+  openFolder(folderId) {
+    const sidebarMgr = getSidebarManager();
+    if (!sidebarMgr?.folders.some((folder) => String(folder.id) === String(folderId))) return;
+    sidebarMgr.setActiveFolder(folderId);
+    this.switchSection('shortcuts');
+    this.closeMobileSidebar();
+  }
+
   async loadShortcuts() {
     this.shortcuts = await StorageHelper.getAll();
     this.forms = await StorageHelper.getAllForms();
@@ -1343,7 +1371,11 @@ class TextBlitzDashboard {
       return;
     }
 
-    this.openEditor('new', 'shortcut', null);
+    const sidebarMgr = getSidebarManager();
+    const targetFolderId = sidebarMgr
+      ? (sidebarMgr.activeFolder || await sidebarMgr.ensureDefaultFolder())
+      : null;
+    this.openEditor('new', 'shortcut', targetFolderId);
   }
 
   /**
@@ -2018,6 +2050,11 @@ class TextBlitzDashboard {
   async handleDelete(id) {
     const s = this.shortcuts.find(x => x.id === id);
     if (!s) return;
+    const sidebarMgr = getSidebarManager();
+    if (sidebarMgr && !sidebarMgr.canDeleteItem(s)) {
+      this.showToast('You do not have permission to delete this shortcut.', 'error');
+      return;
+    }
     if (confirm(`Delete shortcut "${s.trigger}"?`)) {
       await StorageHelper.delete(id);
       this.showToast('Shortcut deleted.');
@@ -2037,6 +2074,11 @@ class TextBlitzDashboard {
   hideBulkDeleteConfirm() { this.bulkDeleteOverlay.style.display = 'none'; }
 
   async handleBulkDelete() {
+    const authorizationSidebar = getSidebarManager();
+    if (authorizationSidebar && this.shortcuts.some((shortcut) => !authorizationSidebar.canDeleteItem(shortcut))) {
+      this.showToast('You do not have permission to delete one or more shortcuts.', 'error');
+      return;
+    }
     const count = this.shortcuts.length;
     await StorageHelper.saveAll([]);
     this.hideBulkDeleteConfirm();
@@ -2173,6 +2215,17 @@ class TextBlitzDashboard {
       this.showToast('Please enter the expanded text', 'error');
       this.editorExpansionInput.focus();
       return;
+    }
+
+    const sidebarMgr = getSidebarManager();
+    if (sidebarMgr) {
+      const authorized = this.currentEditorMode === 'edit'
+        ? sidebarMgr.canEditItem(this.currentEditorItem)
+        : sidebarMgr.canEditFolder(this.currentTargetFolderId);
+      if (!authorized) {
+        this.showToast('You do not have permission to modify this folder.', 'error');
+        return;
+      }
     }
 
     // Check limit for new items

@@ -15,7 +15,7 @@ class HeaderModule {
   // First: Load header HTML file
   async loadHeaderHTML() {
     try {
-      const headerPath = 'dashboard/header/header.html';
+      const headerPath = 'dashboard/header.html';
       const url = chrome.runtime.getURL(headerPath);
       
       console.log('🔄 Fetching header from:', url);
@@ -50,7 +50,7 @@ class HeaderModule {
     const routes = {
       brandHome: 'dashboard/dashboard.html',
       docs: 'dashboard/docs.html',
-      workspace: 'dashboard/workspace/workspace.html',
+      workspace: 'dashboard/workspace.html',
       marketplace: 'dashboard/marketplace.html'
     };
 
@@ -60,6 +60,9 @@ class HeaderModule {
         : container.querySelector(`[data-header-route="${key}"]`);
       if (link) link.href = chrome.runtime.getURL(route);
     });
+
+    const brandLogo = container.querySelector('.brand-logo');
+    if (brandLogo) brandLogo.src = chrome.runtime.getURL('icons/icon128.png');
   }
 
   // Second: Bind HTML elements after they're loaded
@@ -238,7 +241,11 @@ class HeaderModule {
     this.notificationsList.innerHTML = this.notifications.length ? this.notifications.map((notification) => {
       return `<article class="header-notification${notification.read_at ? '' : ' unread'}"><strong>${this.escapeHtml(notification.title)}</strong><span>${this.escapeHtml(notification.message)}</span><small>${this.formatNotificationDate(notification.created_at)}</small><button type="button" data-notification-id="${this.escapeAttribute(notification.id)}">${notification.read_at ? 'View folder' : 'Enable folder'}</button></article>`;
     }).join('') : '<p class="header-notifications-empty">No notifications</p>';
-    this.notificationsList.querySelectorAll('[data-notification-id]').forEach((button) => button.addEventListener('click', () => this.markNotificationRead(button.dataset.notificationId)));
+    this.notificationsList.querySelectorAll('[data-notification-id]').forEach((button) => button.addEventListener('click', () => {
+      const notification = this.notifications.find((item) => item.id === button.dataset.notificationId);
+      if (notification?.read_at) this.viewNotification(notification);
+      else this.markNotificationRead(button.dataset.notificationId);
+    }));
   }
 
   toggleNotifications() { this.notificationsOpen ? this.closeNotifications() : this.openNotifications(); }
@@ -254,8 +261,25 @@ class HeaderModule {
       if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not enable folder.');
       notification.read_at = new Date().toISOString();
       this.renderNotifications();
-      window.dispatchEvent(new CustomEvent('sharedFolderNotification', { detail: { ...notification, folder: payload.folder, shortcuts: payload.shortcuts || [] } }));
+      const detail = { ...notification, folder: payload.folder, shortcuts: payload.shortcuts || [] };
+      window.dispatchEvent(new CustomEvent('sharedFolderNotification', { detail }));
+      if (payload.folder?.id) this.openFolderInDashboard(payload.folder.id);
     } catch (error) { console.warn('Could not mark notification read:', error); }
+  }
+
+  viewNotification(notification) {
+    if (notification?.resource_id) this.openFolderInDashboard(notification.resource_id);
+  }
+
+  openFolderInDashboard(folderId) {
+    const dashboardUrl = chrome.runtime.getURL('dashboard/dashboard.html');
+    const url = new URL(dashboardUrl);
+    url.searchParams.set('folder_id', folderId);
+    if (window.location.href === url.toString()) {
+      window.dispatchEvent(new CustomEvent('openFolder', { detail: { folderId } }));
+    } else {
+      window.location.assign(url.toString());
+    }
   }
 
   async markAllNotificationsRead() {
@@ -417,16 +441,19 @@ class HeaderModule {
   // BRAND/HOME NAVIGATION
   // =============================================
   handleBrandClick() {
-    // This method is called when the brand is clicked
-    // The dashboard will listen for this and navigate to home
+    // Keep the dashboard-specific event for in-page navigation, but also
+    // navigate directly in pages like Workspace/Docs that do not listen for it.
     window.dispatchEvent(new CustomEvent('headerBrandClick', {
       detail: { action: 'navigateToHome' }
     }));
+
+    const dashboardUrl = chrome.runtime.getURL('dashboard/dashboard.html');
+    if (window.location.href !== dashboardUrl) {
+      window.location.assign(dashboardUrl);
+    }
   }
 }
 
-// Initialize header module when DOM is ready
-console.log('📋 header.js loaded. DOM state:', document.readyState);
 
 async function initHeader() {
   console.log('🎬 Initializing header...');

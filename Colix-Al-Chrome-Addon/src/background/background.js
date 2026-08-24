@@ -100,10 +100,6 @@ async function registerCurrentUser() {
 
     if (data.success) {
 
-      await chrome.storage.local.set({
-        registeredUser: data.user
-      });
-
       return data.user;
     }
 
@@ -122,10 +118,6 @@ async function verifyUserAccess() {
     });
 
     if (!userInfo?.email) {
-      await chrome.storage.local.set({
-        extensionEnabled: false,
-        disableReason: 'No Google account found'
-      });
       return false;
     }
 
@@ -140,22 +132,10 @@ async function verifyUserAccess() {
       data.success === true &&
       data.status === 'active';
 
-    await chrome.storage.local.set({
-      extensionEnabled: isActive,
-      disableReason: isActive
-        ? ''
-        : (data.error || 'Account disabled')
-    });
-
     return isActive;
 
   } catch (error) {
     console.error('User verification failed:', error);
-
-    await chrome.storage.local.set({
-      extensionEnabled: false,
-      disableReason: 'Unable to verify account'
-    });
 
     return false;
   }
@@ -265,11 +245,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
           }
         ];
 
-        chrome.storage.local.set({ shortcuts: defaultShortcuts });
         // console.log('✅ Default shortcuts added (fresh install)');
       } else {
         // console.log('✅ User has existing data in Supabase, skipping default shortcuts');
-        chrome.storage.local.set({ shortcuts: [] });
       }
     } catch (error) {
       console.warn('⚠️ Could not check Supabase, adding default shortcuts:', error.message);
@@ -294,7 +272,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
           usageCount: 0
         }
       ];
-      chrome.storage.local.set({ shortcuts: defaultShortcuts });
     }
 
     chrome.tabs.create({ url: chrome.runtime.getURL(DASHBOARD_PATH) });
@@ -345,9 +322,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'getShortcuts') {
-    chrome.storage.local.get({ shortcuts: [] }, (result) => {
-      sendResponse(result.shortcuts);
-    });
+    sendResponse(getSyncManager().getLocalShortcuts());
     return true;
   }
 
@@ -365,10 +340,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           lastName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
         }
 
-        const stored = await new Promise((resolve) => {
-          chrome.storage.local.get({ profileData: null }, (result) => resolve(result.profileData || {}));
-        });
-
         let remote = null;
         let google = null;
         if (email) {
@@ -385,16 +356,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         const profile = {
-          firstName: remote?.firstName || stored.firstName || google?.firstName || firstName,
-          lastName: remote?.lastName || stored.lastName || google?.lastName || lastName,
-          email: remote?.email || stored.email || email,
-          avatarUrl: remote?.avatarUrl || remote?.photoUrl || stored.avatarUrl || stored.photoUrl || google?.avatarUrl || '',
-          photoUrl: remote?.photoUrl || remote?.avatarUrl || stored.photoUrl || stored.avatarUrl || google?.avatarUrl || ''
+          firstName: remote?.firstName || google?.firstName || firstName,
+          lastName: remote?.lastName || google?.lastName || lastName,
+          email: remote?.email || email,
+          avatarUrl: remote?.avatarUrl || remote?.photoUrl || google?.avatarUrl || '',
+          photoUrl: remote?.photoUrl || remote?.avatarUrl || google?.avatarUrl || ''
         };
-
-        await new Promise((resolve) => {
-          chrome.storage.local.set({ profileData: profile }, resolve);
-        });
 
         sendResponse(profile);
       } catch (error) {
@@ -406,9 +373,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'saveProfileData') {
-    chrome.storage.local.set({ profileData: message.data }, () => {
-      sendResponse({ success: true });
-    });
+    sendResponse({ success: true });
     return true;
   }
 
@@ -432,13 +397,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           photoUrl: saved.photoUrl || saved.avatarUrl || message.data?.photoUrl || ''
         };
 
-        chrome.storage.local.set({ profileData: profile }, () => {
-          if (chrome.runtime.lastError) {
-            sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            return;
-          }
-          sendResponse({ success: true, profile });
-        });
+        sendResponse({ success: true, profile });
       } catch (error) {
         console.error('Profile update failed:', error);
         sendResponse({ success: false, error: error.message || 'Profile update failed' });
@@ -448,14 +407,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'incrementUsage') {
-    chrome.storage.local.get({ shortcuts: [] }, (result) => {
-      const shortcuts = result.shortcuts;
-      const index = shortcuts.findIndex(s => s.id === message.id);
-      if (index !== -1) {
-        shortcuts[index].usageCount = (shortcuts[index].usageCount || 0) + 1;
-        chrome.storage.local.set({ shortcuts });
-      }
-    });
+    const shortcut = getSyncManager().getLocalShortcuts().find(item => item.id === message.id);
+    if (shortcut) StorageHelper.update(shortcut.id, { usageCount: (shortcut.usageCount || 0) + 1 });
   }
 });
 

@@ -410,22 +410,34 @@
   // =============================================
   // LOAD SHORTCUTS
   // =============================================
-  function loadShortcuts() {
-    chrome.storage.local.get({ shortcuts: [], forms: [] }, function (result) {
-      shortcuts = Array.isArray(result.shortcuts) ? result.shortcuts : [];
-      forms = Array.isArray(result.forms) ? result.forms : [];
-      // console.log('ColixAI: Loaded', shortcuts.length, 'shortcuts');
-    });
+  async function loadShortcuts() {
+    try {
+      await initSupabaseClient();
+      const identity = await chrome.identity.getProfileUserInfo();
+      if (!identity?.email) return;
+      await initSyncManager(identity.email);
+      shortcuts = await getSyncManager().getLocalShortcuts();
+      forms = await getSyncManager().getLocalForms();
+    } catch (error) {
+      console.warn('ColixAI: Could not load workspace resources:', error.message);
+      shortcuts = [];
+      forms = [];
+    }
   }
 
-  chrome.storage.onChanged.addListener(function (changes, namespace) {
-    if (namespace === 'local' && changes.shortcuts) {
-      shortcuts = changes.shortcuts.newValue || [];
-    }
-    if (namespace === 'local' && changes.forms) {
-      forms = changes.forms.newValue || [];
-    }
-  });
+  function incrementShortcutUsage(shortcut) {
+    const current = (shortcut.usageCount || shortcut.usage_count || 0) + 1;
+    shortcut.usageCount = current;
+    shortcut.updatedAt = new Date().toISOString();
+    StorageHelper.update(shortcut.id, { usageCount: current }).catch(error => console.warn('ColixAI: Could not update shortcut usage:', error.message));
+  }
+
+  function incrementFormUsage(form) {
+    const current = (form.usageCount || form.usage_count || 0) + 1;
+    form.usageCount = current;
+    form.updatedAt = new Date().toISOString();
+    StorageHelper.updateForm(form.id, { usageCount: current }).catch(error => console.warn('ColixAI: Could not update form usage:', error.message));
+  }
 
   // =============================================
   // TRACK LAST FOCUSED EDITABLE FIELD (for sidebar insert)
@@ -934,15 +946,7 @@
           }
           triggerWebConfetti();
 
-          chrome.storage.local.get({ shortcuts: [] }, function (result) {
-            const all = result.shortcuts;
-            const idx = all.findIndex(s => s.id === shortcut.id);
-            if (idx !== -1) {
-              all[idx].usageCount = (all[idx].usageCount || 0) + 1;
-              all[idx].updatedAt = new Date().toISOString();
-              chrome.storage.local.set({ shortcuts: all });
-            }
-          });
+          incrementShortcutUsage(shortcut);
 
           setTimeout(() => { menuState.lockInput = false; }, 150);
         }, 30);
@@ -1096,7 +1100,7 @@
       const html = (form.fields || []).map((field, i) => values[i] ? `<strong>${escapeHtml(field)}:</strong> ${escapeHtml(values[i]).replace(/\n/g, '<br>')}<br>` : '').join('').replace(/<br>$/, '');
       document.execCommand('insertHTML', false, html);
       el.dispatchEvent(new Event('input', { bubbles: true }));
-      chrome.storage.local.get({ forms: [] }, result => { const all = result.forms; const item = all.find(f => f.id === form.id); if (item) { item.usageCount = (item.usageCount || 0) + 1; item.updatedAt = new Date().toISOString(); chrome.storage.local.set({ forms: all }); } });
+      incrementFormUsage(form);
       closeFormPopup();
     });
   }
@@ -1241,15 +1245,7 @@
       }
       triggerWebConfetti();
 
-      chrome.storage.local.get({ shortcuts: [] }, function (result) {
-        const all = result.shortcuts;
-        const idx = all.findIndex(s => s.id === match.id);
-        if (idx !== -1) {
-          all[idx].usageCount = (all[idx].usageCount || 0) + 1;
-          all[idx].updatedAt = new Date().toISOString();
-          chrome.storage.local.set({ shortcuts: all });
-        }
-      });
+      incrementShortcutUsage(match);
 
       setTimeout(() => { menuState.lockInput = false; }, 100);
     });
@@ -1750,15 +1746,7 @@
       triggerWebConfetti();
 
       // Bump usage count
-      chrome.storage.local.get({ shortcuts: [] }, function (result) {
-        const all = result.shortcuts;
-        const idx = all.findIndex(s => s.id === shortcut.id);
-        if (idx !== -1) {
-          all[idx].usageCount = (all[idx].usageCount || 0) + 1;
-          all[idx].updatedAt = new Date().toISOString();
-          chrome.storage.local.set({ shortcuts: all });
-        }
-      });
+      incrementShortcutUsage(shortcut);
     });
   }
 
@@ -2387,21 +2375,11 @@
   }
 
   function checkDismissed(callback) {
-    chrome.storage.local.get([DISMISS_KEY], (result) => {
-      const data = result[DISMISS_KEY];
-      if (data && Date.now() < data.until) {
-        callback(true); // still dismissed
-      } else {
-        if (data) chrome.storage.local.remove(DISMISS_KEY); // clean expired
-        callback(false);
-      }
-    });
+    callback(window.__colixFabDismissedUntil > Date.now());
   }
 
   function dismissFab() {
-    chrome.storage.local.set({
-      [DISMISS_KEY]: { until: Date.now() + DISMISS_DURATION }
-    });
+    window.__colixFabDismissedUntil = Date.now() + DISMISS_DURATION;
     const fab = document.getElementById('tb-fab');
     if (fab) fab.remove();
   }
