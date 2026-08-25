@@ -24,6 +24,7 @@ h1 { max-width: 720px; margin: 0; font-size: clamp(30px, 4vw, 47px); line-height
 .copy-template { width: 100%; min-height: 40px; border: 0; border-radius: 8px; color: #fff; background: var(--green); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: background .18s ease, transform .18s ease; }
 .copy-template:hover { background: var(--green-dark); transform: translateY(-1px); }
 .copy-template:disabled { cursor: wait; opacity: .72; transform: none; }
+.copy-template.imported { cursor: default; opacity: .58; background: #718078; }
 .copy-template.loading::after { content: ""; display: inline-block; width: 12px; height: 12px; margin-left: 8px; border: 2px solid #ffffff77; border-top-color: #fff; border-radius: 50%; vertical-align: -2px; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 900px) { .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .marketplace-main { padding: 38px 24px 60px; } }

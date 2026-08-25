@@ -16,18 +16,62 @@
     notice.className = `marketplace-notice ${type || ''}`;
   }
 
+  function markTemplateImported(button) {
+    button.disabled = true;
+    button.classList.remove('loading');
+    button.classList.add('imported');
+    button.textContent = 'Imported';
+  }
+
+  async function updateImportedTemplateButtons() {
+    const existingTriggers = new Set();
+    const shortcuts = await StorageHelper.getAll();
+    const forms = await StorageHelper.getAllForms();
+    [...shortcuts, ...forms].forEach(item => {
+      if (item.trigger) existingTriggers.add(String(item.trigger).toLowerCase());
+    });
+
+    buttons.forEach(button => {
+      const template = templates[button.dataset.template];
+      if (template && existingTriggers.has(template.trigger.toLowerCase())) {
+        markTemplateImported(button);
+      } else {
+        button.disabled = false;
+        button.classList.remove('imported');
+        button.textContent = 'Import template';
+        button.addEventListener('click', () => copyTemplate(button));
+      }
+    });
+  }
+
+  async function initializeMarketplace() {
+    try {
+      await initSupabaseClient();
+      const authManager = await initAuthManager();
+      if (!authManager.isUserAuthenticated()) {
+        await authManager.authenticateWithChrome();
+      }
+      if (!authManager.isUserAuthenticated()) {
+        throw new Error('Please sign in before importing a template.');
+      }
+      await initSyncManager(authManager.getUserEmail());
+      await updateImportedTemplateButtons();
+    } catch (error) {
+      console.error('Marketplace initialization failed:', error);
+      showNotice(error?.message || 'Could not connect to your workspace.', 'error');
+    }
+  }
+
   async function copyTemplate(button) {
     const template = templates[button.dataset.template];
     if (!template) return;
     button.disabled = true;
     button.classList.add('loading');
-    button.textContent = 'Copying…';
+    button.textContent = 'Importing...';
     try {
       if (await StorageHelper.triggerExists(template.trigger)) {
-        showNotice(`The shortcut ${template.trigger} already exists. Nothing was added.`, 'error');
-        button.disabled = false;
-        button.classList.remove('loading');
-        button.textContent = 'Copy template';
+        showNotice(`The shortcut ${template.trigger} is already imported.`, 'error');
+        markTemplateImported(button);
         return;
       }
 
@@ -54,9 +98,10 @@
       showNotice(error?.message || 'Could not copy this template. Please try again.', 'error');
       button.disabled = false;
       button.classList.remove('loading');
-      button.textContent = 'Copy template';
+      button.textContent = 'Import template';
     }
   }
 
-  buttons.forEach(button => button.addEventListener('click', () => copyTemplate(button)));
+  buttons.forEach(button => { button.disabled = true; });
+  initializeMarketplace();
 }());

@@ -220,28 +220,28 @@ textarea:focus-visible,
 .header-action-btn.snippet-btn {
   width: 52px;
   height: 52px;
-  background: #e04f40;
+  background: #006320fa;
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(29, 172, 75, 0.35);
+  box-shadow: 0 2px 8px #006320fa;
 }
 
 .header-action-btn.snippet-btn:hover:not(:disabled) {
-  background: #d65d4f;
-  box-shadow: 0 6px 16px rgba(29, 172, 75, 0.45);
+  background: #00862bfa;
+  box-shadow: 0 2px 8px #00862bfa;
 }
 
 .header-action-btn.folder-btn {
   width: 42px;
   height: 42px;
-  background: #e04f40;
+  background: #006320fa;
   color: #ffffff;
-  box-shadow: 0 3px 10px rgba(29, 172, 75, 0.3);
+  box-shadow: 0 2px 8px #006320fa;
   margin-top: 14px;
 }
 
 .header-action-btn.folder-btn:hover:not(:disabled) {
-  background: #d65d4f;
-  box-shadow: 0 5px 14px rgba(29, 172, 75, 0.4);
+  background: #00862bfa;
+  box-shadow: 0 2px 8px #00862bfa;
 }
 
 .logo {
@@ -3167,6 +3167,7 @@ body {
 
 .sidebar-tree-section {
   padding: 14px 12px;
+  margin-top: 1rem;
 }
 
 .sidebar-item,

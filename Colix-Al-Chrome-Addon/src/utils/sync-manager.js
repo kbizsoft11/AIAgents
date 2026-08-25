@@ -33,6 +33,52 @@ class SyncManager {
     await this.syncAll();
   }
 
+  async ensureStarterContent() {
+    if (!this.workspaceId || this.resources.length > 0) return false;
+
+    const now = new Date().toISOString();
+    const folderId = `folder_${Date.now()}_starter`;
+    const folder = {
+      id: folderId,
+      name: 'My Snippets',
+      isExpanded: true,
+      createdAt: now,
+      updatedAt: now,
+      workspace_id: this.workspaceId
+    };
+    const shortcuts = [
+      {
+        id: `shortcut_${Date.now()}_ty`,
+        trigger: '-ty',
+        expansion: 'Thank you so much! I really appreciate your help.',
+        label: 'Thank You',
+        folderId,
+        createdAt: now,
+        updatedAt: now,
+        usageCount: 0,
+        workspace_id: this.workspaceId
+      },
+      {
+        id: `shortcut_${Date.now()}_sig`,
+        trigger: '/sig',
+        expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
+        label: 'Email Signature',
+        folderId,
+        createdAt: now,
+        updatedAt: now,
+        usageCount: 0,
+        workspace_id: this.workspaceId
+      }
+    ];
+
+    await this.queueSync('create', 'folder', folderId, folder);
+    for (const shortcut of shortcuts) {
+      await this.queueSync('create', 'shortcut', shortcut.id, shortcut);
+    }
+    await this.syncAll();
+    return true;
+  }
+
   /**
    * Fetch user ID by email and cache it
    */

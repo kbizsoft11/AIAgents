@@ -40,6 +40,7 @@ class TextBlitzDashboard {
     if (authMgr.isUserAuthenticated()) {
       const userEmail = authMgr.getUserEmail();
       const syncMgr = await initSyncManager(userEmail);
+      await syncMgr.ensureStarterContent();
       // console.log('✅ Sync manager initialized for:', userEmail);
     }
 
