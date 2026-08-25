@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Trash</title>
+  <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="trash.css">
+</head>
+<body>
+  <div id="header-container"></div>
+  <main class="workspace-page trash-page">
+    <header class="workspace-heading">
+      <div>
+        <p class="workspace-kicker">Workspace</p>
+        <h1>Trash</h1>
+        <p class="workspace-intro">Restore deleted folders and snippets, or remove them permanently.</p>
+      </div>
+    </header>
+    <section class="workspace-notice" id="trashNotice" role="status" aria-live="polite"></section>
+    <section class="workspace-panel workspace-results-panel">
+      <div class="workspace-panel-heading workspace-results-heading">
+        <div><h2>Deleted items</h2><p id="trashSummary">Loading trash...</p></div>
+        <button class="workspace-secondary-btn" id="trashRefreshBtn" type="button">Refresh</button>
+      </div>
+      <div class="workspace-table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Deleted</th><th>Workspace</th><th>Actions</th></tr></thead>
+          <tbody id="trashResults"><tr><td colspan="5">Loading trash...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="header.js"></script>
+  <script src="trash.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+.sidebar-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 12px 8px;
+  color: #81908a;
+}
+
+.sidebar-skeleton-label {
+  padding: 0 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-skeleton-folder,
+.sidebar-skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #e8eeeb;
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.sidebar-skeleton-item {
+  min-height: 34px;
+  margin-left: 14px;
+}
+
+.sidebar-skeleton-folder-second {
+  margin-top: 4px;
+}
+
+.sidebar-skeleton-line {
+  display: block;
+  flex: none;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #e7eeea 25%, #f5f8f6 50%, #e7eeea 75%);
+  background-size: 200% 100%;
+  animation: sidebar-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+.sidebar-skeleton-chevron {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar-skeleton-folder-icon {
+  width: 16px;
+  height: 13px;
+  border-radius: 3px;
+}
+
+.sidebar-skeleton-folder-name {
+  width: 112px;
+}
+
+.sidebar-skeleton-item-icon {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+}
+
+.sidebar-skeleton-item-name {
+  width: 82px;
+}
+
+.sidebar-skeleton-item-trigger {
+  width: 38px;
+  margin-left: auto;
+}
+
+@keyframes sidebar-skeleton-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-skeleton-line {
+    animation: none;
+  }
+}

@@ -1,0 +1,11 @@
+.trash-page .workspace-results-panel { margin-top: 0; }
+.trash-page .workspace-results-heading { align-items: center; }
+.trash-page table { min-width: 720px; }
+.trash-page td:last-child { white-space: nowrap; }
+.trash-action { margin-right: 6px; padding: 7px 10px; }
+.trash-action-danger { color: #a42626; }
+.trash-empty { padding: 42px 10px; color: var(--workspace-muted); text-align: center; }
+@media (max-width: 640px) {
+  .trash-page .workspace-results-heading { align-items: stretch; }
+  .trash-page .workspace-results-heading button { width: 100%; }
+}

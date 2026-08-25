@@ -178,8 +178,7 @@ class SyncManager {
     await Promise.all(workspaceIds.map((workspaceId) => fetchWorkspaceResources(workspaceId)));
 
     return resources.map((item) => {
-      const { permission, can_manage_sharing, ...resource } = item;
-      return resource;
+      return { ...item };
     });
   }
 

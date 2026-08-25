@@ -133,8 +133,7 @@ class HeaderModule {
             // Usage
             console.log('Usage clicked');
           } else if (index === 2) {
-            // Trash
-            console.log('Trash clicked');
+            window.location.assign(chrome.runtime.getURL('dashboard/trash.html'));
           } else if (index === 3) {
             // Signout
             chrome.runtime.sendMessage({ action: 'logout' }, (response) => {

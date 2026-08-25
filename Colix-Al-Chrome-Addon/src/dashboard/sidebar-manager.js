@@ -21,6 +21,7 @@ class SidebarManager {
     this.folderPermissions = new Map();
     this.workspaceMembers = [];
     this.shareResource = null;
+    this.sharingContextPromise = null;
   }
 
   async init() {
@@ -30,7 +31,7 @@ class SidebarManager {
     this.bindEvents();
     this.createContextMenu();
     this.render();
-    this.loadSharingContext()
+    this.sharingContextPromise = this.loadSharingContext()
       .then(() => this.render())
       .catch((error) => console.warn('Could not finish sidebar sharing setup:', error));
   }
@@ -48,13 +49,9 @@ class SidebarManager {
       this.canManageSharing = ['owner', 'admin'].includes(this.workspaceRole);
       this.workspaceMembers = (payload.items || []).filter((member) => member.status === 'active' && member.user?.email && member.user.email.toLowerCase() !== identity.email.toLowerCase());
 
-      const resourcesResponse = await fetch(`${this.workspaceApiUrl}?tab=resources&resource_type=folder&page=1&per_page=50`, { headers: { 'X-User-Email': identity.email } });
-      const resourcesPayload = await resourcesResponse.json().catch(() => ({}));
-      if (resourcesResponse.ok && resourcesPayload.success) {
-        (resourcesPayload.items || []).forEach((resource) => {
-          this.folderPermissions.set(String(resource.id), resource.permission || 'view');
-        });
-      }
+      this.folders.forEach((folder) => {
+        if (folder.permission) this.folderPermissions.set(String(folder.id), folder.permission);
+      });
     } catch (error) {
       console.warn('Could not load workspace sharing members:', error);
     }
@@ -240,6 +237,7 @@ class SidebarManager {
   render() {
     if (!this.sidebarTree) return;
 
+    window.SidebarSkeleton?.hide();
     this.sidebarTree.innerHTML = '';
 
     this.folders.forEach(folder => {
@@ -527,11 +525,7 @@ class SidebarManager {
       return;
     }
     const doDelete = async () => {
-      const deletedShortcuts = this.shortcuts.filter((shortcut) => String(shortcut.folderId) === String(folderId));
-      const deletedForms = this.forms.filter((form) => String(form.folderId) === String(folderId));
       try {
-        for (const shortcut of deletedShortcuts) await StorageHelper.delete(shortcut.id);
-        for (const form of deletedForms) await StorageHelper.deleteForm(form.id);
         await StorageHelper.deleteFolder(folderId);
 
         this.shortcuts = this.shortcuts.filter((shortcut) => String(shortcut.folderId) !== String(folderId));
@@ -874,6 +868,7 @@ class SidebarManager {
   }
 
   async openShareDialog(type, id, name) {
+    await this.sharingContextPromise;
     if (!this.canManageSharing) return;
     const overlay = document.getElementById('shareResourceOverlay');
     const members = document.getElementById('shareResourceMembers');

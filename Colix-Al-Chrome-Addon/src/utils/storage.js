@@ -408,12 +408,13 @@ const StorageHelper = {
 
   async deleteFolder(id) {
     const folders = await this.getAllFolders();
+    const folder = folders.find(f => f.id === id);
     const filtered = folders.filter(f => f.id !== id);
     await this.saveAllFolders(filtered);
 
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('delete', 'folder', id, null);
+      await syncMgr.queueSync('delete', 'folder', id, folder?.workspace_id ? { workspace_id: folder.workspace_id } : null);
       await syncMgr.syncAll();
     } catch (error) {
       console.warn('Could not sync folder delete:', error);
