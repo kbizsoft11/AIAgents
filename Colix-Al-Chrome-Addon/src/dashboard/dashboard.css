@@ -74,17 +74,6 @@ textarea:focus-visible,
   border-radius: 4px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 /* ===== Mobile Top Bar (hidden on desktop) ===== */
 .mobile-topbar {
   display: none;
@@ -199,7 +188,7 @@ textarea:focus-visible,
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  position: absolute;
+  position: fixed;
     top: 48px;
     left: 165px;
     z-index: 99999 !important;
@@ -1376,12 +1365,6 @@ div#format-container {
   padding: 32px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   text-align: center;
-}
-
-@media (max-width: 560px) {
-  .share-resource-modal .form-modal-header, .share-resource-modal form { padding-left: 18px; padding-right: 18px; }
-  .share-resource-member { grid-template-columns: 18px minmax(0, 1fr) 28px; grid-template-areas: "select identity action" "select permission action"; }
-  .share-member-permission { grid-column: auto; }
 }
 
 .confirm-icon {
@@ -3046,30 +3029,6 @@ div#format-container {
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .editor-commands {
-    flex-basis: 235px;
-  }
-}
-
-@media (max-width: 700px) {
-  .editor-workspace {
-    overflow-y: auto;
-    flex-direction: column;
-  }
-
-  .editor-workspace .editor-content {
-    flex: none;
-    padding: 24px 20px;
-  }
-
-  .editor-commands {
-    flex: none;
-    border-top: 1px solid #e8e8e8;
-    border-left: 0;
-  }
-}
-
 /* Try It Modal */
 .try-it-overlay {
   position: fixed;
@@ -3180,194 +3139,6 @@ div#format-container {
   display: none !important;
 }
 
-/* =====================================================
-   RESPONSIVE BREAKPOINTS
-   Desktop:  > 900px  — fixed sidebar, no mobile topbar
-   Tablet:   601–900px — off-canvas sidebar, mobile topbar
-   Mobile:   ≤ 600px  — off-canvas sidebar, stacked layout
-===================================================== */
-
-@media (max-width: 900px) {
-  body {
-    flex-direction: column;
-  }
-
-  .mobile-topbar {
-    display: flex;
-  }
-
-  .sidebar-close-btn {
-    display: flex;
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100dvh;
-    width: min(300px, 84vw);
-    z-index: 95;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.15);
-  }
-
-  .dashboard-shell > .sidebar {
-    top: 0;
-    height: 100dvh;
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
-  .sidebar-header {
-    padding: 16px 16px;
-  }
-
-  .main {
-    width: 100%;
-  }
-
-  .section {
-    padding: 20px;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .shortcuts-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .top-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .top-bar-left {
-    justify-content: space-between;
-  }
-
-  .top-bar-right {
-    justify-content: stretch;
-  }
-
-  .search-container {
-    max-width: none;
-    order: 1;
-    flex: 1 1 100%;
-  }
-
-  .btn-bulk-delete,
-  #addNewBtn {
-    flex: 1;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 600px) {
-  .section {
-    padding: 16px;
-  }
-
-  .page-title {
-    font-size: 19px;
-  }
-
-  .btn .btn-label {
-    display: inline;
-  }
-
-  .form-overlay,
-  .try-it-overlay {
-    padding: 0;
-    align-items: flex-end;
-  }
-
-  .form-modal,
-  .try-it-modal {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 16px 16px 0 0;
-    max-height: 92dvh;
-  }
-
-  .confirm-modal {
-    padding: 24px 20px;
-  }
-
-  .premium-modal {
-    border-radius: 16px;
-    max-height: 92dvh;
-  }
-
-  .premium-header {
-    padding: 28px 20px 16px;
-  }
-
-  .pricing-card {
-    margin: 16px 20px 0;
-    padding: 20px;
-  }
-
-  .free-comparison {
-    margin: 16px 20px;
-  }
-
-  .pricing-price {
-    font-size: 36px;
-  }
-
-  .form-template-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .editor-header {
-    padding: 12px 16px;
-  }
-
-  .editor-content {
-    padding: 20px 16px;
-  }
-
-  .editor-textarea {
-    min-height: 260px;
-  }
-
-  .editor-header-actions {
-    flex: 1;
-  }
-
-  .editor-header-actions .btn {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .toast-container {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    align-items: stretch;
-  }
-
-  .toast {
-    max-width: none;
-  }
-
-  #format-container {
-    flex-wrap: wrap;
-  }
-
-  .profile-dropdown,
-  .emoji-picker {
-    width: 100%;
-    left: 0;
-    right: 0;
-  }
-}
-
 /* ===== Modern white + green visual polish ===== */
 :root {
   --ui-green: #1dac4b;
@@ -3425,6 +3196,7 @@ body {
 
 .section {
   padding: 34px 42px;
+  padding-top: 5.8rem;
 }
 
 .top-bar {
@@ -3570,49 +3342,6 @@ body {
   box-shadow: 0 3px 10px rgba(29, 172, 75, .16);
 }
 
-@media (max-width: 700px) {
-  .section {
-    padding: 24px 18px;
-  }
-
-  .editor-workspace .editor-content {
-    padding: 24px 18px;
-  }
-}
-
-@media (min-width: 901px) {
-  .mobile-topbar,
-  .sidebar-backdrop {
-    display: none !important;
-  }
-}
-
-/* =====================================================
-   TOUCH SUPPORT (independent of viewport width — also
-   applies to touch laptops/tablets docked at desktop size)
-===================================================== */
-@media (hover: none) {
-  /* Row actions are hover-revealed by default, which makes them
-     unreachable on touch devices. Keep them visible instead. */
-  .shortcut-actions,
-  .folder-actions {
-    opacity: 1;
-  }
-
-  /* Hover tooltips never dismiss reliably on touch; hide them so a
-     stuck tooltip doesn't linger after a tap. */
-  .sidebar-fab::after {
-    display: none;
-  }
-
-  /* Give long-press a slightly larger, easier target */
-  .sidebar-item,
-  .sidebar-folder-header {
-    padding-top: 11px;
-    padding-bottom: 11px;
-  }
-}
-
 /* =====================================================
    TEXT BLAZE STYLE WELCOME & FOLDER DETAIL VIEWS
 ===================================================== */
@@ -3632,15 +3361,6 @@ body {
 .view-sidebar {
   width: 300px;
   flex-shrink: 0;
-}
-
-@media (max-width: 900px) {
-  .view-container {
-    flex-direction: column;
-  }
-  .view-sidebar {
-    width: 100%;
-  }
 }
 
 /* Welcome View */

@@ -13,7 +13,7 @@ body {
 
 /* ===== Top Navigation Bar ===== */
 #header-container {
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 120;
   width: 100%;

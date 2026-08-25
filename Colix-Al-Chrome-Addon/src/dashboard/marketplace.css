@@ -1,7 +1,7 @@
 :root { --green: #1dac4b; --green-dark: #168d3c; --green-soft: #eaf8ee; --ink: #17251e; --muted: #718078; --border: #e4ece6; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; color: var(--ink); background: #f9fbfa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.marketplace-main { max-width: 1240px; margin: 0 auto; padding: 54px 42px 80px; }
+.marketplace-main { max-width: 1240px; margin: 0 auto; padding: 54px 42px 80px; padding-top: 5.8rem; }
 .marketplace-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; margin-bottom: 35px; }
 .eyebrow { margin: 0 0 10px; color: var(--green-dark); font-size: 11px; font-weight: 800; letter-spacing: .13em; }
 h1 { max-width: 720px; margin: 0; font-size: clamp(30px, 4vw, 47px); line-height: 1.08; letter-spacing: -.04em; }
