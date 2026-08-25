@@ -9,6 +9,7 @@ class HeaderModule {
     this.profileDropdownOpen = false;
     this.notificationsOpen = false;
     this.notifications = [];
+    this.notificationsLoaded = false;
     this.notificationsApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/notifications.php';
   }
 
@@ -51,6 +52,7 @@ class HeaderModule {
       brandHome: 'dashboard/dashboard.html',
       docs: 'dashboard/docs.html',
       workspace: 'dashboard/workspace.html',
+      'teams-plans': 'dashboard/teams_plans.html',
       marketplace: 'dashboard/marketplace.html'
     };
 
@@ -115,12 +117,14 @@ class HeaderModule {
       });
     }
 
-    // Profile menu items
+    // Profile menu items — dispatched by data-menu-action rather than position,
+    // so re-ordering or adding menu items later can't silently break routing.
     if (this.headerProfileDropdown) {
-      const profileMenuItems = this.headerProfileDropdown.querySelectorAll('.profile-menu-item');
-      profileMenuItems.forEach((item, index) => {
+      this.headerProfileDropdown.querySelectorAll('.profile-menu-item').forEach((item) => {
         item.addEventListener('click', (e) => {
-          if (index === 0) {
+          const action = item.dataset.menuAction;
+
+          if (action === 'profile') {
             this.closeProfileDropdown();
             return;
           }
@@ -128,25 +132,17 @@ class HeaderModule {
           e.preventDefault();
           e.stopPropagation();
 
-          // Handle menu item based on position: 0=Profile, 1=Usage, 2=Trash, 3=Signout
-          if (index === 1) {
-            // Usage
+          if (action === 'usage') {
             console.log('Usage clicked');
-          } else if (index === 2) {
+            this.closeProfileDropdown();
+          } else if (action === 'trash') {
             window.location.assign(chrome.runtime.getURL('dashboard/trash.html'));
-          } else if (index === 3) {
-            // Signout
-            chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
-              if (chrome.runtime.lastError) {
-                console.error('Logout failed:', chrome.runtime.lastError);
-              }
-              chrome.tabs.getCurrent((tab) => {
-                chrome.tabs.remove(tab.id);
-              });
-            });
+            this.closeProfileDropdown();
+          } else if (action === 'signout') {
+            this.handleSignOut(item);
+          } else {
+            this.closeProfileDropdown();
           }
-
-          this.closeProfileDropdown();
         });
       });
     }
@@ -189,6 +185,24 @@ class HeaderModule {
     });
   }
 
+  handleSignOut(item) {
+    if (item.disabled) return;
+    const label = item.querySelector('.profile-menu-item-label');
+    item.disabled = true;
+    this.headerProfileDropdown?.querySelectorAll('.profile-menu-item').forEach((el) => { if (el !== item) el.disabled = true; });
+    if (label) label.textContent = 'Signing out…';
+    item.insertAdjacentHTML('beforeend', '<span class="profile-menu-item-spinner" aria-hidden="true"></span>');
+
+    chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Logout failed:', chrome.runtime.lastError);
+      }
+      chrome.tabs.getCurrent((tab) => {
+        chrome.tabs.remove(tab.id);
+      });
+    });
+  }
+
   // Main initialization - orchestrates the loading sequence
   async init() {
     console.log('🚀 Starting header initialization...');
@@ -225,9 +239,15 @@ class HeaderModule {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load notifications.');
       this.notifications = payload.notifications || [];
+      this.notificationsLoaded = true;
       this.renderNotifications(payload.unread || 0);
     } catch (error) {
       console.warn('Could not load notifications:', error);
+      // Only replace the skeleton with an error state on the very first load;
+      // a background refresh failure shouldn't wipe out notifications already on screen.
+      if (!this.notificationsLoaded && this.notificationsList) {
+        this.notificationsList.innerHTML = '<p class="header-notifications-empty">Could not load notifications.</p>';
+      }
     }
   }
 
@@ -236,6 +256,7 @@ class HeaderModule {
       this.notificationCount.hidden = unread === 0;
       this.notificationCount.textContent = unread > 9 ? '9+' : String(unread);
     }
+    if (this.markAllNotificationsBtn) this.markAllNotificationsBtn.hidden = unread === 0;
     if (!this.notificationsList) return;
     this.notificationsList.innerHTML = this.notifications.length ? this.notifications.map((notification) => {
       return `<article class="header-notification${notification.read_at ? '' : ' unread'}"><strong>${this.escapeHtml(notification.title)}</strong><span>${this.escapeHtml(notification.message)}</span><small>${this.formatNotificationDate(notification.created_at)}</small><button type="button" data-notification-id="${this.escapeAttribute(notification.id)}">${notification.read_at ? 'View folder' : 'Enable folder'}</button></article>`;
@@ -243,7 +264,7 @@ class HeaderModule {
     this.notificationsList.querySelectorAll('[data-notification-id]').forEach((button) => button.addEventListener('click', () => {
       const notification = this.notifications.find((item) => item.id === button.dataset.notificationId);
       if (notification?.read_at) this.viewNotification(notification);
-      else this.markNotificationRead(button.dataset.notificationId);
+      else this.markNotificationRead(button.dataset.notificationId, button);
     }));
   }
 
@@ -251,9 +272,10 @@ class HeaderModule {
   openNotifications() { this.notificationsOpen = true; this.notificationsPanel.hidden = false; this.notificationsBtn?.setAttribute('aria-expanded', 'true'); }
   closeNotifications() { this.notificationsOpen = false; if (this.notificationsPanel) this.notificationsPanel.hidden = true; this.notificationsBtn?.setAttribute('aria-expanded', 'false'); }
 
-  async markNotificationRead(id) {
+  async markNotificationRead(id, triggerButton) {
     const notification = this.notifications.find((item) => item.id === id);
     if (!notification || notification.read_at) return;
+    if (triggerButton) { triggerButton.disabled = true; triggerButton.textContent = 'Enabling…'; }
     try {
       const response = await fetch(this.notificationsApiUrl, { method: 'POST', headers: { 'X-User-Email': this.profileData.email, 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
       const payload = await response.json().catch(() => ({}));
@@ -263,7 +285,10 @@ class HeaderModule {
       const detail = { ...notification, folder: payload.folder, shortcuts: payload.shortcuts || [] };
       window.dispatchEvent(new CustomEvent('sharedFolderNotification', { detail }));
       if (payload.folder?.id) this.openFolderInDashboard(payload.folder.id);
-    } catch (error) { console.warn('Could not mark notification read:', error); }
+    } catch (error) {
+      console.warn('Could not mark notification read:', error);
+      if (triggerButton) { triggerButton.disabled = false; triggerButton.textContent = 'Enable folder'; }
+    }
   }
 
   viewNotification(notification) {
@@ -282,7 +307,16 @@ class HeaderModule {
   }
 
   async markAllNotificationsRead() {
-    await Promise.all(this.notifications.filter((item) => !item.read_at).map((item) => this.markNotificationRead(item.id)));
+    if (!this.markAllNotificationsBtn || this.markAllNotificationsBtn.disabled) return;
+    const originalLabel = this.markAllNotificationsBtn.textContent;
+    this.markAllNotificationsBtn.disabled = true;
+    this.markAllNotificationsBtn.textContent = 'Marking…';
+    try {
+      await Promise.all(this.notifications.filter((item) => !item.read_at).map((item) => this.markNotificationRead(item.id)));
+    } finally {
+      this.markAllNotificationsBtn.disabled = false;
+      this.markAllNotificationsBtn.textContent = originalLabel;
+    }
   }
 
   formatNotificationDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : 'Just now'; }

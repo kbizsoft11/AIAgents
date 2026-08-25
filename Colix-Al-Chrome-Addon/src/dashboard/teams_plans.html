@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Teams</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="teams_plans.css">
+</head>
+<body>
+  <div id="header-container"></div>
+  <main class="teams-page">
+    <header class="teams-heading">
+      <div>
+        <p class="teams-kicker">Teams</p>
+        <h1>Space to grow, together</h1>
+        <p class="teams-intro">Bring your snippets, forms, and folders together in one shared workspace.</p>
+      </div>
+      <div class="teams-heading-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="12" width="34" height="27" rx="3"></rect><path d="M16 12V8h16v4M15 24h18M15 30h11"></path></svg>
+      </div>
+    </header>
+
+    <section class="teams-notice" id="teamsNotice" role="status" aria-live="polite"></section>
+
+    <section class="teams-panel teams-account-panel" id="teamsAccountPanel" hidden>
+      <div>
+        <p class="teams-panel-label">Workspace subscription</p>
+        <h2 id="teamsWorkspaceName">Your workspace</h2>
+        <p id="teamsSubscriptionSummary">Loading subscription details...</p>
+      </div>
+      <label class="teams-workspace-picker" id="teamsWorkspacePicker" hidden>
+        <span>Workspace</span>
+        <select id="teamsWorkspaceSelect"></select>
+      </label>
+    </section>
+
+    <section class="teams-panel teams-plans-panel">
+      <div class="teams-section-heading">
+        <div>
+          <p class="teams-panel-label">Plans</p>
+          <h2>Choose the room your team needs</h2>
+        </div>
+        <span class="teams-billing-note">Monthly billing</span>
+      </div>
+      <div class="teams-plan-grid" id="teamsPlanGrid">
+        <div class="teams-loading-state">Loading plans...</div>
+      </div>
+    </section>
+
+    <section class="teams-panel teams-help-panel">
+      <div class="teams-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.2.9-1.8 1.3-1.8 2.7M12 17h.01"></path></svg></div>
+      <div><h2>Need a tailored setup?</h2><p>Custom member limits and workspace arrangements are available for growing teams.</p></div>
+      <button class="teams-secondary-btn" id="teamsContactBtn" type="button">Contact us</button>
+    </section>
+  </main>
+  <script src="header.js"></script>
+  <script src="teams_plans.js"></script>
+</body>
+</html>

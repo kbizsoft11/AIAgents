@@ -64,20 +64,16 @@ Deno.serve(async (request) => {
     .maybeSingle();
   if (appUserError || !appUser) return jsonResponse({ success: false, error: 'Application user is not linked.' }, 403);
 
-  const { error: membershipError } = await adminClient.from('workspace_members').upsert({
-    workspace_id: invitation.workspace_id,
-    user_id: appUser.id,
-    role: invitation.role,
-    status: 'active',
-  }, { onConflict: 'workspace_id,user_id' });
-  if (membershipError) return jsonResponse({ success: false, error: 'Could not create workspace membership.' }, 500);
-
-  const { error: updateError } = await adminClient
-    .from('workspace_invitations')
-    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-    .eq('id', invitation.id)
-    .eq('status', 'pending');
-  if (updateError) return jsonResponse({ success: false, error: 'Could not finalize invitation.' }, 500);
+  const { error: membershipError } = await adminClient.rpc('accept_workspace_invitation', {
+    target_invitation: invitation.id,
+    joining_user: appUser.id,
+  });
+  if (membershipError) {
+    if (membershipError.message.includes('WORKSPACE_MEMBER_LIMIT_REACHED')) {
+      return jsonResponse({ success: false, error: 'This workspace has reached its member limit.' }, 409);
+    }
+    return jsonResponse({ success: false, error: 'Could not create workspace membership.' }, 500);
+  }
 
   return jsonResponse({ success: true, workspace_id: invitation.workspace_id, role: invitation.role });
 });

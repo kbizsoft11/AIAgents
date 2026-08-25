@@ -2,10 +2,12 @@
 .trash-page .workspace-results-heading { align-items: center; }
 .trash-page table { min-width: 720px; }
 .trash-page td:last-child { white-space: nowrap; }
+
 .trash-action { margin-right: 6px; padding: 7px 10px; }
-.trash-action-danger { color: #a42626; }
+.trash-action-danger { color: var(--workspace-red); }
+.trash-action-danger:hover:not(:disabled) { background: var(--workspace-red-wash); border-color: var(--workspace-red); }
+.trash-action:disabled { cursor: wait; opacity: .5; }
+
+.trash-view-only { color: var(--workspace-muted); font: 13px Arial, sans-serif; }
+
 .trash-empty { padding: 42px 10px; color: var(--workspace-muted); text-align: center; }
-@media (max-width: 640px) {
-  .trash-page .workspace-results-heading { align-items: stretch; }
-  .trash-page .workspace-results-heading button { width: 100%; }
-}

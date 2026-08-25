@@ -16,17 +16,21 @@
         <h1>Members and access</h1>
         <p class="workspace-intro">Invite people to collaborate on shared snippets, forms, and folders.</p>
       </div>
-      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#4e5d57;">
+      <div class="workspace-heading-actions">
+        <label class="workspace-switcher">
           <span>Workspace</span>
-          <select id="workspaceSelector" style="min-width:220px; padding:8px 10px; border:1px solid #d8e1dd; border-radius:8px; background:#fff; font:inherit;">
-            <option value="">Loading...</option>
+          <select id="workspaceSelector" disabled>
+            <option value="">Loading workspaces…</option>
           </select>
         </label>
-        <button class="workspace-primary-btn" id="inviteUserBtn" type="button" hidden>Invite user</button>
+        <button class="workspace-primary-btn" id="inviteUserBtn" type="button" hidden>
+          <span class="btn-icon" aria-hidden="true">+</span> Invite user
+        </button>
       </div>
     </header>
+
     <section class="workspace-notice" id="workspaceNotice" role="status" aria-live="polite"></section>
+
     <section class="workspace-panel invite-panel" id="invitePanel" hidden>
       <div class="workspace-panel-heading">
         <div><h2>Invite a collaborator</h2><p>They will receive a secure link to join this workspace.</p></div>
@@ -34,12 +38,23 @@
       <form id="inviteForm" class="invite-form">
         <label>Email address<input id="inviteEmail" type="email" autocomplete="email" required placeholder="name@example.com"></label>
         <label>Role<select id="inviteRole"><option value="viewer">Viewer</option><option value="editor">Editor</option><option value="admin">Admin</option></select></label>
-        <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelInviteBtn" type="button">Cancel</button><button class="workspace-primary-btn" type="submit">Send invitation</button></div>
+        <div class="invite-form-actions">
+          <button class="workspace-secondary-btn" id="cancelInviteBtn" type="button">Cancel</button>
+          <button class="workspace-primary-btn" id="sendInviteBtn" type="submit">
+            <span class="btn-label">Send invitation</span>
+            <span class="btn-spinner" aria-hidden="true" hidden></span>
+          </button>
+        </div>
       </form>
     </section>
+
     <section class="workspace-panel workspace-overview-panel">
       <div class="workspace-panel-heading">
-        <div><h2 id="workspaceName">Your workspace</h2><p id="workspaceIdentity">Loading account details...</p></div>
+        <div class="workspace-overview-text">
+          <h2 id="workspaceName"><span class="skeleton-text skeleton-text-lg"></span></h2>
+          <p id="workspaceIdentity"><span class="skeleton-text skeleton-text-md"></span></p>
+          <p id="workspacePlanSummary"><span class="skeleton-text skeleton-text-sm"></span></p>
+        </div>
         <span class="workspace-status">Personal workspace</span>
       </div>
       <nav class="workspace-tabs" role="tablist" aria-label="Workspace views">
@@ -48,25 +63,39 @@
         <button class="workspace-tab" type="button" role="tab" aria-selected="false" data-tab="resources">Shared resources</button>
       </nav>
     </section>
+
     <section class="workspace-panel workspace-results-panel">
       <div class="workspace-filters">
-        <label class="workspace-search">Search<input id="workspaceSearch" type="search" placeholder="Search this view..." autocomplete="off"></label>
+        <label class="workspace-search">Search<input id="workspaceSearch" type="search" placeholder="Search this view…" autocomplete="off"></label>
         <label>Role<select id="workspaceRoleFilter"><option value="">All roles</option><option value="owner">Owner</option><option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label>
         <label id="workspaceStatusFilterWrap">Status<select id="workspaceStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="revoked">Revoked</option><option value="expired">Expired</option></select></label>
         <label id="workspaceResourceFilterWrap">Type<select id="workspaceResourceFilter"><option value="">All resources</option><option value="folder">Folders</option><option value="shortcut">Shortcuts</option><option value="form">Forms</option></select></label>
         <button class="workspace-secondary-btn" id="workspaceClearFilters" type="button">Clear</button>
       </div>
-      <div class="workspace-panel-heading workspace-results-heading"><div><h2 id="workspaceResultsTitle">Members</h2><p id="workspaceResultsSummary">Loading results...</p></div></div>
-      <div class="workspace-table-wrap">
-        <table><thead id="workspaceTableHead"></thead><tbody id="workspaceResults"><tr><td>Loading results...</td></tr></tbody></table>
+      <div class="workspace-panel-heading workspace-results-heading">
+        <div><h2 id="workspaceResultsTitle">Members</h2><p id="workspaceResultsSummary">Loading results…</p></div>
       </div>
-      <div class="workspace-pagination" aria-label="Pagination"><button class="workspace-secondary-btn" id="workspacePrevious" type="button">Previous</button><span id="workspacePageSummary">Page 1 of 1</span><button class="workspace-secondary-btn" id="workspaceNext" type="button">Next</button></div>
+      <div class="workspace-table-wrap">
+        <table>
+          <thead id="workspaceTableHead"></thead>
+          <tbody id="workspaceResults"></tbody>
+        </table>
+      </div>
+      <div class="workspace-pagination" aria-label="Pagination">
+        <button class="workspace-secondary-btn" id="workspacePrevious" type="button">← Previous</button>
+        <span id="workspacePageSummary">Page 1 of 1</span>
+        <button class="workspace-secondary-btn" id="workspaceNext" type="button">Next →</button>
+      </div>
     </section>
   </main>
   <script src="header.js"></script>
+
   <div class="workspace-modal-backdrop" id="workspaceShareModal" hidden>
     <section class="workspace-modal" role="dialog" aria-modal="true" aria-labelledby="workspaceShareTitle">
-      <div class="workspace-modal-heading"><div><h2 id="workspaceShareTitle">Edit folder access</h2><p id="workspaceShareName"></p></div><button class="workspace-modal-close" id="closeWorkspaceShare" type="button" aria-label="Close">&times;</button></div>
+      <div class="workspace-modal-heading">
+        <div><h2 id="workspaceShareTitle">Edit folder access</h2><p id="workspaceShareName"></p></div>
+        <button class="workspace-modal-close" id="closeWorkspaceShare" type="button" aria-label="Close">&times;</button>
+      </div>
       <div id="workspaceShareMembers" class="workspace-share-members"></div>
       <p id="workspaceShareError" class="workspace-share-error" role="alert"></p>
       <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelWorkspaceShare" type="button">Close</button></div>

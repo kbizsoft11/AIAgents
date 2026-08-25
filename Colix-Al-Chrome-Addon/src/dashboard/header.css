@@ -231,6 +231,12 @@ body {
   transform: translateY(-1px);
 }
 
+.topbar-icon-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+  transform: none;
+}
+
 .topbar-icon-btn:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
@@ -257,10 +263,6 @@ body {
 }
 
 /* ===== Profile Dropdown ===== */
-/* NOTE: matches the id/class used in header.js and header.html:
-   the dropdown element is <div class="header-profile-dropdown" id="headerProfileDropdown">.
-   Previously this stylesheet targeted ".profile-dropdown", which never matched
-   anything, so the open/close animation silently did nothing. */
 .header-profile-dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -315,7 +317,7 @@ body {
 .profile-dropdown-identity {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -369,6 +371,11 @@ body {
   outline-offset: -2px;
 }
 
+.profile-menu-item:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .profile-menu-item.danger {
   color: #d92d20;
 }
@@ -392,112 +399,10 @@ body {
   stroke: currentColor;
 }
 
-.notification-dot {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffce3d;
-  border: 2px solid var(--brand-nav-bg);
-}
-
-/* ===== Mobile Top Bar (hidden on desktop) ===== */
-.mobile-topbar {
-  display: none;
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  padding-top: max(10px, env(safe-area-inset-top));
-  background: #ffffff;
-  border-bottom: 1px solid #eee;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.mobile-menu-btn {
-  background: none;
-  border: none;
-  color: #1a1a2e;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.mobile-menu-btn:hover {
-  background: #f5f5f5;
-}
-
-.mobile-topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 800;
-  color: #1a1a2e;
-}
-
-.mobile-topbar-spacer {
-  flex: 1;
-}
-
-/* ===== Responsive Adjustments ===== */
-/* Around laptop widths, the search box is the first to go so the nav links
-   and icon cluster keep their spacing instead of squeezing everything. */
-@media (max-width: 1300px) {
-  .topbar-search {
-    width: clamp(120px, 10vw, 180px);
-  }
-}
-
-@media (max-width: 1150px) {
-  .topbar-search {
-    display: none;
-  }
-}
-
-@media (max-width: 1000px) {
-  .topbar-nav {
-    gap: 4px;
-  }
-
-  .topbar-link {
-    padding: 8px;
-  }
-
-  .topbar-premium-btn span,
-  .topbar-premium-btn {
-    padding: 8px 10px;
-  }
-}
-
-@media (max-width: 900px) {
-  .app-topbar {
-    display: none;
-  }
-
-  .mobile-topbar {
-    display: flex;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .header-profile-dropdown,
-  .topbar-icon-btn,
-  .topbar-premium-btn {
-    transition: none;
-  }
-}
-
+/* Small unread-count badge on the bell icon.
+   (Previously defined twice — a plain 8px dot earlier in this file was
+   dead code, silently overridden by this fuller definition below. Kept
+   only this one, since it's what header.js's textContent count expects.) */
 .notification-dot {
   position: absolute;
   top: -4px;
@@ -527,13 +432,61 @@ body {
 }
 
 .header-notifications-heading { display: flex; justify-content: space-between; align-items: center; padding: 15px 16px; border-bottom: 1px solid #dfe6e0; font: 15px Georgia, serif; }
-.header-notifications-heading button { border: 0; background: transparent; color: #159447; cursor: pointer; font: 12px Arial, sans-serif; }
+.header-notifications-heading button { border: 0; background: transparent; color: #159447; cursor: pointer; font: 12px Arial, sans-serif; transition: opacity 0.15s ease; }
+.header-notifications-heading button:disabled { cursor: wait; opacity: 0.55; }
 .header-notifications-list { display: grid; max-height: 360px; overflow-y: auto; }
 .header-notification { padding: 14px 16px; border-bottom: 1px solid #edf1ed; font: 13px/1.45 Arial, sans-serif; }
 .header-notification.unread { background: #f4f8f4; }
 .header-notification strong { display: block; margin-bottom: 4px; font: 16px Georgia, serif; }
 .header-notification small { display: block; margin-top: 8px; color: #6d786f; }
-.header-notification button { margin-top: 10px; border: 1px solid #159447; border-radius: 3px; padding: 8px 11px; color: #159447; background: #fff; cursor: pointer; font: 700 12px Arial, sans-serif; }
+.header-notification button { margin-top: 10px; border: 1px solid #159447; border-radius: 3px; padding: 8px 11px; color: #159447; background: #fff; cursor: pointer; font: 700 12px Arial, sans-serif; transition: background 0.15s ease; }
+.header-notification button:hover:not(:disabled) { background: #e8f5eb; }
+.header-notification button:disabled { cursor: wait; opacity: 0.6; }
 .header-notifications-empty { margin: 0; padding: 22px 16px; color: #6d786f; font: 13px Arial, sans-serif; }
 
-@media (max-width: 640px) { .header-notifications-panel { right: 8px; } }
+/* Loading skeleton for the notifications list and dropdown identity card */
+.header-skeleton-line {
+  display: inline-block;
+  height: 0.85em;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #edf1ed 25%, #f7faf8 37%, #edf1ed 63%);
+  background-size: 400% 100%;
+  animation: header-shimmer 1.4s ease infinite;
+  vertical-align: middle;
+}
+
+.header-notification-skeleton {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+@keyframes header-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes header-spin {
+  to { transform: rotate(360deg); }
+}
+
+.profile-menu-item-spinner {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  border: 2px solid rgba(23, 34, 46, 0.18);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: header-spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-profile-dropdown,
+  .topbar-icon-btn,
+  .topbar-premium-btn,
+  .header-skeleton-line,
+  .profile-menu-item-spinner {
+    transition: none;
+    animation: none;
+  }
+}

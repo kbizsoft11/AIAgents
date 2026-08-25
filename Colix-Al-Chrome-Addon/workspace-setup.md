@@ -45,7 +45,16 @@ In Supabase Authentication > Providers > Google, enter the web application's cli
 
 ## 2. Schema and migration order
 
-The schema adds `workspaces`, `workspace_members`, `workspace_invitations`, `resource_permissions`, an `auth_user_id` bridge on `users`, and `workspace_id` columns on existing folders, shortcuts, and forms.
+The schema adds `workspaces`, `workspace_members`, `workspace_invitations`, `resource_permissions`, workspace plan tables, an `auth_user_id` bridge on `users`, and `workspace_id` columns on existing folders, shortcuts, and forms.
+
+Workspace seat limits count the owner and active members. Pending, unexpired invitations also reserve seats. The initial plans are:
+
+| Plan | Maximum members | Monthly price |
+| --- | ---: | ---: |
+| Free | 2 total (owner plus one invitee) | $0 |
+| Team | 20 | $19 |
+| Business | 50 | $50 |
+| Custom | Configured per agreement | Contact us |
 
 Run this migration after the new tables exist:
 
@@ -82,6 +91,8 @@ The `auth_user_id` bridge is required because the legacy `users.id` values were 
 After OAuth succeeds, the extension automatically fills `users.auth_user_id` for the matching email. If Google authorization fails before the callback, verify both redirect settings before testing Workspace again.
 
 After verification, make `workspace_id` `NOT NULL` in a later migration. Existing IDs and content are preserved.
+
+The migration also creates one `free` subscription for every existing workspace and automatically creates a `free` subscription for new workspaces. Apply the full current `src/db.sql` in staging first. The `create_workspace_invitation` and `accept_workspace_invitation` database functions use transaction locks so concurrent invitations cannot exceed the plan limit.
 
 ## 3. Auth and API setup
 
@@ -129,11 +140,17 @@ composer install --no-dev
 
 The Supabase URL, keys, invite acceptance URL, and Gmail SMTP settings are currently hardcoded in `send-invitation.php`. The service-role key and SMTP password must remain server-side. Configure `ALLOWED_ORIGIN` to the extension origin in production instead of `*`.
 
-The endpoint validates the Chrome Identity email, checks the linked application user and owner/admin role, initializes a missing personal workspace for that user, stores only a SHA-256 invitation-token hash, and sends a seven-day invitation link through Gmail STARTTLS on port 587.
+The endpoint validates the Chrome Identity email, checks the linked application user and owner/admin role, initializes a missing personal workspace for that user, reserves a seat through `create_workspace_invitation`, stores only a SHA-256 invitation-token hash, and sends a seven-day invitation link through Gmail STARTTLS on port 587. The acceptance page and Edge Function use `accept_workspace_invitation`, so invitation acceptance is also rejected when a workspace is full.
 
 ## 8. Workspace UI
 
 The workspace page uses Chrome Identity for the current Gmail account and sends that identity to the PHP invite API. Supabase OAuth is not required for sending an invitation. The email link opens the public `api/accept-invitation.php` page, where the invitee confirms the receiving email and joins the workspace.
+
+The workspace API returns `workspace_plan` with the plan name, status, member limit, active member count, and pending invitation count. The UI displays this usage and disables inviting when all seats are reserved.
+
+The Teams page is `dashboard/teams_plans.html` and loads plan catalog rows and owned-workspace subscription state from `api/teams-plans.php`. The endpoint must be deployed alongside the other PHP APIs. It returns subscription details only for workspaces owned by the signed-in account; invited members can use the page to see available catalog plans but do not receive another workspace's billing state.
+
+Payment collection is not implemented by the sandbox PayPal checkout page. Before enabling paid plans, add a server-side provider checkout flow and webhook that updates `workspace_subscriptions.plan_code`, `status`, `current_period_end`, and provider identifiers. Never let the extension set these values directly.
 
 ## 9. Verification checklist
 
