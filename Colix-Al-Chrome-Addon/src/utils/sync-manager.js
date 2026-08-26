@@ -224,7 +224,12 @@ class SyncManager {
     await Promise.all(workspaceIds.map((workspaceId) => fetchWorkspaceResources(workspaceId)));
 
     return resources.map((item) => {
-      return { ...item };
+      const normalized = this.normalizeItemKeys(item);
+      const type = normalized.type || normalized.resource_type || normalized.resourceType;
+      return {
+        ...normalized,
+        ...(type ? { type } : {})
+      };
     });
   }
 
@@ -347,36 +352,56 @@ class SyncManager {
    * Get local shortcuts
    */
   async getLocalShortcuts() {
-    return this.resources.filter((item) => item.type === 'shortcut');
+    return this.resources.filter((item) => this.getResourceType(item) === 'shortcut');
   }
 
   /**
    * Get local forms
    */
   async getLocalForms() {
-    return this.resources.filter((item) => item.type === 'form');
+    return this.resources.filter((item) => this.getResourceType(item) === 'form');
   }
 
   async getLocalFolders() {
-    return this.resources.filter((item) => item.type === 'folder');
+    return this.resources.filter((item) => this.getResourceType(item) === 'folder');
+  }
+
+  getResourceType(item) {
+    if (!item || typeof item !== 'object') return '';
+    if (item.type || item.resource_type || item.resourceType) {
+      return item.type || item.resource_type || item.resourceType;
+    }
+    if (item.trigger && item.expansion !== undefined) return 'shortcut';
+    if (item.template_type || item.template || Array.isArray(item.fields)) return 'form';
+    if (item.name && !item.trigger) return 'folder';
+    return '';
   }
 
   /**
    * Save shortcuts to local storage
    */
   async saveLocalShortcuts(shortcuts) {
-    this.resources = [...this.resources.filter((item) => item.type !== 'shortcut'), ...shortcuts];
+    this.resources = [
+      ...this.resources.filter((item) => this.getResourceType(item) !== 'shortcut'),
+      ...shortcuts.map(item => ({ ...item, type: 'shortcut' }))
+    ];
   }
 
   /**
    * Save forms to local storage
    */
   async saveLocalForms(forms) {
-    this.resources = [...this.resources.filter((item) => item.type !== 'form'), ...forms];
+    this.resources = [
+      ...this.resources.filter((item) => this.getResourceType(item) !== 'form'),
+      ...forms.map(item => ({ ...item, type: 'form' }))
+    ];
   }
 
   async saveLocalFolders(folders) {
-    this.resources = [...this.resources.filter((item) => item.type !== 'folder'), ...folders];
+    this.resources = [
+      ...this.resources.filter((item) => this.getResourceType(item) !== 'folder'),
+      ...folders.map(item => ({ ...item, type: 'folder' }))
+    ];
   }
 
   normalizeItemKeys(item) {

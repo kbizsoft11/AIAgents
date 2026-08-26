@@ -121,7 +121,7 @@ Test owner, admin, editor, viewer, removed-member, and unrelated-user sessions. 
 
 ## 5. Sharing behavior
 
-Folder sharing is the first supported workflow. A folder permission applies to child snippets and forms. New children inherit the folder workspace and access. Individual permissions can provide exceptions. Resources remain owned by the workspace and are not copied into a subuser's personal collection.
+Folder sharing is the first supported workflow. A folder permission applies to child snippets and forms. New children inherit the folder workspace and access. Individual and workspace-group permissions can provide access or exceptions. Resources remain owned by the workspace and are not copied into a subuser's personal collection. Deploy the `resource_group_permissions` table and policies from `src/db.sql` before enabling group sharing.
 
 ## 6. Sync rollout
 
@@ -147,6 +147,8 @@ The endpoint validates the Chrome Identity email, checks the linked application 
 The workspace page uses Chrome Identity for the current Gmail account and sends that identity to the PHP invite API. Supabase OAuth is not required for sending an invitation. The email link opens the public `api/accept-invitation.php` page, where the invitee confirms the receiving email and joins the workspace.
 
 The workspace API returns `workspace_plan` with the plan name, status, member limit, active member count, and pending invitation count. The UI displays this usage and disables inviting when all seats are reserved.
+
+Workspace groups are isolated in `dashboard/workspace_groups.html` with their own stylesheet and script. Deploy `api/workspace-groups.php` with the other PHP APIs. Owners and admins can create/delete groups and add/remove active workspace members; viewers and editors can only read groups. Group membership is removed automatically when a group or workspace member is deleted.
 
 The Teams page is `dashboard/teams_plans.html` and loads plan catalog rows and owned-workspace subscription state from `api/teams-plans.php`. The endpoint must be deployed alongside the other PHP APIs. It returns subscription details only for workspaces owned by the signed-in account; invited members can use the page to see available catalog plans but do not receive another workspace's billing state.
 

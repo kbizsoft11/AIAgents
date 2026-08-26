@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Workspace Groups</title>
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="workspace_groups.css">
+</head>
+<body>
+  <div id="header-container"></div>
+  <main class="groups-page">
+    <header class="groups-heading">
+      <div>
+        <p class="groups-kicker">Workspace groups</p>
+        <h1>Organize access by team.</h1>
+        <p class="groups-intro">Create focused groups for HR, IT, Sales, and the people behind each one.</p>
+      </div>
+      <label class="groups-workspace-picker" id="groupsWorkspacePicker" hidden>
+        <span>Workspace</span>
+        <select id="groupsWorkspaceSelect"></select>
+      </label>
+    </header>
+
+    <section class="groups-notice" id="groupsNotice" role="status" aria-live="polite"></section>
+
+    <section class="groups-layout">
+      <!-- Left: group list -->
+      <section class="groups-panel groups-list-panel">
+        <div class="groups-list-heading">
+          <div>
+            <p class="groups-panel-label">Groups</p>
+            <h2>Your groups</h2>
+            <p class="groups-list-count" id="groupsCount">Loading…</p>
+          </div>
+          <button class="groups-primary-btn groups-new-btn" id="groupsNewBtn" type="button" hidden>
+            <span class="btn-icon" aria-hidden="true">+</span> New
+          </button>
+        </div>
+
+        <div id="groupsList" class="groups-list" role="listbox" aria-label="Workspace groups"></div>
+      </section>
+
+      <!-- Right: selected group detail -->
+      <section class="groups-panel groups-detail-panel" id="groupsDetailPanel">
+        <div id="groupsDetailContent"></div>
+      </section>
+    </section>
+  </main>
+  <div class="groups-modal-backdrop" id="groupsCreateModal" hidden>
+    <section class="groups-modal" role="dialog" aria-modal="true" aria-labelledby="groupsCreateTitle">
+      <div class="groups-modal-heading">
+        <div><h2 id="groupsCreateTitle">Create a group</h2><p>Give your workspace a focused access group.</p></div>
+        <button class="groups-modal-close" id="groupsCloseCreateBtn" type="button" aria-label="Close">×</button>
+      </div>
+      <form id="groupsCreateForm" class="groups-create-form">
+        <label>Name<input id="groupsName" maxlength="80" required placeholder="e.g. Human Resources"></label>
+        <label>Description <span>(optional)</span><input id="groupsDescription" maxlength="160" placeholder="What is this group for?"></label>
+        <div class="groups-create-actions">
+          <button class="groups-secondary-btn" id="groupsCancelCreateBtn" type="button">Cancel</button>
+          <button class="groups-primary-btn" type="submit"><span class="groups-button-label">Create group</span><span class="groups-spinner" aria-hidden="true" hidden></span></button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="groups-modal-backdrop" id="groupsMemberModal" hidden>
+    <section class="groups-modal groups-member-modal" role="dialog" aria-modal="true" aria-labelledby="groupsMemberTitle">
+      <div class="groups-modal-heading">
+        <div><h2 id="groupsMemberTitle">Add a member</h2><p>Choose an active workspace member to add.</p></div>
+        <button class="groups-modal-close" id="groupsCloseMemberBtn" type="button" aria-label="Close">×</button>
+      </div>
+      <label class="groups-member-search"><span class="sr-only">Search members</span><input id="groupsMemberSearch" type="search" placeholder="Search by name or email"></label>
+      <div class="groups-member-options" id="groupsMemberOptions"></div>
+    </section>
+  </div>
+  <div class="groups-modal-backdrop" id="groupsEditModal" hidden>
+    <section class="groups-modal" role="dialog" aria-modal="true" aria-labelledby="groupsEditTitle">
+      <div class="groups-modal-heading">
+        <div><h2 id="groupsEditTitle">Edit group</h2><p>Update this group's name and description.</p></div>
+        <button class="groups-modal-close" id="groupsCloseEditBtn" type="button" aria-label="Close">×</button>
+      </div>
+      <form id="groupsEditForm" class="groups-create-form">
+        <label>Name<input id="groupsEditName" maxlength="80" required></label>
+        <label>Description <span>(optional)</span><input id="groupsEditDescription" maxlength="160"></label>
+        <div class="groups-create-actions">
+          <button class="groups-secondary-btn" id="groupsCancelEditBtn" type="button">Cancel</button>
+          <button class="groups-primary-btn" type="submit"><span class="groups-button-label">Save changes</span><span class="groups-spinner" aria-hidden="true" hidden></span></button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <script src="header.js"></script>
+  <script src="workspace_groups.js"></script>
+</body>
+</html>

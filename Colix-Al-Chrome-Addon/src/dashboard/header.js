@@ -53,6 +53,7 @@ class HeaderModule {
       docs: 'dashboard/docs.html',
       workspace: 'dashboard/workspace.html',
       'teams-plans': 'dashboard/teams_plans.html',
+      'workspace-groups': 'dashboard/workspace_groups.html',
       marketplace: 'dashboard/marketplace.html'
     };
 

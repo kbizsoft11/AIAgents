@@ -1338,6 +1338,10 @@ div#format-container {
 .share-resource-modal .form-modal-header h2 { margin: 0 0 6px; color: #17221c; font: 500 24px/1.15 Georgia, 'Times New Roman', serif; }
 .share-resource-modal .form-modal-header p { margin: 0; color: #6d786f; font: 13px/1.5 Arial, sans-serif; }
 .share-resource-modal form { padding: 20px 26px 0; }
+.share-resource-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid #dfe6e0; }
+.share-resource-tab { padding: 9px 14px; border: 0; border-bottom: 2px solid transparent; color: #6d786f; background: transparent; font: 700 13px Arial, sans-serif; cursor: pointer; }
+.share-resource-tab.is-active { border-bottom-color: #159447; color: #107b3b; }
+.share-resource-tab:focus-visible { outline: 2px solid #159447; outline-offset: -2px; }
 .share-resource-members { display: grid; gap: 8px; max-height: 320px; overflow-y: auto; margin-bottom: 18px; }
 .share-resource-search { width: 100%; margin-bottom: 14px; padding: 10px 11px; border: 1px solid #dfe6e0; border-radius: 3px; color: #17221c; background: #fff; font: 14px Arial, sans-serif; }
 .share-resource-search::placeholder { color: #8b958e; }

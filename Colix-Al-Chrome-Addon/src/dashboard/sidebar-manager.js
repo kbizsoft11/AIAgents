@@ -22,6 +22,7 @@ class SidebarManager {
     this.workspaceRole = "viewer";
     this.folderPermissions = new Map();
     this.workspaceMembers = [];
+    this.workspaceGroups = [];
     this.shareResource = null;
     this.sharingContextPromise = null;
   }
@@ -65,6 +66,12 @@ class SidebarManager {
           member.user?.email &&
           member.user.email.toLowerCase() !== identity.email.toLowerCase(),
       );
+      const groupsResponse = await fetch(
+        `https://extensions.kbizsoft.com/magicaa-extension/workspace-groups.php`,
+        { headers: { "X-User-Email": identity.email } },
+      );
+      const groupsPayload = await groupsResponse.json().catch(() => ({}));
+      this.workspaceGroups = groupsResponse.ok && groupsPayload.success ? (groupsPayload.groups || []) : [];
 
       this.folders.forEach((folder) => {
         if (folder.permission)
@@ -1031,7 +1038,8 @@ class SidebarManager {
     const error = document.getElementById("shareResourceError");
     if (!overlay || !members) return;
 
-    this.shareResource = { type, id, name, permissions: [] };
+    this.shareResource = { type, id, name, permissions: [], groupPermissions: [] };
+    this.activeShareTab = "users";
     document.getElementById("shareResourceTitle").textContent =
       `Share ${type === "folder" ? "folder" : type === "form" ? "form" : "snippet"}`;
     document.getElementById("shareResourceDescription").textContent =
@@ -1041,10 +1049,22 @@ class SidebarManager {
     members.innerHTML =
       '<p class="share-resource-empty">Loading workspace members...</p>';
     document.getElementById("shareResourceMemberSearch").value = "";
+    document.querySelectorAll("[data-share-tab]").forEach((tab) => {
+      tab.classList.toggle("is-active", tab.dataset.shareTab === this.activeShareTab);
+      tab.setAttribute("aria-selected", String(tab.dataset.shareTab === this.activeShareTab));
+      tab.onclick = () => {
+        this.activeShareTab = tab.dataset.shareTab;
+        document.querySelectorAll("[data-share-tab]").forEach((item) => {
+          item.classList.toggle("is-active", item.dataset.shareTab === this.activeShareTab);
+          item.setAttribute("aria-selected", String(item.dataset.shareTab === this.activeShareTab));
+        });
+        this.filterShareMembers(document.getElementById("shareResourceMemberSearch").value);
+      };
+    });
     document.getElementById("shareResourceMemberSearch").oninput = (event) =>
       this.filterShareMembers(event.target.value);
     const renderMemberRows = () =>
-      this.workspaceMembers.length
+      this.workspaceMembers.length || this.workspaceGroups.length
         ? this.workspaceMembers
             .map((member) => {
               const user = member.user;
@@ -1053,7 +1073,7 @@ class SidebarManager {
                 user.email;
               return `<div class="share-resource-member" data-member-email="${this.escapeAttribute(user.email)}" data-member-search="${this.escapeAttribute(`${displayName} ${user.email} ${member.role}`.toLowerCase())}" data-shared="false"><input type="checkbox" aria-label="Select ${this.escapeAttribute(displayName)}"><span><strong>${this.escapeHtml(displayName)}</strong><small>${this.escapeHtml(user.email)} · ${this.escapeHtml(member.role)}</small></span><select class="share-member-permission" aria-label="Permission for ${this.escapeAttribute(displayName)}"><option value="view">Can view</option><option value="edit">Can edit</option><option value="manage">Can manage</option></select><button class="share-member-remove" type="button" aria-label="Remove access from ${this.escapeAttribute(displayName)}" hidden>&times;</button></div>`;
             })
-            .join("")
+            .join("") + this.workspaceGroups.map((group) => `<div class="share-resource-member share-resource-group" data-group-id="${this.escapeAttribute(group.id)}" data-member-search="${this.escapeAttribute(`${group.name} group`.toLowerCase())}" data-shared="false"><input type="checkbox" aria-label="Select ${this.escapeAttribute(group.name)}"><span><strong>${this.escapeHtml(group.name)}</strong><small>Workspace group</small></span><select class="share-member-permission" aria-label="Permission for ${this.escapeAttribute(group.name)}"><option value="view">Can view</option><option value="edit">Can edit</option><option value="manage">Can manage</option></select><button class="share-member-remove" type="button" aria-label="Remove access from group" hidden>&times;</button></div>`).join("")
         : '<p class="share-resource-empty">No active workspace members are available.</p>';
     members.innerHTML =
       '<p class="share-resource-empty">Loading folder access...</p>';
@@ -1066,6 +1086,7 @@ class SidebarManager {
       if (!response.ok || !payload.success)
         throw new Error(payload.error || "Could not load folder access.");
       this.shareResource.permissions = payload.permissions || [];
+      this.shareResource.groupPermissions = payload.group_permissions || [];
       members.innerHTML = renderMemberRows();
       this.shareResource.permissions.forEach((permission) => {
         const row = members.querySelector(
@@ -1082,6 +1103,7 @@ class SidebarManager {
     }
     overlay.style.display = "flex";
     this.bindShareMemberActions();
+    this.filterShareMembers("");
   }
 
   filterShareMembers(value) {
@@ -1089,7 +1111,8 @@ class SidebarManager {
     document
       .querySelectorAll("#shareResourceMembers .share-resource-member")
       .forEach((row) => {
-        row.hidden = query !== "" && !row.dataset.memberSearch.includes(query);
+        const recipientType = row.dataset.groupId ? "groups" : "users";
+        row.hidden = recipientType !== this.activeShareTab || (query !== "" && !row.dataset.memberSearch.includes(query));
       });
   }
 
@@ -1127,6 +1150,13 @@ class SidebarManager {
       row.dataset.shared = "true";
       this.updateShareRowAction(row);
     });
+    this.shareResource.groupPermissions.forEach((permission) => {
+      const row = document.querySelector(`#shareResourceMembers [data-group-id="${CSS.escape(permission.group_id)}"]`);
+      if (!row) return;
+      row.querySelector("select").value = permission.permission;
+      row.dataset.shared = "true";
+      this.updateShareRowAction(row);
+    });
   }
 
   updateShareRowAction(row) {
@@ -1136,9 +1166,10 @@ class SidebarManager {
     const checkbox = row.querySelector('input[type="checkbox"]');
     button.hidden = !shared;
     checkbox.hidden = shared;
+    const label = row.dataset.groupId ? row.querySelector("strong").textContent : row.dataset.memberEmail;
     button.setAttribute(
       "aria-label",
-      `${shared ? "Remove access from" : "Grant access to"} ${row.dataset.memberEmail}`,
+      `${shared ? "Remove access from" : "Grant access to"} ${label}`,
     );
   }
 
@@ -1158,7 +1189,7 @@ class SidebarManager {
     const error = document.getElementById("shareResourceError");
     const submit = event.currentTarget.querySelector('[type="submit"]');
     if (!selected.length) {
-      error.textContent = "Select at least one workspace member.";
+      error.textContent = "Select at least one workspace member or group.";
       return;
     }
     if (!this.shareResource) return;
@@ -1177,7 +1208,8 @@ class SidebarManager {
             body: JSON.stringify({
               resource_type: "folder",
               resource_id: this.shareResource.id,
-              email: row.dataset.memberEmail,
+              email: row.dataset.memberEmail || "",
+              group_id: row.dataset.groupId || "",
               permission: row.querySelector("select").value,
             }),
           }).then(async (response) => {
@@ -1189,18 +1221,23 @@ class SidebarManager {
         ),
       );
       results.forEach(({ row }) => {
-        const email = row.dataset.memberEmail;
         const permission = row.querySelector("select").value;
         row.dataset.shared = "true";
         row.querySelector("input").checked = true;
         this.updateShareRowAction(row);
+        if (row.dataset.groupId) {
+          this.shareResource.groupPermissions = this.shareResource.groupPermissions.filter((item) => item.group_id !== row.dataset.groupId);
+          this.shareResource.groupPermissions.push({ permission, group_id: row.dataset.groupId });
+          return;
+        }
+        const email = row.dataset.memberEmail;
         this.shareResource.permissions = this.shareResource.permissions.filter(
           (item) => item.user?.email?.toLowerCase() !== email.toLowerCase(),
         );
         this.shareResource.permissions.push({ permission, user: { email } });
       });
       window.dashboard?.showToast(
-        `Shared with ${results.length} member${results.length === 1 ? "" : "s"}.`,
+        `Shared with ${results.length} recipient${results.length === 1 ? "" : "s"}.`,
       );
     } catch (shareError) {
       error.textContent = shareError.message;
@@ -1212,6 +1249,24 @@ class SidebarManager {
   async removeShareMember(row) {
     if (!row || !this.shareResource) return;
     const email = row.dataset.memberEmail;
+    const groupId = row.dataset.groupId;
+    const groupPermission = this.shareResource.groupPermissions.find((item) => item.group_id === groupId);
+    if (groupId) {
+      if (!groupPermission) {
+        row.dataset.shared = "false";
+        this.updateShareRowAction(row);
+        return;
+      }
+      try {
+        const response = await fetch(this.shareApiUrl, { method: "DELETE", headers: { "X-User-Email": this.currentUserEmail, "Content-Type": "application/json" }, body: JSON.stringify({ resource_type: "folder", resource_id: this.shareResource.id, group_id: groupId, action: "revoke" }) });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) throw new Error(payload.error || "Could not remove group access.");
+        row.dataset.shared = "false";
+        this.updateShareRowAction(row);
+        this.shareResource.groupPermissions = this.shareResource.groupPermissions.filter((item) => item.group_id !== groupId);
+      } catch (removeError) { document.getElementById("shareResourceError").textContent = removeError.message; }
+      return;
+    }
     const permission = this.shareResource.permissions.find(
       (item) => item.user?.email?.toLowerCase() === email.toLowerCase(),
     );

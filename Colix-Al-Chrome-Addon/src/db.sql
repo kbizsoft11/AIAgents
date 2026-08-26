@@ -143,6 +143,38 @@ CREATE TABLE public.workspace_members (
   CONSTRAINT workspace_members_pkey PRIMARY KEY (workspace_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.workspace_groups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  description text,
+  sort_order integer,
+  created_by uuid NOT NULL REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT workspace_groups_pkey PRIMARY KEY (id),
+  CONSTRAINT workspace_groups_name_unique UNIQUE (workspace_id, name)
+);
+
+ALTER TABLE public.workspace_groups ADD COLUMN IF NOT EXISTS sort_order integer;
+
+WITH ordered_groups AS (
+  SELECT id, row_number() OVER (PARTITION BY workspace_id ORDER BY created_at, id) - 1 AS next_order
+  FROM public.workspace_groups
+  WHERE sort_order IS NULL
+)
+UPDATE public.workspace_groups AS groups
+SET sort_order = ordered_groups.next_order
+FROM ordered_groups
+WHERE groups.id = ordered_groups.id AND groups.sort_order IS NULL;
+
+CREATE TABLE IF NOT EXISTS public.workspace_group_members (
+  group_id uuid NOT NULL REFERENCES public.workspace_groups(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT workspace_group_members_pkey PRIMARY KEY (group_id, user_id)
+);
+
 CREATE TABLE public.workspace_invitations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -170,6 +202,19 @@ CREATE TABLE public.resource_permissions (
   CONSTRAINT resource_permissions_unique UNIQUE (workspace_id, resource_type, resource_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.resource_group_permissions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  resource_type text NOT NULL CHECK (resource_type IN ('folder', 'shortcut', 'form')),
+  resource_id text NOT NULL,
+  group_id uuid NOT NULL REFERENCES public.workspace_groups(id) ON DELETE CASCADE,
+  permission text NOT NULL DEFAULT 'view' CHECK (permission IN ('view', 'edit', 'manage')),
+  granted_by uuid NOT NULL REFERENCES public.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT resource_group_permissions_unique UNIQUE (workspace_id, resource_type, resource_id, group_id)
+);
+
 CREATE TABLE IF NOT EXISTS public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -194,8 +239,11 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS auth_user_id uuid;
 CREATE UNIQUE INDEX IF NOT EXISTS users_auth_user_id_idx ON public.users(auth_user_id) WHERE auth_user_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS workspace_members_user_idx ON public.workspace_members(user_id, status);
+CREATE INDEX IF NOT EXISTS workspace_groups_workspace_idx ON public.workspace_groups(workspace_id, created_at);
+CREATE INDEX IF NOT EXISTS workspace_group_members_user_idx ON public.workspace_group_members(user_id, group_id);
 CREATE INDEX IF NOT EXISTS invitations_workspace_idx ON public.workspace_invitations(workspace_id, status);
 CREATE INDEX IF NOT EXISTS permissions_resource_idx ON public.resource_permissions(workspace_id, resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS group_permissions_resource_idx ON public.resource_group_permissions(workspace_id, resource_type, resource_id);
 
 CREATE OR REPLACE FUNCTION public.create_workspace_invitation(
   target_workspace uuid,
@@ -307,8 +355,11 @@ $$;
 
 ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workspace_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workspace_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workspace_group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workspace_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resource_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.resource_group_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workspace_plan_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.workspace_subscriptions ENABLE ROW LEVEL SECURITY;
 
@@ -326,3 +377,16 @@ CREATE POLICY permissions_member_read ON public.resource_permissions FOR SELECT 
 CREATE POLICY permissions_admin_write ON public.resource_permissions FOR ALL
   USING (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']))
   WITH CHECK (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']));
+CREATE POLICY group_permissions_member_read ON public.resource_group_permissions FOR SELECT USING (public.is_workspace_member(workspace_id));
+CREATE POLICY group_permissions_admin_write ON public.resource_group_permissions FOR ALL
+  USING (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']))
+  WITH CHECK (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']));
+CREATE POLICY workspace_groups_member_read ON public.workspace_groups FOR SELECT USING (public.is_workspace_member(workspace_id));
+CREATE POLICY workspace_groups_admin_write ON public.workspace_groups FOR ALL
+  USING (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']))
+  WITH CHECK (public.has_workspace_role(workspace_id, ARRAY['owner', 'admin']));
+CREATE POLICY workspace_group_members_member_read ON public.workspace_group_members FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.workspace_groups g WHERE g.id = group_id AND public.is_workspace_member(g.workspace_id)));
+CREATE POLICY workspace_group_members_admin_write ON public.workspace_group_members FOR ALL
+  USING (EXISTS (SELECT 1 FROM public.workspace_groups g WHERE g.id = group_id AND public.has_workspace_role(g.workspace_id, ARRAY['owner', 'admin'])))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.workspace_groups g WHERE g.id = group_id AND public.has_workspace_role(g.workspace_id, ARRAY['owner', 'admin'])));

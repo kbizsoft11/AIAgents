@@ -287,15 +287,17 @@ class WorkspacePage {
     </div>`;
     modal.hidden = false;
     try {
-      const [membersResponse, permissionsResponse] = await Promise.all([
+      const [membersResponse, permissionsResponse, groupsResponse] = await Promise.all([
         fetch(`${this.workspaceApiUrl}?tab=members&page=1&per_page=50`, { headers: { 'X-User-Email': this.identityEmail } }),
-        fetch(`https://extensions.kbizsoft.com/magicaa-extension/share-resource.php?resource_type=folder&resource_id=${encodeURIComponent(folderId)}`, { headers: { 'X-User-Email': this.identityEmail } })
+        fetch(`https://extensions.kbizsoft.com/magicaa-extension/share-resource.php?resource_type=folder&resource_id=${encodeURIComponent(folderId)}`, { headers: { 'X-User-Email': this.identityEmail } }),
+        fetch(`https://extensions.kbizsoft.com/magicaa-extension/workspace-groups.php${window.location.search}`, { headers: { 'X-User-Email': this.identityEmail } })
       ]);
       const membersPayload = await membersResponse.json().catch(() => ({}));
       const permissionsPayload = await permissionsResponse.json().catch(() => ({}));
+      const groupsPayload = await groupsResponse.json().catch(() => ({}));
       if (!membersResponse.ok || !membersPayload.success || !permissionsResponse.ok || !permissionsPayload.success) throw new Error(permissionsPayload.error || membersPayload.error || 'Could not load folder access.');
       const permissions = permissionsPayload.permissions || [];
-      membersWrap.innerHTML = (membersPayload.items || []).filter((item) => item.status === 'active' && item.user?.email && item.user.email.toLowerCase() !== this.identityEmail.toLowerCase()).map((item) => {
+      const memberRows = (membersPayload.items || []).filter((item) => item.status === 'active' && item.user?.email && item.user.email.toLowerCase() !== this.identityEmail.toLowerCase()).map((item) => {
         const email = item.user.email;
         const current = permissions.find((permission) => permission.user?.email?.toLowerCase() === email.toLowerCase());
         return `<div class="workspace-share-member" data-email="${this.escape(email)}">
@@ -307,7 +309,12 @@ class WorkspacePage {
           </select>
           <button class="workspace-secondary-btn" type="button" data-revoke="${current ? 'true' : 'false'}">${current ? 'Remove' : 'Grant'}</button>
         </div>`;
-      }).join('') || '<p>No other active members.</p>';
+      }).join('');
+      const groupRows = groupsResponse.ok && groupsPayload.success ? (groupsPayload.groups || []).map((group) => {
+        const current = (permissionsPayload.group_permissions || []).find((permission) => permission.group_id === group.id);
+        return `<div class="workspace-share-member" data-group-id="${this.escapeAttribute(group.id)}"><span><strong>${this.escape(group.name)}</strong><small>Workspace group</small></span><select><option value="view"${current?.permission === 'view' ? ' selected' : ''}>Can view</option><option value="edit"${current?.permission === 'edit' ? ' selected' : ''}>Can edit</option><option value="manage"${current?.permission === 'manage' ? ' selected' : ''}>Can manage</option></select><button class="workspace-secondary-btn" type="button" data-revoke="${current ? 'true' : 'false'}">${current ? 'Remove' : 'Grant'}</button></div>`;
+      }).join('') : '';
+      membersWrap.innerHTML = memberRows + groupRows || '<p>No other active members or groups.</p>';
       membersWrap.querySelectorAll('[data-revoke]').forEach((button) => button.addEventListener('click', () => this.updateFolderAccess(folderId, button.closest('.workspace-share-member'), button.dataset.revoke === 'true')));
     } catch (loadError) {
       membersWrap.innerHTML = '';
@@ -320,8 +327,8 @@ class WorkspacePage {
     const originalLabel = button.textContent;
     button.disabled = true;
     button.textContent = revoke ? 'Removing…' : 'Granting…';
-    const email = row.dataset.email;
-    const body = { resource_type: 'folder', resource_id: folderId, email, permission: row.querySelector('select').value, action: revoke ? 'revoke' : 'grant' };
+    const email = row.dataset.email || '';
+    const body = { resource_type: 'folder', resource_id: folderId, email, group_id: row.dataset.groupId || '', permission: row.querySelector('select').value, action: revoke ? 'revoke' : 'grant' };
     try {
       const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/share-resource.php', { method: revoke ? 'DELETE' : 'POST', headers: { 'X-User-Email': this.identityEmail, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const payload = await response.json().catch(() => ({}));

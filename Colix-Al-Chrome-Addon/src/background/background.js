@@ -15,6 +15,14 @@ const REGISTER_API = 'https://extensions.kbizsoft.com/magicaa-extension/register
 // scripts cannot create browser windows directly.
 const dynamicFieldWindows = new Map();
 
+async function waitForSyncToFinish(syncMgr) {
+  const deadline = Date.now() + 10000;
+  while (syncMgr?.isSyncing && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  if (syncMgr?.isSyncing) throw new Error('Shortcut sync timed out.');
+}
+
 function createDynamicFieldWindow(message, sender, sendResponse) {
   const requestId = message.requestId || `dynamic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   dynamicFieldWindows.set(requestId, {
@@ -284,7 +292,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       const authMgr = await initAuthManager();
       
       if (authMgr.isUserAuthenticated()) {
-        const syncMgr = await initSyncManager(authMgr.getUserId());
+        const syncMgr = await initSyncManager(authMgr.getUserEmail());
         // console.log('✅ Sync manager initialized on install');
       }
     })();
@@ -322,7 +330,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'getShortcuts') {
-    sendResponse(getSyncManager().getLocalShortcuts());
+    (async () => {
+      try {
+        const identity = await chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' });
+        if (!identity?.email) {
+          sendResponse({ success: false, shortcuts: [], forms: [], error: 'No Chrome account is available.' });
+          return;
+        }
+
+        let syncMgr;
+        try {
+          syncMgr = getSyncManager();
+          if (syncMgr.userEmail !== identity.email) throw new Error('Sync account changed');
+          await waitForSyncToFinish(syncMgr);
+          await syncMgr.syncAll();
+          await waitForSyncToFinish(syncMgr);
+        } catch (error) {
+          syncMgr = await initSyncManager(identity.email);
+        }
+
+        const shortcuts = await syncMgr.getLocalShortcuts();
+        const forms = await syncMgr.getLocalForms();
+        sendResponse({
+          success: true,
+          shortcuts,
+          forms
+        });
+      } catch (error) {
+        console.error('Could not load shortcuts for content script:', error);
+        sendResponse({ success: false, shortcuts: [], forms: [], error: error.message || 'Could not load shortcuts.' });
+      }
+    })();
     return true;
   }
 
@@ -407,8 +445,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'incrementUsage') {
-    const shortcut = getSyncManager().getLocalShortcuts().find(item => item.id === message.id);
-    if (shortcut) StorageHelper.update(shortcut.id, { usageCount: (shortcut.usageCount || 0) + 1 });
+    (async () => {
+      const shortcuts = await getSyncManager().getLocalShortcuts();
+      const shortcut = shortcuts.find(item => item.id === message.id);
+      if (shortcut) StorageHelper.update(shortcut.id, { usageCount: (shortcut.usageCount || 0) + 1 });
+    })().catch(error => console.warn('Could not update shortcut usage:', error));
   }
 });
 

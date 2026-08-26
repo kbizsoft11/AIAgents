@@ -10,6 +10,7 @@
 
   let shortcuts = [];
   let forms = [];
+  let shortcutsLoaded = false;
   const pendingDynamicFields = new Map();
 
   chrome.runtime.onMessage.addListener((message) => {
@@ -411,18 +412,35 @@
   // LOAD SHORTCUTS
   // =============================================
   async function loadShortcuts() {
-    try {
-      await initSupabaseClient();
-      const identity = await chrome.identity.getProfileUserInfo();
-      if (!identity?.email) return;
-      await initSyncManager(identity.email);
-      shortcuts = await getSyncManager().getLocalShortcuts();
-      forms = await getSyncManager().getLocalForms();
-    } catch (error) {
-      console.warn('ColixAI: Could not load workspace resources:', error.message);
-      shortcuts = [];
-      forms = [];
+    shortcutsLoaded = false;
+    if (sidebarListEl) {
+      sidebarListEl.innerHTML = '<div class="tb-sb-empty">Loading shortcuts...</div>';
     }
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage({ action: 'getShortcuts' }, result => {
+            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+            else resolve(result);
+          });
+        });
+        if (!response?.success) throw new Error(response?.error || 'Could not load shortcuts.');
+        shortcuts = Array.isArray(response.shortcuts) ? response.shortcuts : [];
+        forms = Array.isArray(response.forms) ? response.forms : [];
+        shortcutsLoaded = true;
+        const activeElement = document.activeElement;
+        if (shortcuts.length && activeElement && isEditable(activeElement)) {
+          onInput({ target: activeElement });
+        }
+        return;
+      } catch (error) {
+        console.warn(`ColixAI: Could not load workspace resources (attempt ${attempt}):`, error.message);
+        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    shortcuts = [];
+    forms = [];
+    shortcutsLoaded = true;
   }
 
   function incrementShortcutUsage(shortcut) {
@@ -1154,8 +1172,16 @@
     }
     if (sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    if (node.nodeType !== Node.TEXT_NODE) return;
+    let node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) {
+      const candidate = node.childNodes[range.startOffset - 1] || node.childNodes[range.startOffset];
+      if (!candidate) return;
+      node = candidate.nodeType === Node.TEXT_NODE ? candidate : candidate.lastChild;
+      while (node && node.nodeType !== Node.TEXT_NODE) node = node.lastChild;
+      if (!node) return;
+      range.setStart(node, node.textContent.length);
+      range.collapse(true);
+    }
 
     const text = node.textContent;
     const offset = range.startOffset;
@@ -2332,11 +2358,15 @@
 
   function openSidebar() {
     try {
+      const refreshPromise = loadShortcuts();
       buildSidebar();
       if (!sidebarEl) return;
       sidebarEl.style.display = 'flex';
-      renderSidebarList('');
+      if (sidebarListEl) sidebarListEl.innerHTML = '<div class="tb-sb-empty">Loading shortcuts...</div>';
       sidebarEl.classList.add('tb-sidebar-open');
+      refreshPromise.then(() => {
+        if (sidebarEl?.classList.contains('tb-sidebar-open')) renderSidebarList(sidebarSearchEl?.value || '');
+      });
     } catch (error) {
       console.error('ColixAI: Could not open shortcuts sidebar:', error);
       showTbToast('Could not open shortcuts. Please reload the page.');
