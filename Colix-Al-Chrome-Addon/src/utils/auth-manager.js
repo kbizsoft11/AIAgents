@@ -143,7 +143,10 @@ class AuthManager {
       const user = result?.[0];
       if (user?.id && user.auth_user_id !== this.session.user.id) {
         const updated = await client.update('users', { auth_user_id: this.session.user.id }, { id: user.id });
-        this.currentUser = { ...user, ...(updated || {}), auth_user_id: this.session.user.id };
+        if (!Array.isArray(updated) || updated.length === 0) {
+          throw new Error('Could not link the application user to Supabase Auth. Check the users RLS policy.');
+        }
+        this.currentUser = { ...user, ...(updated[0] || {}), auth_user_id: this.session.user.id };
       } else if (user) {
         this.currentUser = user;
       }
@@ -168,8 +171,7 @@ class AuthManager {
   }
 
   /**
-   * Authenticate user using Chrome Identity API
-   * Gets email, first name, last name, and avatar from Google account
+   * Authenticate user using the Chrome account email.
    */
   async authenticateWithChrome() {
     try {
@@ -182,18 +184,9 @@ class AuthManager {
 
       this.userEmail = email;
 
-      // Get full profile data from Google People API
-      let profileData = { email };
-      try {
-        profileData = await this.getGoogleProfileData();
-      } catch (error) {
-        console.warn('Could not fetch Google profile data:', error.message);
-        // Continue with just email if Google API fails
-      }
-
       // Try to create or update user in Supabase
       try {
-        await this.createOrGetUser(email, profileData);
+        await this.createOrGetUser(email, { email });
       } catch (error) {
         console.warn('Could not sync user to Supabase:', error.message);
         // Continue anyway - user data will still work with localStorage
@@ -206,71 +199,6 @@ class AuthManager {
     } catch (error) {
       console.error('Chrome identity error:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Get user profile data from Google People API
-   * Returns { firstName, lastName, avatarUrl, email }
-   */
-  async getGoogleProfileData() {
-    try {
-      const manifest = chrome.runtime.getManifest();
-      const clientId = manifest.oauth2?.client_id || '';
-      if (!clientId || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
-        console.warn('Google People API skipped: configure a real OAuth client ID in manifest.json');
-        return {
-          firstName: '',
-          lastName: '',
-          avatarUrl: null,
-          email: this.userEmail
-        };
-      }
-
-      // Get access token for Google services
-      const token = await chrome.identity.getAuthToken({ interactive: true });
-      
-      if (!token) {
-        throw new Error('Could not get auth token');
-      }
-
-      // Call Google People API
-      const response = await fetch(
-        'https://www.googleapis.com/people/v1/people/me?personFields=names,photos,emailAddresses',
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Google API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Extract profile information
-      const profileData = {
-        firstName: data.names?.[0]?.givenName || '',
-        lastName: data.names?.[0]?.familyName || '',
-        avatarUrl: data.photos?.[0]?.url || null,
-        email: data.emailAddresses?.[0]?.value || this.userEmail
-      };
-
-      console.log('✅ Google profile data fetched:', profileData);
-      return profileData;
-
-    } catch (error) {
-      console.error('Google People API error:', error);
-      // Return empty profile data if API fails
-      return {
-        firstName: '',
-        lastName: '',
-        avatarUrl: null,
-        email: this.userEmail
-      };
     }
   }
 
@@ -337,7 +265,7 @@ class AuthManager {
         email,
         first_name: profileData.firstName || '',
         last_name: profileData.lastName || '',
-        avatar_url: profileData.avatarUrl || null,
+        ...(profileData.avatarUrl ? { avatar_url: profileData.avatarUrl } : {}),
         created_at: new Date().toISOString()
       };
 
@@ -372,7 +300,9 @@ class AuthManager {
         email,
         first_name: profileData.firstName || '',
         last_name: profileData.lastName || '',
-        avatar_url: profileData.avatarUrl || profileData.photoUrl || null,
+        ...(profileData.avatarUrl || profileData.photoUrl
+          ? { avatar_url: profileData.avatarUrl || profileData.photoUrl }
+          : {}),
         updated_at: new Date().toISOString()
       };
 
@@ -395,10 +325,15 @@ class AuthManager {
         }
 
         const updated = await client.update('users', updateData, { id: user.id });
+        const persistedRows = await client.selectWithFilter('users', { id: user.id });
+        const persistedUser = persistedRows?.[0];
+        if (updateData.avatar_url && persistedUser?.avatar_url !== updateData.avatar_url) {
+          throw new Error('Profile avatar was not persisted. Apply supabase/fix-user-profile-rls.sql.');
+        }
         const merged = {
-          ...user,
+          ...(persistedUser || user),
           ...updateData,
-          ...(updated || {})
+          ...(updated?.[0] || {})
         };
         this.currentUser = merged;
 
@@ -438,12 +373,12 @@ class AuthManager {
     try {
       const client = getSupabaseClient();
 
-      const updateData = {
-        first_name: profileData.firstName || '',
-        last_name: profileData.lastName || '',
-        avatar_url: profileData.avatarUrl || profileData.photoUrl || null,
-        updated_at: new Date().toISOString()
-      };
+      const updateData = { updated_at: new Date().toISOString() };
+      if (profileData.firstName !== undefined) updateData.first_name = profileData.firstName || '';
+      if (profileData.lastName !== undefined) updateData.last_name = profileData.lastName || '';
+      if (profileData.avatarUrl || profileData.photoUrl) {
+        updateData.avatar_url = profileData.avatarUrl || profileData.photoUrl;
+      }
 
       await client.update('users', updateData, { id: userId });
 
@@ -484,10 +419,17 @@ class AuthManager {
 
 // Initialize and export
 let authManager = null;
+let authManagerReady = null;
 
 async function initAuthManager() {
-  if (authManager) return authManager;
-  authManager = new AuthManager();
+  if (!authManager) authManager = new AuthManager();
+  if (!authManagerReady) {
+    authManagerReady = authManager.restoreSession().catch(error => {
+      console.warn('Could not restore Supabase session:', error.message);
+      return false;
+    });
+  }
+  await authManagerReady;
   return authManager;
 }
 

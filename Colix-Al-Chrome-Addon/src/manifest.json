@@ -15,16 +15,8 @@
         "<all_urls>",
         "http://localhost/*",
         "https://extensions.kbizsoft.com/*",
-        "https://*.supabase.co/*",
-        "https://www.googleapis.com/*"
+        "https://*.supabase.co/*"
     ],
-    "oauth2": {
-        "client_id": "683094072539-otivcoos0kq99i7ied5apci08behrcim.apps.googleusercontent.com",
-        "scopes": [
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "https://www.googleapis.com/auth/userinfo.email"
-        ]
-    },
     "action": {
         "default_icon": {
             "16": "icons/icon16.png",
