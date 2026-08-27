@@ -6,6 +6,7 @@ class ProfileModule {
     this.profileData = null;
     this.initialized = false;
     this.oldAvatarUrl = null; // Track old avatar URL for deletion
+    this.pendingAvatarUrl = '';
     this.ready = this.init();
   }
 
@@ -57,6 +58,8 @@ class ProfileModule {
 
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
+        this.pendingAvatarUrl = '';
+        this.oldAvatarUrl = null;
         this.populateFormFields();
         this.setUploadStatus('No file selected');
         this.hideLocalPreview();
@@ -243,18 +246,9 @@ class ProfileModule {
 
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodeURIComponent(fileName)}`;
 
-      // Update profile data with new avatar URL
-      this.profileData = {
-        ...(this.profileData || {}),
-        firstName: this.profileData?.firstName || '',
-        lastName: this.profileData?.lastName || '',
-        email: this.profileData?.email || email,
-        avatarUrl: publicUrl,
-        photoUrl: publicUrl
-      };
+      this.pendingAvatarUrl = publicUrl;
 
       this.setUploadStatus('Photo uploaded successfully. Save changes to update your profile.');
-      this.render();
       this.hideLocalPreview();
     } catch (error) {
       console.error('Avatar upload failed:', error);
@@ -277,7 +271,7 @@ class ProfileModule {
     const saveBtn = document.getElementById('profileSaveBtn');
     const firstNameInput = document.getElementById('profileFirstNameInput');
     const lastNameInput = document.getElementById('profileLastNameInput');
-    const avatarInput = document.getElementById('profileAvatarInput');
+    const avatarInput = document.getElementById('profileAvatarFileInput');
 
     if (saveBtn) {
       saveBtn.disabled = isSaving;
@@ -291,39 +285,44 @@ class ProfileModule {
   async saveProfile() {
     const firstNameInput = document.getElementById('profileFirstNameInput');
     const lastNameInput = document.getElementById('profileLastNameInput');
-    const avatarInput = document.getElementById('profileAvatarInput');
 
     if (!firstNameInput || !lastNameInput) {
       console.error('Profile form inputs not found');
       return;
     }
 
-    const avatarValue = avatarInput ? (avatarInput.value || '').trim() : '';
     const payload = {
       firstName: firstNameInput.value.trim(),
       lastName: lastNameInput.value.trim(),
-      avatarUrl: avatarValue || this.profileData?.avatarUrl || this.profileData?.photoUrl || '',
-      photoUrl: avatarValue || this.profileData?.photoUrl || this.profileData?.avatarUrl || '',
+      avatarUrl: this.pendingAvatarUrl || this.profileData?.avatarUrl || this.profileData?.photoUrl || '',
+      photoUrl: this.pendingAvatarUrl || this.profileData?.photoUrl || this.profileData?.avatarUrl || '',
       email: (this.profileData && this.profileData.email) || ''
     };
 
     this.setSaving(true);
 
     try {
-      const response = await new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: 'updateProfileInfo', data: payload }, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error('Runtime error:', chrome.runtime.lastError);
-            resolve(null);
-            return;
-          }
-          resolve(result || null);
+        const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/profile.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Email': payload.email
+          },
+          body: JSON.stringify({
+            first_name: payload.firstName,
+            last_name: payload.lastName,
+            avatar_url: payload.avatarUrl
+          })
+        }).then(async result => {
+          const body = await result.json().catch(() => ({}));
+          if (!result.ok || !body.success) throw new Error(body.error || 'Could not save the profile.');
+          return body;
         });
-      });
 
-      if (response && response.profile) {
+      if (response?.profile) {
         const oldAvatarUrl = this.oldAvatarUrl;
         this.profileData = response.profile;
+        this.pendingAvatarUrl = '';
         this.render();
         if (window.headerModule && typeof window.headerModule.loadProfileData === 'function') {
           await window.headerModule.loadProfileData();
@@ -337,12 +336,10 @@ class ProfileModule {
         if (window.dashboard && typeof window.dashboard.showToast === 'function') {
           window.dashboard.showToast('Profile updated successfully!');
         }
-      } else {
-        this.setUploadStatus('Could not save the profile.', true);
       }
     } catch (error) {
       console.error('Failed to save profile:', error);
-      this.setUploadStatus('Could not save the profile.', true);
+      this.setUploadStatus(error.message || 'Could not save the profile.', true);
     } finally {
       this.setSaving(false);
     }
@@ -360,11 +357,16 @@ class ProfileModule {
         });
       });
 
-      this.profileData = response;
+      this.profileData = {
+        ...(this.profileData || {}),
+        ...(response || {})
+      };
+      this.pendingAvatarUrl = '';
       this.render();
     } catch (error) {
       console.error('Failed to load profile data:', error);
       this.profileData = { firstName: '', lastName: '', email: '', photoUrl: '' };
+      this.pendingAvatarUrl = '';
       this.render();
     }
   }
@@ -373,11 +375,9 @@ class ProfileModule {
     const data = this.profileData || {};
     const firstNameInput = document.getElementById('profileFirstNameInput');
     const lastNameInput = document.getElementById('profileLastNameInput');
-    const avatarInput = document.getElementById('profileAvatarInput');
 
     if (firstNameInput) firstNameInput.value = data.firstName || '';
     if (lastNameInput) lastNameInput.value = data.lastName || '';
-    if (avatarInput) avatarInput.value = data.photoUrl || data.avatarUrl || '';
   }
 
   render() {
@@ -409,6 +409,10 @@ class ProfileModule {
         avatar.src = photoUrl;
         avatar.style.display = 'block';
         avatarFallback.style.display = 'none';
+        avatar.onerror = () => {
+          avatar.style.display = 'none';
+          avatarFallback.style.display = 'flex';
+        };
       } else {
         // Fallback to generated avatar
         avatar.src = this.createFallbackAvatar(email, firstName, lastName);

@@ -352,11 +352,19 @@ class HeaderModule {
     if (photoUrl && /^https?:\/\//i.test(photoUrl)) {
       if (this.profileAvatar && this.profileAvatarFallback) {
         this.profileAvatar.src = photoUrl;
+        this.profileAvatar.onerror = () => {
+          this.profileAvatar.style.display = 'none';
+          this.profileAvatarFallback.style.display = 'flex';
+        };
         this.profileAvatar.style.display = 'block';
         this.profileAvatarFallback.style.display = 'none';
       }
       if (this.profileAvatarLarge && this.profileAvatarLargeFallback) {
         this.profileAvatarLarge.src = photoUrl;
+        this.profileAvatarLarge.onerror = () => {
+          this.profileAvatarLarge.style.display = 'none';
+          this.profileAvatarLargeFallback.style.display = 'flex';
+        };
         this.profileAvatarLarge.style.display = 'block';
         this.profileAvatarLargeFallback.style.display = 'none';
       }

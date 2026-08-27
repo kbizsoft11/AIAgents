@@ -220,7 +220,11 @@ class SupabaseClient {
 
     // Filter to only allowed fields and convert to snake_case
     const filteredData = this.filterFieldsForTable(table, data);
-    return this.request('PATCH', table, { body: filteredData, query });
+    return this.request('PATCH', table, {
+      body: filteredData,
+      query,
+      prefer: 'return=representation'
+    });
   }
 
   /**

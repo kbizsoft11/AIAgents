@@ -379,26 +379,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         let remote = null;
-        let google = null;
         if (email) {
           try {
             await initSupabaseClient();
             const authMgr = await initAuthManager();
             remote = await authMgr.getUserProfileFromSupabase(email);
-            if (!remote?.avatarUrl && !remote?.photoUrl) {
-              google = await authMgr.getGoogleProfileData();
-            }
           } catch (error) {
             console.warn('Could not load profile from Supabase:', error.message);
           }
         }
 
         const profile = {
-          firstName: remote?.firstName || google?.firstName || firstName,
-          lastName: remote?.lastName || google?.lastName || lastName,
+          firstName: remote?.firstName || firstName,
+          lastName: remote?.lastName || lastName,
           email: remote?.email || email,
-          avatarUrl: remote?.avatarUrl || remote?.photoUrl || google?.avatarUrl || '',
-          photoUrl: remote?.photoUrl || remote?.avatarUrl || google?.avatarUrl || ''
+          avatarUrl: remote?.avatarUrl || remote?.photoUrl || '',
+          photoUrl: remote?.photoUrl || remote?.avatarUrl || ''
         };
 
         sendResponse(profile);
@@ -426,6 +422,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         await initSupabaseClient();
         const authMgr = await initAuthManager();
+        if (!authMgr.session || !authMgr.isUserAuthenticated()) {
+          await authMgr.signInWithGoogle();
+        }
         const saved = await authMgr.saveUserProfile(email, message.data || {});
         const profile = {
           firstName: saved.firstName || message.data?.firstName || '',
