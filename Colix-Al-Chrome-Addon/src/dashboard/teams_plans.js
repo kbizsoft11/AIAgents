@@ -13,6 +13,24 @@ class TeamsPlansPage {
     this.isLoading = false;
     this.noticeTimer = null;
     this.selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace_id') || '';
+    
+    // Listen for payment completion from the hosted checkout tab.
+    this.checkoutTabSuccessListener = (tabId, changeInfo, tab) => {
+      if (!tab?.url) return;
+      try {
+        const url = new URL(tab.url);
+        if (url.hostname !== 'extensions.kbizsoft.com') return;
+        if (url.pathname.includes('/magicaa-extension/paypal-checkout.html') && url.searchParams.get('payment_success') === '1') {
+          chrome.tabs.onUpdated.removeListener(this.checkoutTabSuccessListener);
+          this.showNotice('Payment complete. Your workspace is active for 30 days.', 'success');
+          this.load();
+        }
+      } catch (error) {
+        // Ignore malformed URLs from unrelated tabs.
+      }
+    };
+    chrome.tabs.onUpdated.addListener(this.checkoutTabSuccessListener);
+    
     this.workspaceSelect?.addEventListener('change', () => {
       if (this.isLoading) return;
       this.selectedWorkspaceId = this.workspaceSelect.value;
@@ -107,14 +125,47 @@ class TeamsPlansPage {
       const isCurrent = plan.plan_code === currentCode;
       const custom = Number(plan.max_members) > 100000000;
       const price = Number(plan.monthly_price);
+      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling;
+      
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
         <div class="teams-plan-price">${custom ? 'Custom' : `$${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
-        <button class="teams-plan-action" type="button" disabled>${isCurrent ? 'Current plan' : custom ? 'Contact us' : 'Available soon'}</button>
+        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" ${!canUpgrade ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Upgrade for 30 days' : 'Included'}</button>
       </article>`;
     }).join('');
+    
+    // Add click handlers to upgrade buttons
+    this.planGrid.querySelectorAll('[data-plan-code]:not(:disabled)').forEach((button) => {
+      button.addEventListener('click', () => this.startCheckout(button.dataset.planCode));
+    });
+  }
+
+  async startCheckout(planCode) {
+    const workspace = this.getSelectedWorkspace();
+    if (!workspace) {
+      this.showNotice('Select an owned workspace before starting checkout.', 'error');
+      return;
+    }
+
+    try {
+      const identity = await chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' });
+      if (!identity?.email) {
+        this.showNotice('Please sign in to Chrome to continue.', 'error');
+        return;
+      }
+
+      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/paypal-checkout.html');
+      hostedUrl.searchParams.set('workspace_id', workspace.id);
+      hostedUrl.searchParams.set('plan_code', planCode);
+      hostedUrl.searchParams.set('user_email', identity.email);
+
+      await chrome.tabs.create({ url: hostedUrl.toString(), active: true });
+    } catch (error) {
+      console.error('Checkout error:', error);
+      this.showNotice(error.message || 'Could not start checkout.', 'error');
+    }
   }
 
   setLoadingState(isLoading) {

@@ -15,7 +15,9 @@
         "<all_urls>",
         "http://localhost/*",
         "https://extensions.kbizsoft.com/*",
-        "https://*.supabase.co/*"
+        "https://*.supabase.co/*",
+        "https://www.paypal.com/*",
+        "https://www.sandbox.paypal.com/*"
     ],
     "action": {
         "default_icon": {
@@ -57,7 +59,6 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "dashboard/*.html",
                 "dashboard/header/*.html",
                 "icons/*"
             ],

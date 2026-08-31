@@ -1,0 +1,215 @@
+Implementation Plan
+
+No code changes yet. The current Clonix architecture uses x-user-email headers for Supabase access, so invitations and sharing must first establish trusted authentication and server-enforced authorization. The relevant foundations are auth-manager.js, supabase-client.js, sync-manager.js, and db.sql.
+
+1. Establish the account model
+
+Introduce workspaces rather than treating every user as an isolated owner.
+
+workspaces
+id
+name
+owner_id
+timestamps
+workspace_members
+workspace_id
+user_id
+role: owner, admin, editor, viewer
+status: active, removed
+timestamps
+Existing users receive a personal workspace during migration.
+Existing data is assigned to that workspace.
+A user may belong to multiple workspaces later, but the initial UI can use one active workspace.
+Recommended permissions:
+
+owner: full control, billing, delete workspace
+admin: invite/remove users and manage sharing
+editor: create and edit shared resources
+viewer: read and use shared resources, but cannot modify them
+
+2. Replace client-trusted authorization
+
+The existing x-user-email approach must not authorize invitations or shared data because a client can forge that header.
+
+Use Supabase Auth as the canonical identity layer:
+
+Authenticate the extension user with a real Supabase session.
+Store the Supabase access token and refresh token securely through the extension.
+Configure Google authentication or a trusted backend exchange for Chrome Identity.
+Update Supabase requests to send:
+Authorization: Bearer <access_token>
+the public anon key
+Remove authorization decisions based solely on email headers.
+Keep email columns temporarily for migration and lookup compatibility.
+This is the most important security phase. RLS should derive the current user from auth.uid().
+
+3. Add invitation lifecycle
+
+Create an workspace_invitations table:
+
+id
+workspace_id
+email
+role
+token_hash
+invited_by
+status: pending, accepted, revoked, expired
+expires_at
+accepted_at
+timestamps
+Invitation flow:
+
+Owner/admin enters an email and selects a role.
+A Supabase Edge Function validates permission and creates the invitation.
+The Edge Function sends the email through Resend, Postmark, or another email provider.
+The email links to a hosted acceptance page.
+The recipient signs in with Google/Supabase Auth.
+The backend verifies that the authenticated email matches the invitation.
+The recipient becomes a workspace member.
+The invitation is marked accepted.
+The extension refreshes workspace membership and shared data.
+The email should never be sent directly from the extension with privileged credentials.
+
+4. Design sharing permissions
+
+For the first release, use folder-level sharing as the primary model.
+
+Create a table such as resource_permissions:
+
+id
+workspace_id
+resource_type: folder, shortcut, form
+resource_id
+user_id or workspace_member_id
+permission: view, edit, manage
+granted_by
+timestamps
+Recommended behavior:
+
+Sharing a folder shares its snippets and forms.
+New items created inside a shared folder inherit the folder’s access.
+Individual snippet/form sharing is supported separately where needed.
+Owners and admins can revoke access.
+Removing a member immediately removes access without deleting the original resources.
+Resources remain owned by the creator/workspace, not copied into the subuser’s personal account.
+5. Update database security
+
+Add reusable SQL helper functions such as:
+
+is_workspace_member(workspace_id)
+has_workspace_role(workspace_id, required_role)
+can_read_resource(resource_type, resource_id)
+can_edit_resource(resource_type, resource_id)
+RLS policies should enforce:
+
+Users can read their own profile.
+Members can see only workspaces they belong to.
+Owners/admins can manage invitations and memberships.
+Members can read resources shared with them.
+Editors can modify resources with edit permission.
+Viewers cannot write.
+Invitation tokens are never readable by arbitrary clients.
+Acceptance occurs through a controlled RPC or Edge Function.
+6. Refactor synchronization
+
+Update sync-manager.js and supabase-client.js:
+
+Stop fetching snippets/forms/folders only by email.
+Fetch resources through workspace-aware views or RPC functions.
+Include ownership and effective permission in returned records.
+Add workspace_id to snippets, forms, and folders.
+Cache the active workspace locally.
+Namespace local data by workspace/account to prevent leakage when users switch accounts.
+Preserve the pending sync queue, but reject queued edits when the member no longer has edit access.
+Use updated_at and deterministic conflict handling.
+Recommended initial conflict rule: last-write-wins for editable shared resources, with server timestamps.
+Prevent local deletion from deleting resources for other members unless the user has manage permission.
+7. Add dashboard workflows
+
+Add a new Team / Members page or section containing:
+
+Current workspace name
+Active members
+Roles
+Pending invitations
+Invite user dialog
+Resend invitation
+Revoke invitation
+Change role
+Remove member
+Add sharing controls to:
+
+Folder context menu, using the existing Share folder... placeholder in sidebar-manager.js
+Snippet/form editor
+Resource list actions
+The UI should clearly distinguish:
+
+Personally owned resources
+Shared resources
+Read-only resources
+Resources shared with specific members
+8. Migration strategy
+
+Use a staged migration:
+
+Add new tables and nullable workspace_id columns.
+Create one workspace per existing user.
+Add each existing user as the workspace owner.
+Backfill existing folders, shortcuts, and forms.
+Deploy the new authenticated request path.
+Enable RLS for workspace-based access.
+Remove reliance on x-user-email after validation.
+Retain legacy email fields only if needed for reporting or migration compatibility.
+Existing personal data must remain untouched and visible after migration.
+
+9. Suggested implementation phases
+
+Security foundation
+
+Supabase Auth session handling
+authenticated API requests
+workspace schema
+RLS helpers and policies
+Workspace migration
+
+backfill existing users and resources
+workspace-aware sync
+Invitations
+
+invitation table
+Edge Function
+email provider
+acceptance page
+pending invitation UI
+Membership management
+
+roles
+revoke/remove/change role
+member list
+Folder sharing
+
+share folder modal
+inherited permissions
+shared-resource sync
+Individual resource sharing
+
+snippet/form permissions
+permission overrides
+improved access indicators
+Hardening and rollout
+
+automated RLS tests
+sync conflict tests
+account-switching tests
+invitation expiry/replay tests
+production migration and monitoring
+Recommended first implementation slice
+
+Start with:
+
+Supabase Auth/session design.
+Workspace and membership schema.
+RLS policies.
+Migration for existing personal data.
+Workspace-aware sync.
+Only after that should invitation email and sharing UI be added. Otherwise, the UI could appear functional while the underlying authorization remains forgeable through the current email-header model.

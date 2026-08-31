@@ -439,16 +439,10 @@
       </div>
 
       <!-- Pay Button -->
-      <button class="btn-pay" id="payBtn" onclick="handlePay()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-          <line x1="1" y1="10" x2="23" y2="10"></line>
-        </svg>
-        Pay <span id="btnAmount">$5.99</span>
-      </button>
+      <div id="paypalButtons"></div>
 
       <!-- Cancel Button -->
-      <button class="btn-cancel" id="cancelBtn" onclick="handleCancel()">
+      <button class="btn-cancel" id="cancelBtn">
         Cancel
       </button>
 
@@ -481,93 +475,10 @@
     <div class="closing-note">This window will close automatically...</div>
   </div>
 
-  <script>
-    // ── Read URL params ───────────────────────
-    const params = new URLSearchParams(window.location.search);
-    const amount = params.get('amount') || '5.99';
-    const plan = params.get('plan') || 'monthly';
-    const isYearly = plan === 'yearly';
-
-    // ── Update UI with correct values ─────────
-    document.getElementById('planLabel').textContent =
-      isYearly ? 'Yearly' : 'Monthly';
-
-    document.getElementById('billingLabel').textContent =
-      isYearly
-        ? `$${amount} / year`
-        : `$${amount} / month`;
-
-    document.getElementById('totalLabel').textContent =
-      `$${amount} USD`;
-
-    document.getElementById('btnAmount').textContent =
-      `$${amount}`;
-
-    // ── Generate fake order ID ────────────────
-    function generateOrderId() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let id = 'SB-';
-      for (let i = 0; i < 12; i++) {
-        id += chars[Math.floor(Math.random() * chars.length)];
-        if (i === 5) id += '-';
-      }
-      return id;
-    }
-
-    // ── Pay button handler ────────────────────
-    function handlePay() {
-      const payBtn = document.getElementById('payBtn');
-      const cancelBtn = document.getElementById('cancelBtn');
-
-      // Disable buttons during processing
-      payBtn.disabled = true;
-      cancelBtn.disabled = true;
-      payBtn.textContent = 'Processing...';
-      payBtn.style.opacity = '0.7';
-
-      // Simulate processing delay
-      setTimeout(() => {
-        const orderId = generateOrderId();
-
-        // Show success screen
-        document.getElementById('checkoutCard').style.display = 'none';
-        const successScreen = document.getElementById('successScreen');
-        successScreen.classList.add('visible');
-        document.getElementById('orderIdDisplay').textContent = 'Order: ' + orderId;
-
-        // Send message to parent (dashboard.js)
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'TEXTBLITZ_PAYMENT_SUCCESS',
-            orderId: orderId,
-            amount: amount,
-            plan: plan,
-            payerEmail: 'sandbox.buyer@textblitz.test',
-            payerName: 'Sandbox Buyer'
-          }, '*');
-        }
-
-        // Close popup after 2.5 seconds
-        setTimeout(() => window.close(), 2500);
-
-      }, 1800); // 1.8s processing simulation
-    }
-
-    // ── Cancel button handler ─────────────────
-    function handleCancel() {
-      if (window.opener) {
-        window.opener.postMessage({
-          type: 'TEXTBLITZ_PAYMENT_CANCELLED'
-        }, '*');
-      }
-      window.close();
-    }
-
-    // ── Close on Escape ───────────────────────
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') handleCancel();
-    });
-  </script>
+  <script src="../utils/supabase-config.js"></script>
+  <script src="../utils/supabase-client.js"></script>
+  <script src="../utils/auth-manager.js"></script>
+  <script src="paypal-checkout.js"></script>
 
 </body>
 

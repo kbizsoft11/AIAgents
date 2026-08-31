@@ -107,6 +107,8 @@ h2 { margin-bottom: 8px; font-size: 24px; font-weight: 500; }
   cursor: default;
 }
 .teams-plan-card.is-current .teams-plan-action { color: var(--teams-green-dark); border-color: #b9ddc2; background: var(--teams-green-wash); }
+.teams-plan-action:not(:disabled):hover { border-color: var(--teams-green); color: var(--teams-green-dark); background: var(--teams-green-wash); cursor: pointer; }
+.teams-plan-action:disabled { color: var(--teams-faint); background: #fafcfb; cursor: not-allowed; }
 
 /* ---------- Loading / empty / error states ---------- */
 

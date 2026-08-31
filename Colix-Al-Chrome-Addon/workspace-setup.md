@@ -152,7 +152,9 @@ Workspace groups are isolated in `dashboard/workspace_groups.html` with their ow
 
 The Teams page is `dashboard/teams_plans.html` and loads plan catalog rows and owned-workspace subscription state from `api/teams-plans.php`. The endpoint must be deployed alongside the other PHP APIs. It returns subscription details only for workspaces owned by the signed-in account; invited members can use the page to see available catalog plans but do not receive another workspace's billing state.
 
-Payment collection is not implemented by the sandbox PayPal checkout page. Before enabling paid plans, add a server-side provider checkout flow and webhook that updates `workspace_subscriptions.plan_code`, `status`, `current_period_end`, and provider identifiers. Never let the extension set these values directly.
+The Teams page uses `api/paypal.php` for one-time PayPal Orders. It creates and captures orders on the server, derives the price from `workspace_plan_catalog`, and grants 30 days from the current expiry (or from now). Apply `supabase/paypal-payments.sql` before deploying the endpoint. Configure `PAYPAL_ENV=sandbox` or `PAYPAL_ENV=staging` in your server environment, plus `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`; never place the client secret or service-role key in the extension or source control. The extension uses the Chrome identity email as a fallback when a Supabase bearer token is not available, and the endpoint checks the linked application user and workspace owner before creating an order.
+
+There is no webhook until a public HTTPS callback URL is available. Add PayPal webhook verification before production launch so refunds, disputes, and reversals can revoke or suspend access. Never let the extension set subscription fields directly.
 
 ## 9. Verification checklist
 
