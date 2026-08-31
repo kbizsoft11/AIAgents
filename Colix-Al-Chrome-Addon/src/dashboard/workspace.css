@@ -203,6 +203,43 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .workspace-overview-text h2,
 .workspace-overview-text p { min-height: 1.4em; }
 
+.workspace-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.workspace-name-row h2 {
+  margin: 0;
+}
+
+.workspace-name-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--workspace-line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--workspace-muted);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.workspace-name-edit-btn:hover:not(:disabled) {
+  background: var(--workspace-wash);
+  border-color: var(--workspace-green);
+  color: var(--workspace-green-dark);
+}
+
+.workspace-name-edit-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 .workspace-status {
   padding: 7px 10px;
   border-radius: 999px;

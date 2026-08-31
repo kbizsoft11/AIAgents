@@ -51,7 +51,12 @@
     <section class="workspace-panel workspace-overview-panel">
       <div class="workspace-panel-heading">
         <div class="workspace-overview-text">
-          <h2 id="workspaceName"><span class="skeleton-text skeleton-text-lg"></span></h2>
+          <div class="workspace-name-row">
+            <h2 id="workspaceName"><span class="skeleton-text skeleton-text-lg"></span></h2>
+            <button class="workspace-name-edit-btn" id="workspaceRenameBtn" type="button" aria-label="Rename workspace" title="Rename workspace">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+          </div>
           <p id="workspaceIdentity"><span class="skeleton-text skeleton-text-md"></span></p>
           <p id="workspacePlanSummary"><span class="skeleton-text skeleton-text-sm"></span></p>
         </div>
@@ -99,6 +104,29 @@
       <div id="workspaceShareMembers" class="workspace-share-members"></div>
       <p id="workspaceShareError" class="workspace-share-error" role="alert"></p>
       <div class="invite-form-actions"><button class="workspace-secondary-btn" id="cancelWorkspaceShare" type="button">Close</button></div>
+    </section>
+  </div>
+
+  <div class="workspace-modal-backdrop" id="workspaceRenameModal" hidden>
+    <section class="workspace-modal" role="dialog" aria-modal="true" aria-labelledby="workspaceRenameTitle">
+      <div class="workspace-modal-heading">
+        <div><h2 id="workspaceRenameTitle">Rename workspace</h2><p>Choose a clear name for this workspace.</p></div>
+        <button class="workspace-modal-close" id="closeWorkspaceRename" type="button" aria-label="Close">&times;</button>
+      </div>
+      <form id="workspaceRenameForm">
+        <label>
+          Workspace name
+          <input id="workspaceRenameInput" type="text" maxlength="120" autocomplete="off" required placeholder="My workspace">
+        </label>
+        <p id="workspaceRenameError" class="workspace-share-error" role="alert"></p>
+        <div class="invite-form-actions">
+          <button class="workspace-secondary-btn" id="cancelWorkspaceRename" type="button">Cancel</button>
+          <button class="workspace-primary-btn" id="saveWorkspaceRenameBtn" type="submit">
+            <span class="btn-label">Save changes</span>
+            <span class="btn-spinner" aria-hidden="true" hidden></span>
+          </button>
+        </div>
+      </form>
     </section>
   </div>
   <script src="workspace.js"></script>

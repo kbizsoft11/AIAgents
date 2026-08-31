@@ -8,6 +8,11 @@ class WorkspacePage {
     this.results = document.getElementById('workspaceResults');
     this.tableHead = document.getElementById('workspaceTableHead');
     this.workspaceSelector = document.getElementById('workspaceSelector');
+    this.renameBtn = document.getElementById('workspaceRenameBtn');
+    this.renameModal = document.getElementById('workspaceRenameModal');
+    this.renameForm = document.getElementById('workspaceRenameForm');
+    this.renameInput = document.getElementById('workspaceRenameInput');
+    this.renameError = document.getElementById('workspaceRenameError');
     this.state = { tab: 'members', search: '', role: '', status: '', resource_type: '', page: 1, per_page: 10, pages: 1, total: 0 };
     this.availableWorkspaces = [];
     this.activeWorkspaceId = null;
@@ -81,6 +86,13 @@ class WorkspacePage {
     this.inviteForm?.addEventListener('submit', (event) => this.submitInvitation(event));
     document.getElementById('closeWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
     document.getElementById('cancelWorkspaceShare')?.addEventListener('click', () => this.closeShareEditor());
+    document.getElementById('closeWorkspaceRename')?.addEventListener('click', () => this.closeRenameModal());
+    document.getElementById('cancelWorkspaceRename')?.addEventListener('click', () => this.closeRenameModal());
+    this.renameBtn?.addEventListener('click', () => this.openRenameModal());
+    this.renameForm?.addEventListener('submit', (event) => this.submitWorkspaceRename(event));
+    this.renameModal?.addEventListener('click', (event) => {
+      if (event.target === this.renameModal) this.closeRenameModal();
+    });
     this.results?.addEventListener('click', (event) => {
       const button = event.target.closest('[data-edit-folder]');
       if (button) this.openShareEditor(button.dataset.editFolder, button.dataset.folderName);
@@ -342,6 +354,72 @@ class WorkspacePage {
   }
 
   closeShareEditor() { document.getElementById('workspaceShareModal').hidden = true; }
+
+  openRenameModal() {
+    const currentName = (document.getElementById('workspaceName')?.textContent || '').trim();
+    if (!this.renameInput) return;
+    this.renameInput.value = currentName;
+    this.renameInput.focus();
+    this.renameInput.select();
+    this.renameError.textContent = '';
+    this.renameModal.hidden = false;
+  }
+
+  closeRenameModal() {
+    if (!this.renameModal) return;
+    this.renameModal.hidden = true;
+    this.renameError.textContent = '';
+    if (this.renameForm) this.renameForm.reset();
+  }
+
+  async submitWorkspaceRename(event) {
+    event.preventDefault();
+    const name = this.renameInput.value.trim();
+    if (!name) {
+      this.renameError.textContent = 'Workspace name cannot be empty.';
+      this.renameInput.focus();
+      return;
+    }
+
+    const saveButton = document.getElementById('saveWorkspaceRenameBtn');
+    const label = saveButton.querySelector('.btn-label');
+    const spinner = saveButton.querySelector('.btn-spinner');
+    saveButton.disabled = true;
+    label.textContent = 'Saving…';
+    spinner.hidden = false;
+    this.renameError.textContent = '';
+
+    try {
+      const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/workspace-name.php', {
+        method: 'POST',
+        headers: {
+          'X-User-Email': this.identityEmail,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ workspace_id: this.activeWorkspaceId, name })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Could not update workspace name.');
+      }
+
+      const displayName = payload.workspace?.name || name;
+      document.getElementById('workspaceName').textContent = displayName;
+      this.availableWorkspaces = this.availableWorkspaces.map((workspace) => ({
+        ...workspace,
+        name: workspace.id === this.activeWorkspaceId ? displayName : workspace.name,
+      }));
+      this.renderWorkspaceSwitcher();
+      this.showNotice('Workspace name updated successfully.', 'success');
+      this.closeRenameModal();
+    } catch (error) {
+      this.renameError.textContent = error.message;
+    } finally {
+      saveButton.disabled = false;
+      label.textContent = 'Save changes';
+      spinner.hidden = true;
+    }
+  }
 
   setLoadingState(isLoading) {
     this.isLoading = isLoading;
