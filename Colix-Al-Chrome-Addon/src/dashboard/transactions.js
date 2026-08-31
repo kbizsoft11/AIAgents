@@ -3,30 +3,91 @@ class TransactionsPage {
     this.apiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/transactions.php';
     this.results = document.getElementById('transactionsResults');
     this.summary = document.getElementById('transactionsSummary');
+    this.rangeSummary = document.getElementById('transactionsRangeSummary');
     this.notice = document.getElementById('transactionsNotice');
     this.refreshBtn = document.getElementById('transactionsRefreshBtn');
+    this.searchInput = document.getElementById('transactionsSearch');
+    this.statusFilter = document.getElementById('transactionsStatusFilter');
+    this.clearFiltersBtn = document.getElementById('transactionsClearFilters');
+    this.previousBtn = document.getElementById('transactionsPrevious');
+    this.nextBtn = document.getElementById('transactionsNext');
+    this.pageSummary = document.getElementById('transactionsPageSummary');
     this.noticeTimer = null;
     this.isLoading = false;
+    this.identityEmail = '';
     this.transactions = [];
+    this.state = { page: 1, per_page: 10, total: 0, pages: 1, status: '', search: '' };
 
+    this.bindEvents();
+    this.load();
+  }
+
+  bindEvents() {
     this.refreshBtn?.addEventListener('click', () => {
       if (!this.isLoading) this.load();
     });
 
-    this.load();
+    let searchTimer;
+    this.searchInput?.addEventListener('input', (event) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        this.state.search = event.target.value.trim();
+        this.state.page = 1;
+        this.load();
+      }, 250);
+    });
+
+    this.statusFilter?.addEventListener('change', (event) => {
+      this.state.status = event.target.value;
+      this.state.page = 1;
+      this.load();
+    });
+
+    this.clearFiltersBtn?.addEventListener('click', () => {
+      if (this.isLoading) return;
+      this.state.search = '';
+      this.state.status = '';
+      this.state.page = 1;
+      this.searchInput.value = '';
+      this.statusFilter.value = '';
+      this.load();
+    });
+
+    this.previousBtn?.addEventListener('click', () => {
+      if (this.isLoading || this.state.page <= 1) return;
+      this.state.page -= 1;
+      this.load();
+    });
+
+    this.nextBtn?.addEventListener('click', () => {
+      if (this.isLoading || this.state.page >= this.state.pages) return;
+      this.state.page += 1;
+      this.load();
+    });
   }
 
   async load() {
     this.showLoading();
     try {
-      const identity = await chrome.identity.getProfileUserInfo();
-      if (!identity?.email) {
-        throw new Error('Please sign in to Chrome before viewing transaction history.');
+      if (!this.identityEmail) {
+        const identity = await chrome.identity.getProfileUserInfo();
+        if (!identity?.email) {
+          throw new Error('Please sign in to Chrome before viewing transaction history.');
+        }
+        this.identityEmail = identity.email;
       }
 
-      const response = await fetch(this.apiUrl, {
+      const params = new URLSearchParams({
+        page: String(this.state.page),
+        per_page: String(this.state.per_page),
+      });
+
+      if (this.state.status) params.set('status', this.state.status);
+      if (this.state.search) params.set('search', this.state.search);
+
+      const response = await fetch(`${this.apiUrl}?${params.toString()}`, {
         headers: {
-          'X-User-Email': identity.email,
+          'X-User-Email': this.identityEmail,
         },
       });
       const payload = await response.json().catch(() => ({}));
@@ -35,6 +96,14 @@ class TransactionsPage {
       }
 
       this.transactions = Array.isArray(payload.transactions) ? payload.transactions : [];
+      const pagination = payload.pagination || {};
+      this.state = {
+        ...this.state,
+        page: Number(pagination.page || this.state.page || 1),
+        per_page: Number(pagination.per_page || this.state.per_page || 10),
+        total: Number(pagination.total || 0),
+        pages: Number(pagination.pages || 1),
+      };
       this.render();
     } catch (error) {
       this.renderError(error.message || 'Could not load transaction history.');
@@ -45,16 +114,22 @@ class TransactionsPage {
 
   render() {
     const count = this.transactions.length;
-    this.summary.textContent = `${count} transaction${count === 1 ? '' : 's'}`;
+
+    this.summary.textContent = count
+      ? 'Payment history'
+      : (this.state.search || this.state.status ? 'No transactions match your filters' : 'No transactions yet');
+
+    this.updateRangeSummary();
 
     if (!count) {
       this.results.innerHTML = `<tr class="workspace-empty-row"><td colspan="6">
         <div class="workspace-empty-state">
           <span class="workspace-empty-icon" aria-hidden="true">·</span>
-          <span class="workspace-empty-title">No transactions yet</span>
-          <span class="workspace-empty-sub">Your workspace payments will appear here.</span>
+          <span class="workspace-empty-title">${this.escape(this.state.search || this.state.status ? 'No matching transactions' : 'No transactions yet')}</span>
+          <span class="workspace-empty-sub">${this.escape(this.state.search || this.state.status ? 'Try another filter or clear the current selection.' : 'Your workspace payments will appear here.')}</span>
         </div>
       </td></tr>`;
+      this.renderPagination();
       return;
     }
 
@@ -73,16 +148,42 @@ class TransactionsPage {
         <td class="transaction-ref">${this.escape(ref)}</td>
       </tr>`;
     }).join('');
+
+    this.renderPagination();
+  }
+
+  updateRangeSummary() {
+    if (!this.rangeSummary) return;
+    const total = this.state.total || 0;
+    const start = total ? (this.state.page - 1) * this.state.per_page + 1 : 0;
+    const end = total ? Math.min(this.state.page * this.state.per_page, total) : 0;
+
+    this.rangeSummary.textContent = total
+      ? `Showing ${start}-${end} of ${total} transaction${total === 1 ? '' : 's'}`
+      : (this.state.search || this.state.status ? 'No transactions match your filters' : 'No transactions yet');
+  }
+
+  renderPagination() {
+    const pageSummary = this.state.pages > 0 ? `Page ${this.state.page} of ${this.state.pages}` : 'Page 1 of 1';
+    this.pageSummary.textContent = pageSummary;
+    this.previousBtn.disabled = this.state.page <= 1 || this.isLoading;
+    this.nextBtn.disabled = this.state.page >= this.state.pages || this.isLoading;
   }
 
   setLoadingState(isLoading) {
     this.isLoading = isLoading;
     if (this.refreshBtn) this.refreshBtn.disabled = isLoading;
+    if (this.searchInput) this.searchInput.disabled = isLoading;
+    if (this.statusFilter) this.statusFilter.disabled = isLoading;
+    if (this.clearFiltersBtn) this.clearFiltersBtn.disabled = isLoading;
+    if (this.previousBtn) this.previousBtn.disabled = isLoading || this.state.page <= 1;
+    if (this.nextBtn) this.nextBtn.disabled = isLoading || this.state.page >= this.state.pages;
   }
 
   showLoading() {
     this.setLoadingState(true);
     this.summary.textContent = 'Loading transactions…';
+    if (this.rangeSummary) this.rangeSummary.textContent = 'Loading transactions…';
 
     const rows = Array.from({ length: 5 }, () => {
       const cells = Array.from({ length: 6 }, () => `<td><span class="skeleton-text skeleton-cell" style="width:${55 + Math.floor(Math.random() * 35)}%"></span></td>`).join('');
@@ -90,6 +191,7 @@ class TransactionsPage {
     }).join('');
 
     this.results.innerHTML = rows;
+    this.renderPagination();
   }
 
   renderError(message) {
@@ -101,6 +203,8 @@ class TransactionsPage {
       </div>
     </td></tr>`;
     this.summary.textContent = 'Could not load transactions';
+    if (this.rangeSummary) this.rangeSummary.textContent = 'Could not load transactions';
+    this.pageSummary.textContent = 'Page 1 of 1';
     this.showNotice(message, 'error');
   }
 
@@ -120,6 +224,7 @@ class TransactionsPage {
 
   formatStatus(value) {
     const status = String(value || 'created').trim();
+    if (status === 'approved_pending_capture') return 'Pending';
     return status
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -128,7 +233,7 @@ class TransactionsPage {
   statusClass(value) {
     const status = String(value || 'created').toLowerCase();
     if (status === 'completed') return 'is-success';
-    if (status === 'failed' || status === 'cancelled' || status === 'declined') return 'is-error';
+    if (status === 'failed') return 'is-error';
     return 'is-pending';
   }
 

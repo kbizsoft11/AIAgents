@@ -26,8 +26,26 @@
       <div class="workspace-panel-heading workspace-results-heading">
         <div>
           <h2>Payment history</h2>
-          <p id="transactionsSummary">Loading transactions...</p>
+          <p id="transactionsSummary" style="display:none;">Loading transactions...</p>
         </div>
+      </div>
+
+      <div class="workspace-filters">
+        <label class="workspace-search">
+          <span>Search</span>
+          <input id="transactionsSearch" type="search" placeholder="Search by workspace, plan, or reference" />
+        </label>
+        <label>
+          <span>Status</span>
+          <select id="transactionsStatusFilter">
+            <option value="">All statuses</option>
+            <option value="created">Created</option>
+            <option value="approved_pending_capture">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </label>
+        <button class="workspace-secondary-btn" id="transactionsClearFilters" type="button">Clear</button>
       </div>
 
       <div class="workspace-table-wrap">
@@ -46,6 +64,15 @@
             <tr><td colspan="6">Loading transactions...</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="workspace-pagination">
+        <span id="transactionsRangeSummary" class="workspace-pagination-range">Loading transactions...</span>
+        <div class="workspace-pagination-controls">
+          <span id="transactionsPageSummary">Page 1 of 1</span>
+          <button class="workspace-secondary-btn" id="transactionsPrevious" type="button">Previous</button>
+          <button class="workspace-secondary-btn" id="transactionsNext" type="button">Next</button>
+        </div>
       </div>
     </section>
   </main>

@@ -31,3 +31,29 @@
   font-family: Arial, sans-serif;
   word-break: break-word;
 }
+
+.transactions-page .workspace-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.transactions-page .workspace-pagination-range {
+  color: var(--workspace-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.transactions-page .workspace-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.transactions-page .workspace-pagination-controls #transactionsPageSummary {
+  color: var(--workspace-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}

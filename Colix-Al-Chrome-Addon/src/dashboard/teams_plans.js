@@ -125,8 +125,8 @@ class TeamsPlansPage {
       const isCurrent = plan.plan_code === currentCode;
       const custom = Number(plan.max_members) > 100000000;
       const price = Number(plan.monthly_price);
-      const hasActivePlan = Boolean(currentCode);
-      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling && !hasActivePlan;
+      const hasActivePaidPlan = Boolean(currentCode && currentCode !== 'free');
+      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling && !hasActivePaidPlan;
       const isCustomAction = custom && !isCurrent;
       const buttonDisabled = isCurrent || !(canUpgrade || isCustomAction);
       
