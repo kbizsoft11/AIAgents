@@ -41,7 +41,7 @@ class TeamsPlansPage {
       this.renderPlans();
     });
     this.contactBtn?.addEventListener('click', () => {
-      this.showNotice('Please contact the ColixAI team to discuss a custom workspace plan.', 'info');
+      window.location.href = 'mailto:info@kbizsoft.com';
     });
     this.showLoadingState();
     this.load();
@@ -125,20 +125,30 @@ class TeamsPlansPage {
       const isCurrent = plan.plan_code === currentCode;
       const custom = Number(plan.max_members) > 100000000;
       const price = Number(plan.monthly_price);
-      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling;
+      const hasActivePlan = Boolean(currentCode);
+      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling && !hasActivePlan;
+      const isCustomAction = custom && !isCurrent;
+      const buttonDisabled = isCurrent || !(canUpgrade || isCustomAction);
       
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
         <div class="teams-plan-price">${custom ? 'Custom' : `$${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
-        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" ${!canUpgrade ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Upgrade for 30 days' : 'Included'}</button>
+        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Upgrade for 30 days' : 'Included'}</button>
       </article>`;
     }).join('');
     
-    // Add click handlers to upgrade buttons
-    this.planGrid.querySelectorAll('[data-plan-code]:not(:disabled)').forEach((button) => {
-      button.addEventListener('click', () => this.startCheckout(button.dataset.planCode));
+    // Add click handlers to plan buttons.
+    this.planGrid.querySelectorAll('[data-plan-code]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        if (button.dataset.customContact === '1') {
+          window.location.href = 'mailto:info@kbizsoft.com';
+          return;
+        }
+        this.startCheckout(button.dataset.planCode);
+      });
     });
   }
 

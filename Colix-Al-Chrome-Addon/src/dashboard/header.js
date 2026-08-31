@@ -54,7 +54,8 @@ class HeaderModule {
       workspace: 'dashboard/workspace.html',
       'teams-plans': 'dashboard/teams_plans.html',
       'workspace-groups': 'dashboard/workspace_groups.html',
-      marketplace: 'dashboard/marketplace.html'
+      marketplace: 'dashboard/marketplace.html',
+      transactions: 'dashboard/transactions.html'
     };
 
     Object.entries(routes).forEach(([key, route]) => {
@@ -135,6 +136,9 @@ class HeaderModule {
 
           if (action === 'usage') {
             console.log('Usage clicked');
+            this.closeProfileDropdown();
+          } else if (action === 'transactions') {
+            window.location.assign(chrome.runtime.getURL('dashboard/transactions.html'));
             this.closeProfileDropdown();
           } else if (action === 'trash') {
             window.location.assign(chrome.runtime.getURL('dashboard/trash.html'));

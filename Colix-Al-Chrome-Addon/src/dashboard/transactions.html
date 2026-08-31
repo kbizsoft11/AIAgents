@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColixAI - Transactions</title>
+  <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="transactions.css">
+</head>
+<body>
+  <div id="header-container"></div>
+  <main class="workspace-page transactions-page">
+    <header class="workspace-heading">
+      <div>
+        <p class="workspace-kicker">Billing</p>
+        <h1>Transactions</h1>
+        <p class="workspace-intro">Review your recent workspace payments and subscription activity.</p>
+      </div>
+      <button class="workspace-secondary-btn" id="transactionsRefreshBtn" type="button">Refresh</button>
+    </header>
+
+    <section class="workspace-notice" id="transactionsNotice" role="status" aria-live="polite"></section>
+
+    <section class="workspace-panel workspace-results-panel">
+      <div class="workspace-panel-heading workspace-results-heading">
+        <div>
+          <h2>Payment history</h2>
+          <p id="transactionsSummary">Loading transactions...</p>
+        </div>
+      </div>
+
+      <div class="workspace-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Workspace</th>
+              <th>Plan</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Reference</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsResults">
+            <tr><td colspan="6">Loading transactions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="header.js"></script>
+  <script src="transactions.js"></script>
+</body>
+</html>

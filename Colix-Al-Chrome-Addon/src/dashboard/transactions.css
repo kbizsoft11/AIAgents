@@ -1,0 +1,33 @@
+.transactions-page .workspace-results-heading { margin-bottom: 0; }
+
+.transaction-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font: 700 11px Arial, sans-serif;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.transaction-status.is-success {
+  color: #176b38;
+  background: var(--workspace-green-wash);
+}
+
+.transaction-status.is-error {
+  color: var(--workspace-red);
+  background: var(--workspace-red-wash);
+}
+
+.transaction-status.is-pending {
+  color: var(--workspace-amber);
+  background: var(--workspace-amber-wash);
+}
+
+.transaction-ref {
+  color: var(--workspace-muted);
+  font-family: Arial, sans-serif;
+  word-break: break-word;
+}
