@@ -6,74 +6,74 @@ api
 # Desktop app files
 
 # Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+Colix-AI-Desktop-App/logs
+Colix-AI-Desktop-App/*.log
+Colix-AI-Desktop-App/npm-debug.log*
+Colix-AI-Desktop-App/yarn-debug.log*
+Colix-AI-Desktop-App/yarn-error.log*
+Colix-AI-Desktop-App/pnpm-debug.log*
+Colix-AI-Desktop-App/lerna-debug.log*
 
 # Build outputs
-release
-dist
-dist-ssr
-dist-electron
+Colix-AI-Desktop-App/release
+Colix-AI-Desktop-App/dist
+Colix-AI-Desktop-App/dist-ssr
+Colix-AI-Desktop-App/dist-electron
 
 # Python
-__pycache__
-python-dist
-*.spec
-.venv
+Colix-AI-Desktop-App/__pycache__
+Colix-AI-Desktop-App/python-dist
+Colix-AI-Desktop-App/*.spec
+Colix-AI-Desktop-App/.venv
 
 # Dependencies
-node_modules
+Colix-AI-Desktop-App/node_modules
 
 # Env
-.env
-.env.*
-!.env.example
+Colix-AI-Desktop-App/.env
+Colix-AI-Desktop-App/.env.*
+!Colix-AI-Desktop-App/.env.example
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Colix-AI-Desktop-App/.vscode/*
+!Colix-AI-Desktop-App/.vscode/extensions.json
+Colix-AI-Desktop-App/.idea
+Colix-AI-Desktop-App/*.suo
+Colix-AI-Desktop-App/*.ntvs*
+Colix-AI-Desktop-App/*.njsproj
+Colix-AI-Desktop-App/*.sln
+Colix-AI-Desktop-App/*.sw?
 
 # Local
-*.local
+Colix-AI-Desktop-App/*.local
 
 # macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon?
-._*
-.Spotlight-V100
-.Trashes
-*.icns
-icon.iconset/
+Colix-AI-Desktop-App/.DS_Store
+Colix-AI-Desktop-App/.AppleDouble
+Colix-AI-Desktop-App/.LSOverride
+Colix-AI-Desktop-App/Icon?
+Colix-AI-Desktop-App/._*
+Colix-AI-Desktop-App/.Spotlight-V100
+Colix-AI-Desktop-App/.Trashes
+Colix-AI-Desktop-App/*.icns
+Colix-AI-Desktop-App/icon.iconset/
 
 # Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
+Colix-AI-Desktop-App/*~
+Colix-AI-Desktop-App/.fuse_hidden*
+Colix-AI-Desktop-App/.directory
+Colix-AI-Desktop-App/.Trash-*
+Colix-AI-Desktop-App/.nfs*
 
 # Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.lnk
+Colix-AI-Desktop-App/Thumbs.db
+Colix-AI-Desktop-App/Thumbs.db:encryptable
+Colix-AI-Desktop-App/ehthumbs.db
+Colix-AI-Desktop-App/Desktop.ini
+Colix-AI-Desktop-App/$RECYCLE.BIN/
+Colix-AI-Desktop-App/*.lnk
 
 # PyInstaller temp
-build/listener/
-listener.exe
-listener
+Colix-AI-Desktop-App/build/listener/
+Colix-AI-Desktop-App/listener.exe
+Colix-AI-Desktop-App/listener
