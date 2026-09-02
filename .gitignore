@@ -2,3 +2,78 @@ api/vendor/
 supabase/.temp/
 api/.env
 api
+
+# Desktop app files
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+release
+dist
+dist-ssr
+dist-electron
+
+# Python
+__pycache__
+python-dist
+*.spec
+.venv
+
+# Dependencies
+node_modules
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local
+*.local
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+*.icns
+icon.iconset/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# PyInstaller temp
+build/listener/
+listener.exe
+listener
