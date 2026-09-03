@@ -13,16 +13,13 @@
     ],
     "host_permissions": [
         "<all_urls>",
+        "http://localhost/*",
+        "https://extensions.kbizsoft.com/*",
         "https://*.supabase.co/*",
-        "https://www.googleapis.com/*"
+        "https://checkout.razorpay.com/*",
+        "https://api.razorpay.com/*",
+        "https://mail.google.com/*"
     ],
-    "oauth2": {
-        "client_id": "683094072539-otivcoos0kq99i7ied5apci08behrcim.apps.googleusercontent.com",
-        "scopes": [
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "https://www.googleapis.com/auth/userinfo.email"
-        ]
-    },
     "action": {
         "default_icon": {
             "16": "icons/icon16.png",
@@ -50,6 +47,22 @@
             ],
             "run_at": "document_idle",
             "all_frames": true
+        },
+        {
+            "matches": [
+                "https://mail.google.com/*"
+            ],
+            "js": [
+                "utils/supabase-config.js",
+                "utils/supabase-client.js",
+                "utils/auth-manager.js",
+                "utils/sync-manager.js",
+                "utils/storage.js",
+                "content/content.js",
+                "gmail/gmail-ai.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
         }
     ],
     "background": {
@@ -63,7 +76,6 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "dashboard/*.html",
                 "dashboard/header/*.html",
                 "icons/*"
             ],
