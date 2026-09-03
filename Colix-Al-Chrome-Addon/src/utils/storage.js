@@ -220,9 +220,9 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut);
-      await syncMgr.syncAll(); // Sync immediately
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
-      console.warn('Could not sync:', error);
+      console.warn('Could not queue sync:', error);
     }
 
     return newShortcut;
@@ -243,9 +243,9 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('update', 'shortcut', id, nextUpdates);
-      await syncMgr.syncAll(); // Sync immediately
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
-      console.warn('Could not sync:', error);
+      console.warn('Could not queue sync:', error);
       throw error;
     }
 
@@ -265,7 +265,7 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('update', 'form', id, nextUpdates);
-      await syncMgr.syncAll();
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
       console.warn('Could not sync:', error);
       throw error;
@@ -284,13 +284,30 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('delete', 'shortcut', id, null);
-      await syncMgr.syncAll(); // Sync immediately
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
       console.warn('Could not sync:', error);
       throw error;
     }
 
     return filtered;
+  },
+
+  // Helper to notify all content scripts when shortcuts are updated
+  async notifyContentScriptsOfUpdate() {
+    try {
+      const shortcuts = await this.getAll();
+      const forms = await this.getAllForms();
+      chrome.runtime.sendMessage({
+        action: 'shortcutsUpdated',
+        shortcuts,
+        forms
+      }).catch(() => {
+        // Tab might not have content script loaded, that's okay
+      });
+    } catch (error) {
+      console.warn('Could not notify content scripts:', error.message);
+    }
   },
 
   // Search shortcuts
@@ -353,7 +370,7 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('create', 'form', newForm.id, newForm);
-      await syncMgr.syncAll(); // Sync immediately
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
       console.warn('Could not sync:', error);
     }
@@ -433,10 +450,9 @@ const StorageHelper = {
     try {
       const syncMgr = getSyncManager();
       await syncMgr.queueSync('delete', 'form', id, null);
-      await syncMgr.syncAll(); // Sync immediately
+      // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
       console.warn('Could not sync:', error);
-      throw error;
     }
 
     return filtered;

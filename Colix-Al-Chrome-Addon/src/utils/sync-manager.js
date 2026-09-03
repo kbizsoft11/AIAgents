@@ -167,8 +167,13 @@ class SyncManager {
       // This ensures deletes are sent before pulling
       await this.pushToSupabase();
 
-      // Then sync from Supabase to local (pull)
-      await this.pullFromSupabase();
+      // Only pull from Supabase if we have pending items OR cache is stale (> 30 seconds)
+      const now = Date.now();
+      const shouldRefresh = !this.lastSyncTime || (now - this.lastSyncTime.getTime()) > 30000;
+      
+      if (this.pendingSyncQueue.length > 0 || shouldRefresh) {
+        await this.pullFromSupabase();
+      }
 
       this.lastSyncTime = new Date();
       // console.log('Sync completed successfully');
@@ -191,6 +196,14 @@ class SyncManager {
       console.error('Pull from Supabase error:', error);
       // Don't throw - allow sync to continue
     }
+  }
+
+  /**
+   * Force pull from Supabase (skip cache)
+   */
+  async forcePullFromSupabase() {
+    this.lastSyncTime = null; // Clear cache
+    return this.pullFromSupabase();
   }
 
   async getWorkspaceResources() {

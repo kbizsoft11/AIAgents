@@ -77,6 +77,20 @@ chrome.windows.onRemoved.addListener(windowId => {
   }
 });
 
+// Notify all content scripts when shortcuts are updated
+async function notifyShortcutsUpdated(shortcuts, forms) {
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'shortcutsUpdated',
+      shortcuts,
+      forms
+    }).catch(() => {
+      // Tab might not have content script loaded, that's okay
+    });
+  });
+}
+
 async function registerCurrentUser() {
   try {
 
@@ -343,10 +357,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           syncMgr = getSyncManager();
           if (syncMgr.userEmail !== identity.email) throw new Error('Sync account changed');
           await waitForSyncToFinish(syncMgr);
+          // Force refresh on first content script load or after 30 seconds
+          const now = Date.now();
+          if (!syncMgr.lastSyncTime || (now - syncMgr.lastSyncTime.getTime()) > 30000) {
+            await syncMgr.forcePullFromSupabase();
+          }
           await syncMgr.syncAll();
           await waitForSyncToFinish(syncMgr);
         } catch (error) {
           syncMgr = await initSyncManager(identity.email);
+          // Force initial pull for new sync manager
+          await syncMgr.forcePullFromSupabase();
         }
 
         const shortcuts = await syncMgr.getLocalShortcuts();
@@ -362,6 +383,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     })();
     return true;
+  }
+
+  if (message.action === 'shortcutsUpdated') {
+    // Dashboard notifies that shortcuts/forms were updated
+    // Relay to all content scripts so they refresh their cache
+    (async () => {
+      try {
+        const identity = await chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' });
+        if (identity?.email) {
+          await notifyShortcutsUpdated(message.shortcuts || [], message.forms || []);
+        }
+      } catch (error) {
+        console.warn('Could not relay shortcuts update:', error.message);
+      }
+    })();
+    return false;
   }
 
   if (message.action === 'getProfileInfo') {

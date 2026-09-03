@@ -17,22 +17,37 @@
   let sidebarSearchEl = null;
 
   chrome.runtime.onMessage.addListener((message) => {
-    if (message.action !== 'dynamicFieldResult') return;
-    const pending = pendingDynamicFields.get(message.requestId);
-    if (!pending) return;
-    pendingDynamicFields.delete(message.requestId);
-    if (message.cancelled) {
-      pending.cancel();
+    if (message.action === 'dynamicFieldResult') {
+      const pending = pendingDynamicFields.get(message.requestId);
+      if (!pending) return;
+      pendingDynamicFields.delete(message.requestId);
+      if (message.cancelled) {
+        pending.cancel();
+        return;
+      }
+      const escapeValue = value => String(value || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+      let expanded = pending.text;
+      pending.fields.forEach((field, index) => {
+        expanded = expanded.split(field.token).join(escapeValue(message.values?.[index]));
+      });
+      pending.complete(expanded);
       return;
     }
-    const escapeValue = value => String(value || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    let expanded = pending.text;
-    pending.fields.forEach((field, index) => {
-      expanded = expanded.split(field.token).join(escapeValue(message.values?.[index]));
-    });
-    pending.complete(expanded);
+
+    // FIX: Listen for shortcuts updated message from dashboard
+    if (message.action === 'shortcutsUpdated') {
+      shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : shortcuts;
+      forms = Array.isArray(message.forms) ? message.forms : forms;
+      // console.log('✅ Shortcuts cache updated from dashboard');
+      // Update the active element's menu to reflect new data
+      const activeElement = document.activeElement;
+      if (shortcuts.length && activeElement && isEditable(activeElement)) {
+        onInput({ target: activeElement });
+      }
+      return;
+    }
   });
 
   // Feature flag — set to true to re-enable the "//" popup trigger in future
