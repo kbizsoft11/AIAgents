@@ -2,3 +2,4 @@ dist/
 supabase/.temp/
 /node_modules/
 /supabase/.temp/
+dist

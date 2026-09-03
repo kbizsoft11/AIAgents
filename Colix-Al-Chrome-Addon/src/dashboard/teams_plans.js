@@ -14,22 +14,8 @@ class TeamsPlansPage {
     this.noticeTimer = null;
     this.selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace_id') || '';
     
-    // Listen for payment completion from the hosted checkout tab.
-    this.checkoutTabSuccessListener = (tabId, changeInfo, tab) => {
-      if (!tab?.url) return;
-      try {
-        const url = new URL(tab.url);
-        if (url.hostname !== 'extensions.kbizsoft.com') return;
-        if (url.pathname.includes('/magicaa-extension/razorpay-checkout.html') && url.searchParams.get('payment_success') === '1') {
-          chrome.tabs.onUpdated.removeListener(this.checkoutTabSuccessListener);
-          this.showNotice('Payment complete. Your workspace is active for 30 days.', 'success');
-          this.load();
-        }
-      } catch (error) {
-        // Ignore malformed URLs from unrelated tabs.
-      }
-    };
-    chrome.tabs.onUpdated.addListener(this.checkoutTabSuccessListener);
+    const callbackParams = new URLSearchParams(window.location.search);
+    this.paymentReturned = callbackParams.get('payment_success') === '1';
     
     this.workspaceSelect?.addEventListener('change', () => {
       if (this.isLoading) return;
@@ -61,6 +47,12 @@ class TeamsPlansPage {
       this.renderWorkspacePicker();
       this.renderWorkspaceState();
       this.renderPlans();
+      if (this.paymentReturned) {
+        this.showNotice('Payment complete. Refreshing subscription status...', 'success');
+        this.paymentReturned = false;
+        window.history.replaceState({}, '', `${window.location.pathname}?workspace_id=${encodeURIComponent(this.selectedWorkspaceId)}`);
+        setTimeout(() => this.load(), 1200);
+      }
     } catch (error) {
       this.renderError(error.message || 'Teams plans are unavailable right now.');
     } finally {
@@ -132,10 +124,10 @@ class TeamsPlansPage {
       
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
-        <div class="teams-plan-price">${custom ? 'Custom' : `$${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
+        <div class="teams-plan-price">${custom ? 'Custom' : `INR ${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
-        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Upgrade for 30 days' : 'Included'}</button>
+        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Subscribe monthly' : 'Included'}</button>
       </article>`;
     }).join('');
     
@@ -170,6 +162,7 @@ class TeamsPlansPage {
       hostedUrl.searchParams.set('workspace_id', workspace.id);
       hostedUrl.searchParams.set('plan_code', planCode);
       hostedUrl.searchParams.set('user_email', identity.email);
+      hostedUrl.searchParams.set('return_url', chrome.runtime.getURL(`dashboard/teams_plans.html?workspace_id=${encodeURIComponent(workspace.id)}`));
 
       await chrome.tabs.create({ url: hostedUrl.toString(), active: true });
     } catch (error) {
