@@ -20,7 +20,7 @@ class TeamsPlansPage {
       try {
         const url = new URL(tab.url);
         if (url.hostname !== 'extensions.kbizsoft.com') return;
-        if (url.pathname.includes('/magicaa-extension/paypal-checkout.html') && url.searchParams.get('payment_success') === '1') {
+        if (url.pathname.includes('/magicaa-extension/razorpay-checkout.html') && url.searchParams.get('payment_success') === '1') {
           chrome.tabs.onUpdated.removeListener(this.checkoutTabSuccessListener);
           this.showNotice('Payment complete. Your workspace is active for 30 days.', 'success');
           this.load();
@@ -166,7 +166,7 @@ class TeamsPlansPage {
         return;
       }
 
-      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/paypal-checkout.html');
+      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/razorpay-checkout.html');
       hostedUrl.searchParams.set('workspace_id', workspace.id);
       hostedUrl.searchParams.set('plan_code', planCode);
       hostedUrl.searchParams.set('user_email', identity.email);

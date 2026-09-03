@@ -1804,15 +1804,15 @@ div#format-container {
   background: #e74c3c;
 }
 
-/* ===== PayPal Container ===== */
-#paypalContainer {
+/* ===== razorpay Container ===== */
+#razorpayContainer {
   margin-top: 16px;
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
 }
 
-#paypalFrame {
+#razorpayFrame {
   display: block;
   width: 100%;
   border: none;
@@ -1851,20 +1851,20 @@ div#format-container {
   color: #27ae60;
 }
 
-/* ===== PayPal Status ===== */
-#paypalStatus {
+/* ===== razorpay Status ===== */
+#razorpayStatus {
   margin-top: 16px;
   text-align: center;
 }
 
-.paypal-processing {
+.razorpay-processing {
   background: #f8f9fa;
   border: 1.5px solid #e0e0e0;
   border-radius: 10px;
   padding: 16px 20px;
 }
 
-.paypal-processing-text {
+.razorpay-processing-text {
   font-size: 13px;
   color: #666;
   display: flex;
@@ -1873,7 +1873,7 @@ div#format-container {
   gap: 8px;
 }
 
-.paypal-spinner {
+.razorpay-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid #e0e0e0;

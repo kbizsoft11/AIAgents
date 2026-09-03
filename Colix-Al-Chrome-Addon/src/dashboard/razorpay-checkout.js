@@ -2,7 +2,7 @@ const params = new URLSearchParams(window.location.search);
 const workspaceId = params.get('workspace_id') || '';
 const planCode = params.get('plan_code') || '';
 const userEmail = params.get('user_email') || '';
-const paymentApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/paypal.php';
+const paymentApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/razorpay.php';
 
 function showError(message) {
   const notice = document.querySelector('.sandbox-notice');
