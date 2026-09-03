@@ -33,13 +33,14 @@ async function initializeCheckout() {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not start checkout.');
     document.getElementById('planLabel').textContent = payload.plan_name;
-    document.getElementById('billingLabel').textContent = `$${payload.amount} for 30 days`;
-    document.getElementById('totalLabel').textContent = `$${payload.amount} USD`;
+    const currency = payload.currency || 'INR';
+    document.getElementById('billingLabel').textContent = `${currency} ${payload.amount} for 30 days`;
+    document.getElementById('totalLabel').textContent = `${currency} ${payload.amount}`;
     await loadRazorpaySdk();
     new Razorpay({
       key: payload.key_id,
       amount: Math.round(Number(payload.amount) * 100),
-      currency: 'USD',
+      currency,
       name: 'ColixAI',
       description: `${payload.plan_name} - 30 day workspace access`,
       order_id: payload.order_id,

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.payment_transactions (
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   plan_code text NOT NULL REFERENCES public.workspace_plan_catalog(plan_code),
   amount numeric(10, 2) NOT NULL CHECK (amount > 0),
-  currency text NOT NULL CHECK (currency = 'USD'),
+  currency text NOT NULL CHECK (currency IN ('INR', 'USD')),
   razorpay_order_id text UNIQUE,
   razorpay_payment_id text UNIQUE,
   razorpay_signature text,
@@ -22,6 +22,8 @@ CREATE INDEX IF NOT EXISTS payment_transactions_workspace_id_idx ON public.payme
 ALTER TABLE public.payment_transactions ADD COLUMN IF NOT EXISTS razorpay_order_id text UNIQUE;
 ALTER TABLE public.payment_transactions ADD COLUMN IF NOT EXISTS razorpay_payment_id text UNIQUE;
 ALTER TABLE public.payment_transactions ADD COLUMN IF NOT EXISTS razorpay_signature text;
+ALTER TABLE public.payment_transactions DROP CONSTRAINT IF EXISTS payment_transactions_currency_check;
+ALTER TABLE public.payment_transactions ADD CONSTRAINT payment_transactions_currency_check CHECK (currency IN ('INR', 'USD'));
 
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
