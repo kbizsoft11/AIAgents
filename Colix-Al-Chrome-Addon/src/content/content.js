@@ -12,6 +12,9 @@
   let forms = [];
   let shortcutsLoaded = false;
   const pendingDynamicFields = new Map();
+  let sidebarEl = null;
+  let sidebarListEl = null;
+  let sidebarSearchEl = null;
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action !== 'dynamicFieldResult') return;
@@ -447,14 +450,24 @@
     const current = (shortcut.usageCount || shortcut.usage_count || 0) + 1;
     shortcut.usageCount = current;
     shortcut.updatedAt = new Date().toISOString();
-    StorageHelper.update(shortcut.id, { usageCount: current }).catch(error => console.warn('ColixAI: Could not update shortcut usage:', error.message));
+    // Send message to background script to update usage count
+    // (StorageHelper is not available in content script context)
+    chrome.runtime.sendMessage({ 
+      action: 'incrementUsage', 
+      id: shortcut.id 
+    }).catch(error => console.warn('ColixAI: Could not update shortcut usage:', error.message));
   }
 
   function incrementFormUsage(form) {
     const current = (form.usageCount || form.usage_count || 0) + 1;
     form.usageCount = current;
     form.updatedAt = new Date().toISOString();
-    StorageHelper.updateForm(form.id, { usageCount: current }).catch(error => console.warn('ColixAI: Could not update form usage:', error.message));
+    // Send message to background script to update usage count
+    // (StorageHelper is not available in content script context)
+    chrome.runtime.sendMessage({ 
+      action: 'incrementUsage', 
+      id: form.id 
+    }).catch(error => console.warn('ColixAI: Could not update form usage:', error.message));
   }
 
   // =============================================
@@ -1995,10 +2008,6 @@
     `;
     document.head.appendChild(style);
   }
-
-  let sidebarEl = null;
-  let sidebarListEl = null;
-  let sidebarSearchEl = null;
 
   function buildSidebar() {
     if (sidebarEl) return;

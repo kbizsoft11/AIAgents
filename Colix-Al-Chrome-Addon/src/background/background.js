@@ -445,10 +445,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'incrementUsage') {
     (async () => {
-      const shortcuts = await getSyncManager().getLocalShortcuts();
-      const shortcut = shortcuts.find(item => item.id === message.id);
-      if (shortcut) StorageHelper.update(shortcut.id, { usageCount: (shortcut.usageCount || 0) + 1 });
-    })().catch(error => console.warn('Could not update shortcut usage:', error));
+      try {
+        const syncMgr = getSyncManager();
+        if (!syncMgr) {
+          console.warn('Sync manager not available for usage tracking');
+          return;
+        }
+        const shortcuts = await syncMgr.getLocalShortcuts();
+        const shortcut = shortcuts.find(item => item.id === message.id);
+        if (shortcut) {
+          await syncMgr.queueSync('update', 'shortcut', shortcut.id, { usageCount: (shortcut.usageCount || 0) + 1 });
+          await syncMgr.syncAll().catch(() => {}); // Ignore sync errors, usage tracking is optional
+        }
+      } catch (error) {
+        console.warn('Could not update shortcut usage:', error.message);
+        // Silently fail - usage tracking is optional and should not affect shortcut insertion
+      }
+    })();
   }
 });
 
