@@ -13,6 +13,11 @@ ALTER TABLE public.payment_transactions
   ADD COLUMN IF NOT EXISTS period_start timestamptz;
 ALTER TABLE public.payment_transactions
   ADD COLUMN IF NOT EXISTS period_end timestamptz;
+ALTER TABLE public.payment_transactions
+  DROP CONSTRAINT IF EXISTS payment_transactions_status_check;
+ALTER TABLE public.payment_transactions
+  ADD CONSTRAINT payment_transactions_status_check
+  CHECK (status IN ('created', 'authorized', 'approved_pending_capture', 'completed', 'failed'));
 CREATE INDEX IF NOT EXISTS payment_transactions_razorpay_subscription_idx
   ON public.payment_transactions(razorpay_subscription_id);
 CREATE UNIQUE INDEX IF NOT EXISTS payment_transactions_razorpay_payment_idx

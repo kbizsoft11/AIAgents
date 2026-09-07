@@ -84,7 +84,6 @@
       padding: 8px 12px;
       border-radius: 8px;
     }
-
     .topbar-premium-btn,
     .topbar-icon-btn {
       border: none;
@@ -138,6 +137,12 @@
       border-radius: 50%;
     }
 
+    .loading-screen { width: 100%; max-width: 460px; padding: 16px 20px; text-align: center; background: #f8f9fa; border: 1.5px solid #e0e0e0; border-radius: 10px; }
+    .loader-mark { width: 16px; height: 16px; margin: 0 auto 8px; border: 2px solid #e0e0e0; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .loading-title { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #666; }
+    .loading-text { margin: 0; color: #666; font-size: 13px; }
+    .state-error { color: #991b1b; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .checkout-wrap {
       min-height: calc(100vh - 72px);
       display: flex;
@@ -147,6 +152,7 @@
     }
 
     .card {
+      display: none;
       background: #ffffff;
       border-radius: 16px;
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
@@ -382,9 +388,16 @@
 </head>
 
 <body>
+  <div class="checkout-wrap">
+    <div class="loading-screen" id="loadingScreen" role="status" aria-live="polite">
+      <div class="loader-mark" aria-hidden="true"></div>
+      <h1 class="loading-title" id="loadingTitle">Preparing secure checkout</h1>
+      <p class="loading-text" id="loadingText">Connecting to Razorpay...</p>
+    </div>
+  </div>
 
   <!-- Checkout Card -->
-  <div class="card" id="checkoutCard">
+  <div class="card" id="checkoutCard" hidden>
     <div class="card-header">
       <div class="razorpay-logo">Razor<span>pay</span></div>
       <div class="sandbox-badge">
@@ -419,11 +432,11 @@
         </div>
         <div class="order-row">
           <span>Billing</span>
-          <span id="billingLabel">INR 0.00 / month</span>
+          <span id="billingLabel">Loading...</span>
         </div>
         <div class="order-row">
           <span>Total due today</span>
-          <span id="totalLabel">INR 0.00</span>
+          <span id="totalLabel">Loading...</span>
         </div>
       </div>
 

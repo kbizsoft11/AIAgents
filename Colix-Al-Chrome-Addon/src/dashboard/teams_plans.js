@@ -41,6 +41,7 @@ class TeamsPlansPage {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load Teams plans.');
       this.plans = Array.isArray(payload.plans) ? payload.plans : [];
+      this.currency = payload.currency || 'USD';
       this.workspaces = Array.isArray(payload.workspaces) ? payload.workspaces : [];
       this.canManageBilling = payload.can_manage_billing === true;
       this.workspacePanel.hidden = false;
@@ -124,7 +125,7 @@ class TeamsPlansPage {
       
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
-        <div class="teams-plan-price">${custom ? 'Custom' : `INR ${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
+        <div class="teams-plan-price">${custom ? 'Custom' : `${this.currency} ${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
         <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Subscribe monthly' : 'Included'}</button>
