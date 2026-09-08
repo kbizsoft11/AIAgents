@@ -62,45 +62,106 @@ class SyncManager {
   }
 
   async ensureStarterContent() {
-    if (!this.workspaceId || this.resources.length > 0) return false;
+    if (!this.workspaceId) return false;
 
     const now = new Date().toISOString();
-    const folderId = `folder_${Date.now()}_starter`;
-    const folder = {
-      id: folderId,
-      name: 'My Snippets',
-      isExpanded: true,
-      createdAt: now,
-      updatedAt: now,
-      workspace_id: this.workspaceId
-    };
-    const shortcuts = [
-      {
-        id: `shortcut_${Date.now()}_ty`,
-        trigger: '-ty',
-        expansion: 'Thank you so much! I really appreciate your help.',
-        label: 'Thank You',
-        folderId,
+    const timestamp = Date.now();
+    const folders = this.resources.filter((item) => this.getResourceType(item) === 'folder');
+    const existingShortcuts = this.resources.filter((item) => this.getResourceType(item) === 'shortcut');
+    const existingTriggers = new Set(existingShortcuts.map((item) => String(item.trigger || '').toLowerCase()));
+    const foldersToCreate = [];
+    const shortcutsToCreate = [];
+
+    // Keep the original starter folder for a brand-new workspace only.
+    let starterFolder = folders.find((folder) => String(folder.name || '').trim().toLowerCase() === 'my snippets');
+    if (!starterFolder && this.resources.length === 0) {
+      starterFolder = {
+        id: `folder_${timestamp}_starter`,
+        name: 'My Snippets',
+        isExpanded: true,
         createdAt: now,
         updatedAt: now,
-        usageCount: 0,
         workspace_id: this.workspaceId
+      };
+      foldersToCreate.push(starterFolder);
+    }
+
+    let templatesFolder = folders.find((folder) => String(folder.name || '').trim().toLowerCase() === 'templates');
+    if (!templatesFolder) {
+      templatesFolder = {
+        id: `folder_${timestamp}_templates`,
+        name: 'Templates',
+        isExpanded: true,
+        createdAt: now,
+        updatedAt: now,
+        workspace_id: this.workspaceId
+      };
+      foldersToCreate.push(templatesFolder);
+    }
+
+    if (this.resources.length === 0 && starterFolder) {
+      shortcutsToCreate.push(
+        {
+          id: `shortcut_${timestamp}_ty`,
+          trigger: '-ty',
+          expansion: 'Thank you so much! I really appreciate your help.',
+          label: 'Thank You',
+          folderId: starterFolder.id,
+          createdAt: now,
+          updatedAt: now,
+          usageCount: 0,
+          workspace_id: this.workspaceId
+        },
+        {
+          id: `shortcut_${timestamp}_sig`,
+          trigger: '/sig',
+          expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
+          label: 'Email Signature',
+          folderId: starterFolder.id,
+          createdAt: now,
+          updatedAt: now,
+          usageCount: 0,
+          workspace_id: this.workspaceId
+        }
+      );
+    }
+
+    const marketplaceTemplates = [
+      {
+        suffix: 'support',
+        trigger: '-support-reply',
+        expansion: 'Hello {{field:Customer name}},\n\nThanks for reaching out about {{field:Order or topic}}. Your request is marked as {{select:Priority|Normal|High|Urgent}}.\n\n{{textarea:Reply message}}\n\nBest,\n{{first_name}}',
+        label: 'Customer Support Reply'
       },
       {
-        id: `shortcut_${Date.now()}_sig`,
-        trigger: '/sig',
-        expansion: 'Best regards,\n{{first_name}} {{last_name}}\n{{email}}',
-        label: 'Email Signature',
-        folderId,
-        createdAt: now,
-        updatedAt: now,
-        usageCount: 0,
-        workspace_id: this.workspaceId
+        suffix: 'meeting',
+        trigger: '-meeting-notes',
+        expansion: 'Meeting: {{field:Meeting title}}\nDate: {{date_time:MMM D, YYYY HH:mm}}\nAttendees: {{textarea:Attendees}}\nOutcome: {{select:Outcome|Planned|In progress|Complete}}\nFollow-up needed: {{radio:Follow-up|Yes|No}}',
+        label: 'Meeting Notes'
       }
     ];
 
-    await this.queueSync('create', 'folder', folderId, folder);
-    for (const shortcut of shortcuts) {
+    marketplaceTemplates.forEach((template) => {
+      if (existingTriggers.has(template.trigger.toLowerCase())) return;
+      shortcutsToCreate.push({
+        id: `shortcut_${timestamp}_${template.suffix}`,
+        trigger: template.trigger,
+        expansion: template.expansion,
+        label: template.label,
+        folderId: templatesFolder.id,
+        createdAt: now,
+        updatedAt: now,
+        usageCount: 0,
+        workspace_id: this.workspaceId
+      });
+    });
+
+    if (foldersToCreate.length === 0 && shortcutsToCreate.length === 0) return false;
+
+    for (const folder of foldersToCreate) {
+      await this.queueSync('create', 'folder', folder.id, folder);
+    }
+    for (const shortcut of shortcutsToCreate) {
       await this.queueSync('create', 'shortcut', shortcut.id, shortcut);
     }
     await this.syncAll();

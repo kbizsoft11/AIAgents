@@ -2714,6 +2714,67 @@ div#format-container {
   vertical-align: middle;
 }
 
+.editor-dynamic-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: min(100%, 420px);
+  margin: 0 3px;
+  padding: 3px 8px;
+  border: 1px solid #a8cbd0;
+  border-radius: 6px;
+  background: #eef9fa;
+  color: #17636c;
+  cursor: default;
+  font-size: 12px;
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.editor-dynamic-token-kind {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #d4eff2;
+  color: #087f8c;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.editor-dynamic-token-label {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.editor-dynamic-token-options {
+  overflow: hidden;
+  color: #4d7c82;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-dynamic-token-textarea {
+  min-height: 30px;
+  border-style: dashed;
+}
+
+.editor-dynamic-token-select,
+.editor-dynamic-token-radio {
+  border-color: #8abca5;
+  background: #eef9f1;
+  color: #26734a;
+}
+
+.editor-dynamic-token-select .editor-dynamic-token-kind,
+.editor-dynamic-token-radio .editor-dynamic-token-kind {
+  background: #d8f0df;
+  color: #26734a;
+}
+
 .editor-rich-editor-shell:focus-within {
   border-color: #1a1a2e;
   box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.08);
@@ -2974,6 +3035,155 @@ div#format-container {
 .editor-modal-input:focus {
   border-color: var(--ui-green, #1dac4b);
   box-shadow: 0 0 0 3px rgba(29, 172, 75, .1);
+}
+
+.formula-function-browser {
+  max-height: 245px;
+  margin-top: 10px;
+  overflow-y: auto;
+  border: 1px solid #e2e7e3;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.formula-function-category-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 12px;
+  border: 0;
+  border-bottom: 1px solid #edf0ee;
+  background: #fff;
+  color: #153f48;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.formula-function-category-option:last-child {
+  border-bottom: 0;
+}
+
+.formula-function-category-option:hover {
+  background: #f3fbfb;
+}
+
+.formula-function-category-option > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-function-category-option strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formula-function-category-option small {
+  color: #718080;
+  font-size: 11px;
+}
+
+.formula-function-category-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 6px;
+  background: #eef9fa;
+  color: #087f8c;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.formula-function-category-arrow {
+  color: #718080;
+  font-size: 20px;
+}
+
+.formula-function-back {
+  width: 100%;
+  padding: 8px 11px;
+  border: 0;
+  border-bottom: 1px solid #edf0ee;
+  background: #f8fbfb;
+  color: #087f8c;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: left;
+}
+
+.formula-function-back:hover {
+  background: #eef9fa;
+}
+
+.formula-function-category + .formula-function-category {
+  border-top: 1px solid #edf0ee;
+}
+
+.formula-function-category h4 {
+  margin: 0;
+  padding: 9px 11px 7px;
+  color: #345c62;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.formula-function-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 0;
+  border-top: 1px solid #f1f3f2;
+  background: #fff;
+  color: #1d2828;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.formula-function-item:hover {
+  background: #f3fbfb;
+}
+
+.formula-function-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.formula-function-copy strong {
+  color: #153f48;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.formula-function-copy small {
+  overflow: hidden;
+  color: #6c7778;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formula-function-item code {
+  flex: 0 0 auto;
+  max-width: 48%;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: 1px solid #dce4e2;
+  border-radius: 5px;
+  color: #6b7d7d;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .editor-modal-textarea {

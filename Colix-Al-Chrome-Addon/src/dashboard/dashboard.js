@@ -159,6 +159,7 @@ class TextBlitzDashboard {
     this.editorFormulaCommand = document.querySelector('.editor-formula-command');
     this.editorFormulaPicker = document.getElementById('editorFormulaPicker');
     this.editorFormulaInput = document.getElementById('editorFormulaInput');
+    this.editorFormulaFunctions = document.getElementById('editorFormulaFunctions');
     this.editorFormulaFormat = document.getElementById('editorFormulaFormat');
     this.editorFormulaError = document.getElementById('editorFormulaError');
     this.editorFormulaClose = document.getElementById('editorFormulaClose');
@@ -524,14 +525,16 @@ class TextBlitzDashboard {
       this.editorFormulaInput.value = '';
       this.editorFormulaFormat.value = '';
       this.editorFormulaError.style.display = 'none';
+      this.editorFormulaFunctions.innerHTML = '';
       this.editorFormulaPicker?.classList.add('open');
       setTimeout(() => this.editorFormulaInput?.focus(), 50);
     });
+    this.editorFormulaInput?.addEventListener('focus', () => this.renderFormulaFunctions());
     this.editorFormulaCancel?.addEventListener('click', () => this.editorFormulaPicker?.classList.remove('open'));
     this.editorFormulaClose?.addEventListener('click', () => this.editorFormulaPicker?.classList.remove('open'));
     this.editorFormulaInsert?.addEventListener('click', () => {
       const formula = this.editorFormulaInput.value.trim();
-      if (!/^[0-9+\-*/().\s]+$/.test(formula) || !/[0-9]/.test(formula)) {
+      if (!this.isSupportedFormula(formula)) {
         this.editorFormulaError.style.display = 'block';
         this.editorFormulaInput.focus();
         return;
@@ -938,8 +941,94 @@ class TextBlitzDashboard {
     if (button) button.classList.toggle('active', document.queryCommandState(command));
   }
 
+  getFormulaFunctions() {
+    return [
+      {
+        name: 'Mathematical functions',
+        functions: [
+          ['round', 'Round a number', 'round(1.3)'],
+          ['ceil', 'Round a number up', 'ceil(1.3)'],
+          ['floor', 'Round a number down', 'floor(1.3)'],
+          ['sqrt', 'Square root of a number', 'sqrt(1.3)'],
+          ['abs', 'Absolute value of a number', 'abs(-1.3)'],
+          ['isodd', 'Whether a number is odd', 'isodd(3)'],
+          ['iseven', 'Whether a number is even', 'iseven(3)'],
+          ['remainder', 'The remainder of a division', 'remainder(13, 4)'],
+          ['max', 'Maximum of two or more numbers', 'max(7, 5)'],
+          ['min', 'Minimum of two or more numbers', 'min(7, 5)'],
+          ['random', 'A random number between 0 and 1', 'random()'],
+          ['ln', 'Natural logarithm of a number', 'ln(1.3)']
+        ]
+      },
+      {
+        name: 'Date functions',
+        functions: [
+          ['datetimeparse', 'Parse a date to the standard format', 'datetimeparse("Jan 23, 2020")'],
+          ['datetimeformat', 'Format a date in a custom format', 'datetimeformat("2020-01-23", "MMM D, YYYY")'],
+          ['datetimeadd', 'Add a period to a date', 'datetimeadd("2020-01-23", 7, "days")'],
+          ['datetimediff', 'Find the difference between two dates', 'datetimediff("2020-01-01", "2020-01-23", "days")'],
+          ['today', "Get today's date", 'today()'],
+          ['now', 'Get the current date and time', 'now()']
+        ]
+      }
+    ];
+  }
+
+  renderFormulaFunctions(categoryIndex = null) {
+    if (!this.editorFormulaFunctions) return;
+    const categories = this.getFormulaFunctions();
+
+    if (categoryIndex === null) {
+      this.editorFormulaFunctions.innerHTML = categories.map((category, index) => `
+        <button type="button" class="formula-function-category-option" data-formula-category="${index}">
+          <span class="formula-function-category-icon">${index === 0 ? '∑' : '▣'}</span>
+          <span><strong>${this.escapeHtml(category.name)}</strong><small>${category.functions.length} functions</small></span>
+          <span class="formula-function-category-arrow">›</span>
+        </button>
+      `).join('');
+      this.editorFormulaFunctions.querySelectorAll('[data-formula-category]').forEach(button => {
+        button.addEventListener('click', () => this.renderFormulaFunctions(Number(button.dataset.formulaCategory)));
+      });
+      return;
+    }
+
+    const category = categories[categoryIndex];
+    if (!category) return this.renderFormulaFunctions();
+    this.editorFormulaFunctions.innerHTML = `
+      <button type="button" class="formula-function-back" data-formula-back>‹ All formula categories</button>
+      <section class="formula-function-category">
+        <h4>${this.escapeHtml(category.name)}</h4>
+        ${category.functions.map(([name, description, example]) => `
+          <button type="button" class="formula-function-item" data-formula-example="${this.escapeHtml(example)}">
+            <span class="formula-function-copy"><strong>${this.escapeHtml(name)}</strong><small>${this.escapeHtml(description)}</small></span>
+            <code>${this.escapeHtml(example)}</code>
+          </button>
+        `).join('')}
+      </section>
+    `;
+    this.editorFormulaFunctions.querySelector('[data-formula-back]')?.addEventListener('click', () => this.renderFormulaFunctions());
+    this.editorFormulaFunctions.querySelectorAll('[data-formula-example]').forEach(button => {
+      button.addEventListener('click', () => {
+        this.editorFormulaInput.value = button.dataset.formulaExample || '';
+        this.editorFormulaInput.focus();
+      });
+    });
+  }
+
+  isSupportedFormula(formula) {
+    const value = String(formula || '').trim();
+    if (/^[0-9+\-*/().\s]+$/.test(value) && /[0-9]/.test(value)) return true;
+    const allowedFunctions = '(round|ceil|floor|sqrt|abs|isodd|iseven|remainder|max|min|random|ln|datetimeparse|datetimeformat|datetimeadd|datetimediff|today|now)';
+    return new RegExp(`^${allowedFunctions}\\([A-Za-z0-9_+\\-*/().,\\s:"']*\\)$`).test(value);
+  }
+
   insertEditorText(text) {
     if (!this.editorExpansionInput) return;
+    const dynamicToken = String(text || '').match(/^\{\{(?:first_name|last_name|email|clipboard|date|time)\}\}$|^\{\{(?:field|textarea|select|radio|date_time|formula):[^}]+\}\}$/);
+    if (dynamicToken) {
+      this.insertDynamicEditorToken(dynamicToken[0]);
+      return;
+    }
     const selection = window.getSelection();
     if (this.editorSavedRange && selection) {
       try {
@@ -951,6 +1040,22 @@ class TextBlitzDashboard {
     }
     this.editorExpansionInput.focus();
     document.execCommand('insertText', false, text);
+    this.saveEditorSelection();
+  }
+
+  insertDynamicEditorToken(token) {
+    if (!this.editorExpansionInput) return;
+    const selection = window.getSelection();
+    if (this.editorSavedRange && selection) {
+      try {
+        selection.removeAllRanges();
+        selection.addRange(this.editorSavedRange);
+      } catch (error) {
+        this.editorSavedRange = null;
+      }
+    }
+    this.editorExpansionInput.focus();
+    document.execCommand('insertHTML', false, this.renderDynamicEditorToken(token));
     this.saveEditorSelection();
   }
 
@@ -999,12 +1104,16 @@ class TextBlitzDashboard {
   }
 
   renderEditorContent(expansion) {
-    return String(expansion || '').replace(/\{\{snippet:([^}]+)\}\}/g, (token, id) => {
+    return String(expansion || '')
+      .replace(/\{\{snippet:([^}]+)\}\}/g, (token, id) => {
       const shortcut = this.shortcuts.find(entry => entry.id === id);
       if (!shortcut) return token;
       const label = this.escapeHtml(shortcut.label || shortcut.trigger || 'Imported snippet');
       return `<span class="editor-snippet-tag" contenteditable="false" data-snippet-token="${this.escapeHtml(token)}" title="${this.escapeHtml(shortcut.trigger || '')}">${label}</span><br>`;
-    });
+      })
+      .replace(/\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}/g, (token) => this.renderDynamicEditorToken(token))
+      .replace(/\{\{(first_name|last_name|email|clipboard|date|time)\}\}/g, (token) => this.renderDynamicEditorToken(token))
+      .replace(/\{\{(date_time|formula):([^}]+)\}\}/g, (token) => this.renderDynamicEditorToken(token));
   }
 
   serializeEditorContent() {
@@ -1012,7 +1121,50 @@ class TextBlitzDashboard {
     clone.querySelectorAll('[data-snippet-token]').forEach(tag => {
       tag.replaceWith(document.createTextNode(tag.dataset.snippetToken || ''));
     });
+    clone.querySelectorAll('[data-dynamic-token]').forEach(tag => {
+      tag.replaceWith(document.createTextNode(tag.dataset.dynamicToken || ''));
+    });
     return clone.innerHTML;
+  }
+
+  renderDynamicEditorToken(token) {
+    const value = String(token || '');
+    const fieldMatch = value.match(/^\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}$/);
+    const simpleMatch = value.match(/^\{\{(first_name|last_name|email|clipboard|date|time)\}\}$/);
+    const calculatedMatch = value.match(/^\{\{(date_time|formula):([^}]+)\}\}$/);
+    if (!fieldMatch && !simpleMatch && !calculatedMatch) return this.escapeHtml(token);
+
+    const kind = fieldMatch?.[1] || simpleMatch?.[1] || calculatedMatch?.[1];
+    const label = fieldMatch?.[2]?.trim() || calculatedMatch?.[2]?.trim() || ({
+      first_name: 'First name',
+      last_name: 'Last name',
+      email: 'Email',
+      clipboard: 'Clipboard',
+      date: 'Date',
+      time: 'Time'
+    }[kind] || 'Dynamic value');
+    const options = fieldMatch?.[3]
+      ? fieldMatch[3].split('|').slice(1).map(option => option.trim()).filter(Boolean)
+      : [];
+    const kindLabel = {
+      field: 'Text',
+      textarea: 'Paragraph',
+      select: 'Dropdown',
+      radio: 'Radio',
+      first_name: 'Profile',
+      last_name: 'Profile',
+      email: 'Profile',
+      clipboard: 'Clipboard',
+      date: 'Date',
+      time: 'Time',
+      date_time: 'Date/Time',
+      formula: 'Formula'
+    }[kind] || 'Field';
+    const detail = options.length
+      ? `${kindLabel}: ${label} (${options.join(', ')})`
+      : `${kindLabel}: ${label}`;
+
+    return `<span class="editor-dynamic-token editor-dynamic-token-${kind}" contenteditable="false" data-dynamic-token="${this.escapeHtml(token)}" title="${this.escapeHtml(detail)}"><span class="editor-dynamic-token-kind">${this.escapeHtml(kindLabel)}</span><span class="editor-dynamic-token-label">${this.escapeHtml(label)}</span>${options.length ? `<span class="editor-dynamic-token-options">${this.escapeHtml(options.join(' / '))}</span>` : ''}</span>`;
   }
 
   renderImportSnippetList(filter = '') {

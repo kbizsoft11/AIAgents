@@ -127,8 +127,9 @@ const StorageHelper = {
 
     try {
       // Fetch both user status and free credit token limit in parallel
+      const userStatusPromise = globalThis.colixUserStatusPromise;
       const [userResponse, freeLimitToken] = await Promise.all([
-        window.colixUserStatusPromise || fetch(`${this.API_BASE_URL}/${this.API_CHECK_USER}?email=${email}`),
+        userStatusPromise || fetch(`${this.API_BASE_URL}/${this.API_CHECK_USER}?email=${email}`),
         this.getMaxFreeCreditToken('json')
       ]);
 

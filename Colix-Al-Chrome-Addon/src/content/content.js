@@ -38,7 +38,12 @@
 
     // FIX: Listen for shortcuts updated message from dashboard
     if (message.action === 'shortcutsUpdated') {
-      shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : shortcuts;
+      shortcuts = Array.isArray(message.shortcuts)
+        ? message.shortcuts.map(shortcut => ({
+          ...shortcut,
+          expansion: normalizeStoredExpansion(shortcut.expansion)
+        }))
+        : shortcuts;
       forms = Array.isArray(message.forms) ? message.forms : forms;
       // console.log('✅ Shortcuts cache updated from dashboard');
       // Update the active element's menu to reflect new data
@@ -443,7 +448,12 @@
           });
         });
         if (!response?.success) throw new Error(response?.error || 'Could not load shortcuts.');
-        shortcuts = Array.isArray(response.shortcuts) ? response.shortcuts : [];
+        shortcuts = Array.isArray(response.shortcuts)
+          ? response.shortcuts.map(shortcut => ({
+            ...shortcut,
+            expansion: normalizeStoredExpansion(shortcut.expansion)
+          }))
+          : [];
         forms = Array.isArray(response.forms) ? response.forms : [];
         shortcutsLoaded = true;
         const activeElement = document.activeElement;
@@ -515,6 +525,18 @@
   // =============================================
   // HELPERS
   // =============================================
+  function normalizeStoredExpansion(expansion) {
+    if (typeof expansion !== 'string' || !expansion.includes('data-')) return expansion || '';
+
+    const container = document.createElement('div');
+    container.innerHTML = expansion;
+    container.querySelectorAll('[data-dynamic-token], [data-snippet-token]').forEach(node => {
+      const token = node.dataset.dynamicToken || node.dataset.snippetToken;
+      if (token) node.replaceWith(document.createTextNode(token));
+    });
+    return container.innerHTML;
+  }
+
   function escapeHtml(text) {
     const d = document.createElement('div');
     d.textContent = text;
@@ -1425,7 +1447,7 @@
         result = result.replace(/\{\{date\}\}/g, date);
         result = result.replace(/\{\{time\}\}/g, time);
         result = result.replace(/\{\{formula:([^|}]+)(?:\|([^}]*))?\}\}/g, (_, expression, format) => {
-          const value = evaluateNumericExpression(expression);
+          const value = evaluateFormulaExpression(expression);
           return value === null ? '' : formatFormulaResult(value, format || '');
         });
         resolveInputFields(result, callback);
@@ -1514,7 +1536,121 @@
     return index === source.length && Number.isFinite(value) ? value : null;
   }
 
+  function splitFormulaArguments(source) {
+    if (!String(source || '').trim()) return [];
+    const args = [];
+    let current = '';
+    let quote = null;
+    for (const character of String(source || '')) {
+      if ((character === '"' || character === "'") && (!quote || quote === character)) {
+        quote = quote ? null : character;
+        current += character;
+      } else if (character === ',' && !quote) {
+        args.push(current.trim());
+        current = '';
+      } else {
+        current += character;
+      }
+    }
+    if (current.trim()) args.push(current.trim());
+    return args;
+  }
+
+  function unquoteFormulaValue(value) {
+    const text = String(value || '').trim();
+    return /^(['"]).*\1$/.test(text) ? text.slice(1, -1) : text;
+  }
+
+  function parseFormulaDate(value) {
+    const parsed = new Date(unquoteFormulaValue(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function formatFormulaDate(date, format = 'YYYY-MM-DD') {
+    const pad = number => String(number).padStart(2, '0');
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const shortMonths = months.map(month => month.slice(0, 3));
+    const hours24 = date.getHours();
+    const replacements = {
+      YYYY: date.getFullYear(),
+      MMMM: months[date.getMonth()],
+      MMM: shortMonths[date.getMonth()],
+      MM: pad(date.getMonth() + 1),
+      DD: pad(date.getDate()),
+      D: date.getDate(),
+      HH: pad(hours24),
+      hh: pad((hours24 % 12) || 12),
+      mm: pad(date.getMinutes()),
+      ss: pad(date.getSeconds()),
+      a: hours24 >= 12 ? 'pm' : 'am'
+    };
+    return String(format).replace(/YYYY|MMMM|MMM|MM|DD|HH|hh|mm|ss|D|a/g, token => replacements[token]);
+  }
+
+  function evaluateFormulaExpression(expression) {
+    const source = String(expression || '').trim();
+    const match = source.match(/^([a-z]+)\((.*)\)$/i);
+    if (!match) return evaluateNumericExpression(source);
+
+    const name = match[1].toLowerCase();
+    const args = splitFormulaArguments(match[2]);
+    const numbers = () => args.map(arg => evaluateNumericExpression(arg));
+    const numericArgs = numbers();
+    if (['round', 'ceil', 'floor', 'sqrt', 'abs', 'ln'].includes(name) && numericArgs.length === 1 && numericArgs[0] !== null) {
+      return ({
+        round: Math.round,
+        ceil: Math.ceil,
+        floor: Math.floor,
+        sqrt: Math.sqrt,
+        abs: Math.abs,
+        ln: Math.log
+      }[name])(numericArgs[0]);
+    }
+    if (name === 'isodd' && numericArgs.length === 1 && numericArgs[0] !== null) return Math.abs(numericArgs[0] % 2) === 1 ? 1 : 0;
+    if (name === 'iseven' && numericArgs.length === 1 && numericArgs[0] !== null) return Math.abs(numericArgs[0] % 2) === 0 ? 1 : 0;
+    if (name === 'remainder' && numericArgs.length === 2 && numericArgs.every(value => value !== null) && numericArgs[1] !== 0) return numericArgs[0] % numericArgs[1];
+    if (name === 'max' && numericArgs.length > 0 && numericArgs.every(value => value !== null)) return Math.max(...numericArgs);
+    if (name === 'min' && numericArgs.length > 0 && numericArgs.every(value => value !== null)) return Math.min(...numericArgs);
+    if (name === 'random' && args.length === 0) return Math.random();
+
+    if (name === 'today' && args.length === 0) return formatFormulaDate(new Date());
+    if (name === 'now' && args.length === 0) return formatFormulaDate(new Date(), 'YYYY-MM-DD HH:mm:ss');
+    if (name === 'datetimeparse' && args.length === 1) {
+      const date = parseFormulaDate(args[0]);
+      return date ? formatFormulaDate(date) : null;
+    }
+    if (name === 'datetimeformat' && args.length >= 2) {
+      const date = parseFormulaDate(args[0]);
+      return date ? formatFormulaDate(date, unquoteFormulaValue(args[1])) : null;
+    }
+    if (name === 'datetimeadd' && args.length >= 3) {
+      const date = parseFormulaDate(args[0]);
+      const amount = evaluateNumericExpression(args[1]);
+      const unit = unquoteFormulaValue(args[2]).toLowerCase();
+      if (!date || amount === null) return null;
+      if (unit.startsWith('year')) date.setFullYear(date.getFullYear() + amount);
+      else if (unit.startsWith('month')) date.setMonth(date.getMonth() + amount);
+      else if (unit.startsWith('week')) date.setDate(date.getDate() + amount * 7);
+      else if (unit.startsWith('day')) date.setDate(date.getDate() + amount);
+      else if (unit.startsWith('hour')) date.setHours(date.getHours() + amount);
+      else if (unit.startsWith('minute')) date.setMinutes(date.getMinutes() + amount);
+      else return null;
+      return formatFormulaDate(date);
+    }
+    if (name === 'datetimediff' && args.length >= 3) {
+      const first = parseFormulaDate(args[0]);
+      const second = parseFormulaDate(args[1]);
+      const unit = unquoteFormulaValue(args[2]).toLowerCase();
+      if (!first || !second) return null;
+      const difference = second.getTime() - first.getTime();
+      const divisors = { second: 1000, seconds: 1000, minute: 60000, minutes: 60000, hour: 3600000, hours: 3600000, day: 86400000, days: 86400000, week: 604800000, weeks: 604800000 };
+      return divisors[unit] ? difference / divisors[unit] : null;
+    }
+    return null;
+  }
+
   function formatFormulaResult(value, format) {
+    if (typeof value !== 'number') return String(value ?? '');
     if (format === 'integer') return String(Math.round(value));
     if (format === '2-decimals') return value.toFixed(2);
     if (format === 'currency') {

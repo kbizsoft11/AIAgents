@@ -160,6 +160,17 @@ class SidebarManager {
               ? f.is_expanded
               : true,
       }));
+      const defaultFolderOrder = {
+        'my snippets': 0,
+        templates: 1,
+      };
+      this.folders.sort((a, b) => {
+        const aName = String(a.name || '').trim().toLowerCase();
+        const bName = String(b.name || '').trim().toLowerCase();
+        const aOrder = defaultFolderOrder[aName] ?? 2;
+        const bOrder = defaultFolderOrder[bName] ?? 2;
+        return aOrder - bOrder;
+      });
       this.shortcuts = resources.filter((item) => syncManager.getResourceType(item) === "shortcut").map((s) => ({
         ...s,
         folderId:
