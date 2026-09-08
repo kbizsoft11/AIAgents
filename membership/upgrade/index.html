@@ -6,6 +6,12 @@
   <meta name="color-scheme" content="light">
   <title>Upgrade your ColixAI workspace</title>
   <link rel="stylesheet" href="upgrade.css">
+
+  <style>
+    .paypal-overlay-context-popup {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
   <div class="shell">
@@ -28,9 +34,9 @@
       </section>
 
       <section class="checkout-card" aria-live="polite">
-        <div class="card-heading"><div><p class="card-kicker">Your plan</p><h2 id="plan-name">Preparing checkout</h2></div><span class="plan-pill">MONTHLY</span></div>
+        <div class="card-heading"><div><p class="card-kicker">Your plan</p><h2 id="plan-name">Preparing checkout</h2></div><span class="plan-pill" id="plan-pill">MONTHLY</span></div>
         <div class="price-row"><span id="price">--</span><span id="interval">per month</span></div>
-        <div class="summary"><div><span>Plan</span><strong id="plan-summary">Loading...</strong></div><div><span>Billing</span><strong>Monthly, recurring</strong></div><div><span>Payment</span><strong>PayPal secure checkout</strong></div></div>
+        <div class="summary"><div><span>Plan</span><strong id="plan-summary">Loading...</strong></div><div><span>Billing</span><strong id="billing-summary">Monthly, recurring</strong></div><div><span>Payment</span><strong>PayPal secure checkout</strong></div></div>
         <p id="message" class="status">Connecting to secure checkout...</p>
         <div id="paypal-buttons" hidden></div>
         <button id="retry" class="retry" type="button" hidden>Try again</button>

@@ -9,11 +9,13 @@ class TeamsPlansPage {
     this.workspacePicker = document.getElementById('teamsWorkspacePicker');
     this.workspaceSelect = document.getElementById('teamsWorkspaceSelect');
     this.contactBtn = document.getElementById('teamsContactBtn');
+    this.billingNote = document.getElementById('teamsBillingNote');
     this.workspaces = [];
     this.isLoading = false;
     this.noticeTimer = null;
     this.lastPaymentRefresh = 0;
     this.selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace_id') || '';
+    this.billingInterval = new URLSearchParams(window.location.search).get('billing_interval') === 'annual' ? 'annual' : 'monthly';
     
     const callbackParams = new URLSearchParams(window.location.search);
     this.paymentReturned = callbackParams.get('payment_success') === '1';
@@ -106,7 +108,8 @@ class TeamsPlansPage {
     const status = subscription.status || 'active';
     const period = subscription.current_period_end ? ` · Renews ${this.formatDate(subscription.current_period_end)}` : '';
     this.workspaceName.textContent = workspace.name || 'Your workspace';
-    this.subscriptionSummary.textContent = `${currentPlan?.name || subscription.plan_code || 'Free'} plan · ${this.formatStatus(status)}${period}`;
+    const interval = subscription.billing_interval === 'annual' ? 'Annual billing' : 'Monthly billing';
+    this.subscriptionSummary.textContent = `${currentPlan?.name || subscription.plan_code || 'Free'} plan · ${interval} · ${this.formatStatus(status)}${period}`;
   }
 
   // Fixed display order regardless of what order the API returns plans in:
@@ -132,23 +135,35 @@ class TeamsPlansPage {
       return;
     }
     const orderedPlans = this.plans.slice().sort((a, b) => this.planSortRank(a) - this.planSortRank(b));
-    this.planGrid.innerHTML = orderedPlans.map((plan) => {
+    if (this.billingNote) this.billingNote.textContent = this.billingInterval === 'annual' ? 'Annual billing · Save 5%' : 'Monthly billing';
+    this.planGrid.innerHTML = `<div class="teams-billing-toggle" role="group" aria-label="Billing frequency"><button type="button" data-billing-interval="monthly" class="${this.billingInterval === 'monthly' ? 'is-selected' : ''}">Monthly</button><button type="button" data-billing-interval="annual" class="${this.billingInterval === 'annual' ? 'is-selected' : ''}">Annual <span>Save 5%</span></button></div><div class="teams-plans-list">${orderedPlans.map((plan) => {
       const isCurrent = plan.plan_code === currentCode;
       const custom = Number(plan.max_members) > 100000000;
-      const price = Number(plan.monthly_price);
+      const monthlyPrice = Number(plan.monthly_price);
+      const price = this.billingInterval === 'annual' ? monthlyPrice * 12 * 0.95 : monthlyPrice;
       const hasActivePaidPlan = Boolean(currentCode && currentCode !== 'free');
-      const canUpgrade = !isCurrent && !custom && price > 0 && this.canManageBilling && !hasActivePaidPlan;
+      const canUpgrade = !isCurrent && !custom && monthlyPrice > 0 && this.canManageBilling && !hasActivePaidPlan;
       const isCustomAction = custom && !isCurrent;
       const buttonDisabled = isCurrent || !(canUpgrade || isCustomAction);
       
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
-        <div class="teams-plan-price">${custom ? 'Custom' : `${this.currency} ${price.toFixed(2)}`}<small>${custom ? '' : ' / month'}</small></div>
+        <div class="teams-plan-price">${custom ? 'Custom' : this.formatPrice(price)}<small>${custom ? '' : this.billingInterval === 'annual' ? ' / year' : ' / month'}</small></div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
-        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : price > 0 ? 'Subscribe monthly' : 'Included'}</button>
+        <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : monthlyPrice > 0 ? `Subscribe ${this.billingInterval}` : 'Included'}</button>
       </article>`;
-    }).join('');
+    }).join('')}</div>`;
+
+    this.planGrid.querySelectorAll('[data-billing-interval]').forEach((button) => {
+      button.addEventListener('click', () => {
+        this.billingInterval = button.dataset.billingInterval;
+        const url = new URL(window.location.href);
+        url.searchParams.set('billing_interval', this.billingInterval);
+        window.history.replaceState({}, '', url);
+        this.renderPlans();
+      });
+    });
     
     // Add click handlers to plan buttons.
     this.planGrid.querySelectorAll('[data-plan-code]').forEach((button) => {
@@ -158,12 +173,12 @@ class TeamsPlansPage {
           window.location.href = 'mailto:info@kbizsoft.com';
           return;
         }
-        this.startCheckout(button.dataset.planCode);
+        this.startCheckout(button.dataset.planCode, this.billingInterval);
       });
     });
   }
 
-  async startCheckout(planCode) {
+  async startCheckout(planCode, billingInterval) {
     const workspace = this.getSelectedWorkspace();
     if (!workspace) {
       this.showNotice('Select an owned workspace before starting checkout.', 'error');
@@ -181,6 +196,7 @@ class TeamsPlansPage {
       hostedUrl.searchParams.set('workspace_id', workspace.id);
       hostedUrl.searchParams.set('plan_code', planCode);
       hostedUrl.searchParams.set('user_email', identity.email);
+      hostedUrl.searchParams.set('billing_interval', billingInterval);
 
       await chrome.tabs.create({ url: hostedUrl.toString(), active: true });
     } catch (error) {
@@ -221,6 +237,7 @@ class TeamsPlansPage {
 
   formatStatus(status) { return status.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
   formatDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : ''; }
+  formatPrice(value) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: this.currency || 'USD', currencyDisplay: 'symbol' }).format(Number(value)); }
 
   showNotice(message, type = 'info') {
     clearTimeout(this.noticeTimer);

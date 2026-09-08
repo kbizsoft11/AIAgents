@@ -9,6 +9,18 @@ const price = document.getElementById('price');
 const message = document.getElementById('message');
 const buttons = document.getElementById('paypal-buttons');
 const retry = document.getElementById('retry');
+const planPill = document.getElementById('plan-pill');
+const billingSummary = document.getElementById('billing-summary');
+let billingInterval = params.get('billing_interval') === 'annual' ? 'annual' : 'monthly';
+let paypalSdkPromise = null;
+
+function formatPrice(amount, currency) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD',
+    currencyDisplay: 'symbol',
+  }).format(Number(amount));
+}
 
 function showError(error) {
   message.textContent = error instanceof Error ? error.message : 'PayPal checkout is unavailable.';
@@ -29,13 +41,16 @@ async function callApi(body) {
 }
 
 function loadPayPalSdk(clientId) {
-  return new Promise((resolve, reject) => {
+  if (window.paypal?.Buttons) return Promise.resolve();
+  if (paypalSdkPromise) return paypalSdkPromise;
+  paypalSdkPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription`;
     script.onload = resolve;
     script.onerror = () => reject(new Error('PayPal checkout could not be loaded.'));
     document.head.appendChild(script);
   });
+  return paypalSdkPromise;
 }
 
 async function initialize() {
@@ -44,12 +59,16 @@ async function initialize() {
   message.textContent = 'Connecting to secure checkout...';
   try {
     if (!workspaceId || !planCode || !userEmail) throw new Error('Missing checkout details. Please restart checkout.');
-    const payload = await callApi({ action: 'prepare_subscription', workspace_id: workspaceId, plan_code: planCode });
+    const payload = await callApi({ action: 'prepare_subscription', workspace_id: workspaceId, plan_code: planCode, billing_interval: billingInterval });
     title.textContent = payload.plan_name;
     planSummary.textContent = payload.plan_name;
-    price.textContent = `${payload.currency} ${payload.amount}`;
+    price.textContent = formatPrice(payload.amount, payload.currency);
+    planPill.textContent = payload.billing_interval === 'annual' ? 'ANNUAL' : 'MONTHLY';
+    billingSummary.textContent = payload.billing_interval === 'annual' ? 'Annual, recurring · 5% saved' : 'Monthly, recurring';
+    document.getElementById('interval').textContent = payload.billing_interval === 'annual' ? 'per year' : 'per month';
     message.textContent = 'Choose a payment method below to start your subscription.';
     await loadPayPalSdk(payload.paypal_client_id);
+    buttons.replaceChildren();
     buttons.hidden = false;
     window.paypal.Buttons({
       style: { layout: 'vertical', shape: 'rect', label: 'subscribe', height: 48 },
@@ -72,3 +91,30 @@ async function initialize() {
 
 retry.addEventListener('click', initialize);
 initialize();
+
+
+
+(function hidePayPalOverlay() {
+
+    function hideOverlay() {
+        const overlays = document.querySelectorAll(
+            '.paypal-overlay-context-popup, .paypal-checkout-overlay'
+        );
+
+        overlays.forEach(function (overlay) {
+            overlay.style.setProperty('display', 'none', 'important');
+            overlay.style.setProperty('visibility', 'hidden', 'important');
+            overlay.style.setProperty('opacity', '0', 'important');
+            overlay.style.setProperty('pointer-events', 'none', 'important');
+        });
+    }
+
+    // Check repeatedly because PayPal creates the overlay dynamically.
+    const interval = setInterval(hideOverlay, 100);
+
+    // Stop checking after 30 seconds.
+    setTimeout(function () {
+        clearInterval(interval);
+    }, 30000);
+
+})();

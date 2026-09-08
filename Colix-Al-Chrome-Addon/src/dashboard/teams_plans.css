@@ -61,7 +61,15 @@ h2 { margin-bottom: 8px; font-size: 24px; font-weight: 500; }
 
 /* ---------- Plan grid: always 4 across ---------- */
 
-.teams-plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.teams-plan-grid { display: block; }
+.teams-billing-toggle { display: flex; width: fit-content; margin: 0 0 14px auto; gap: 4px; padding: 4px; background: var(--teams-green-wash); border-radius: var(--teams-radius-sm); }
+.teams-billing-toggle button { padding: 8px 13px; border: 0; border-radius: 4px; color: var(--teams-muted); background: transparent; font: 700 12px Arial, sans-serif; cursor: pointer; }
+.teams-billing-toggle button.is-selected { color: var(--teams-green-dark); background: #fff; box-shadow: 0 2px 7px rgba(32, 76, 48, .12); }
+.teams-billing-toggle button span { margin-left: 4px; color: var(--teams-green); font-size: 10px; }
+.teams-plans-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+
+@media (max-width: 900px) { .teams-plans-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .teams-plans-list { grid-template-columns: 1fr; } }
 
 .teams-plan-card {
   position: relative;
