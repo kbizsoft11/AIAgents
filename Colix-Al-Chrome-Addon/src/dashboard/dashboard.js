@@ -41,7 +41,9 @@ class TextBlitzDashboard {
     if (authMgr.isUserAuthenticated()) {
       const userEmail = authMgr.getUserEmail();
       const syncMgr = await initSyncManager(userEmail);
-      syncMgr.ready.then(() => syncMgr.ensureStarterContent());
+      syncMgr.ready
+        .then(() => syncMgr.ensureStarterContent())
+        .catch((error) => console.warn('Could not create starter templates:', error));
       // console.log('✅ Sync manager initialized for:', userEmail);
     }
 
