@@ -13,6 +13,8 @@ function collectJavaScript(directory) {
 }
 
 async function build() {
+  fs.rmSync(outputRoot, { recursive: true, force: true });
+
   for (const sourcePath of collectJavaScript(sourceRoot)) {
     const relativePath = path.relative(sourceRoot, sourcePath);
     const outputPath = path.join(outputRoot, relativePath);

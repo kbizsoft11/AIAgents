@@ -78,7 +78,8 @@ class SyncManager {
       updatedAt: now,
       workspace_id: this.workspaceId
     };
-    const shortcuts = [
+    const foldersToCreate = [folder];
+    const shortcutsToCreate = [
       {
         id: `shortcut_${Date.now()}_ty`,
         trigger: '-ty',
@@ -100,8 +101,8 @@ class SyncManager {
         updatedAt: now,
         usageCount: 0,
         workspace_id: this.workspaceId
-      });
-    });
+      }
+    ];
 
     if (foldersToCreate.length === 0 && shortcutsToCreate.length === 0) return false;
 
