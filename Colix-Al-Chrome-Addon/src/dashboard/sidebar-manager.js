@@ -25,6 +25,9 @@ class SidebarManager {
     this.workspaceGroups = [];
     this.shareResource = null;
     this.sharingContextPromise = null;
+    this.folderCreationInProgress = false;
+    this.editingFolderId = null;
+    this.folderRenameDraft = null;
   }
 
   async init() {
@@ -34,11 +37,14 @@ class SidebarManager {
     this.bindEvents();
     this.createContextMenu();
     this.render();
-    this.sharingContextPromise = this.loadSharingContext()
-      .then(() => this.render())
-      .catch((error) =>
-        console.warn("Could not finish sidebar sharing setup:", error),
-      );
+    this.sharingContextPromise = new Promise((resolve) => {
+      const start = () => this.loadSharingContext()
+        .then(() => this.render())
+        .catch((error) => console.warn("Could not finish sidebar sharing setup:", error))
+        .finally(resolve);
+      if ('requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 2000 });
+      else window.setTimeout(start, 500);
+    });
   }
 
   async loadSharingContext() {
@@ -134,7 +140,18 @@ class SidebarManager {
 
   async loadFolders() {
     return (async () => {
-      this.folders = (await StorageHelper.getAllFolders()).map((f) => ({
+      const resources = await StorageHelper.getAllResources();
+      const syncManager = getSyncManager();
+      const folderResources = new Map();
+      resources
+        .filter((item) => syncManager.getResourceType(item) === "folder")
+        .forEach((folder) => folderResources.set(String(folder.id), folder));
+      const uniqueFolders = new Map();
+      folderResources.forEach((folder) => {
+        const nameKey = String(folder.name || '').trim().toLowerCase();
+        if (!uniqueFolders.has(nameKey)) uniqueFolders.set(nameKey, folder);
+      });
+      this.folders = Array.from(uniqueFolders.values()).map((f) => ({
         ...f,
         isExpanded:
           f.isExpanded !== undefined
@@ -143,15 +160,7 @@ class SidebarManager {
               ? f.is_expanded
               : true,
       }));
-      const legacyUncategorizedFolders = this.folders.filter(
-        (folder) =>
-          String(folder.id).toLowerCase() === "uncategorized" ||
-          String(folder.name).toLowerCase() === "uncategorized",
-      );
-      this.folders = this.folders.filter(
-        (folder) => !legacyUncategorizedFolders.includes(folder),
-      );
-      this.shortcuts = (await StorageHelper.getAll()).map((s) => ({
+      this.shortcuts = resources.filter((item) => syncManager.getResourceType(item) === "shortcut").map((s) => ({
         ...s,
         folderId:
           s.folderId !== undefined
@@ -160,7 +169,7 @@ class SidebarManager {
               ? s.folder_id
               : null,
       }));
-      this.forms = (await StorageHelper.getAllForms()).map((f) => ({
+      this.forms = resources.filter((item) => syncManager.getResourceType(item) === "form").map((f) => ({
         ...f,
         folderId:
           f.folderId !== undefined
@@ -203,9 +212,6 @@ class SidebarManager {
       if (itemsMigrated) {
         await this.saveShortcuts();
         await this.saveForms();
-      }
-      for (const folder of legacyUncategorizedFolders) {
-        await StorageHelper.deleteFolder(folder.id);
       }
       await this.saveFolders();
     })();
@@ -292,10 +298,13 @@ class SidebarManager {
   }
 
   canEditFolder(folderId) {
+    const folder = this.folders.find(
+      (item) => String(item.id) === String(folderId),
+    );
+    if (folder?.isLocalOwned) return true;
     return (
       ["edit", "manage"].includes(this.getFolderPermission(folderId)) ||
-      (!this.folders.find((folder) => String(folder.id) === String(folderId))
-        ?.isShared &&
+      (!folder?.isShared &&
         this.workspaceRole === "editor")
     );
   }
@@ -337,7 +346,7 @@ class SidebarManager {
     folderDiv.draggable = true;
 
     // Add active class if this is the active folder
-    if (this.activeFolder === folder.id) {
+    if (String(this.activeFolder) === String(folder.id)) {
       folderDiv.classList.add("active");
     }
 
@@ -354,7 +363,8 @@ class SidebarManager {
       ) {
         return;
       }
-      this.setActiveFolder(folder.id);
+      if (window.dashboard?.openFolder) window.dashboard.openFolder(folder.id);
+      else this.setActiveFolder(folder.id);
     });
 
     // Right-click context menu
@@ -376,21 +386,92 @@ class SidebarManager {
     icon.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1dac4b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
 
+    const nameDisplay = document.createElement("span");
+    nameDisplay.className = "folder-name-display";
+    nameDisplay.textContent = folder.name;
+    const isEditing = String(this.editingFolderId) === String(folder.id);
+    nameDisplay.hidden = isEditing;
+
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.className = "folder-name-input";
-    nameInput.value = folder.name;
-    nameInput.readOnly = true;
-    nameInput.ondblclick = () => this.editFolderName(folder.id);
-    nameInput.onblur = (e) => this.saveFolderName(folder.id, e.target.value);
+    nameInput.value = isEditing && this.folderRenameDraft !== null
+      ? this.folderRenameDraft
+      : folder.name;
+    nameInput.readOnly = !isEditing;
+    nameInput.hidden = !isEditing;
+    nameInput.onclick = (e) => e.stopPropagation();
+    nameInput.oninput = (e) => {
+      this.folderRenameDraft = e.target.value;
+    };
     nameInput.onkeydown = (e) => {
       if (e.key === "Enter") {
-        e.target.blur();
+        e.preventDefault();
+        saveRename();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelRename();
       }
     };
 
     const actions = document.createElement("div");
     actions.className = "folder-actions";
+
+    const renameBtn = document.createElement("button");
+    renameBtn.className = "folder-action-btn folder-rename-btn";
+    renameBtn.type = "button";
+    renameBtn.title = "Rename folder";
+    renameBtn.setAttribute("aria-label", "Rename folder");
+    renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+
+    const saveRenameBtn = document.createElement("button");
+    saveRenameBtn.className = "folder-action-btn folder-save-btn";
+    saveRenameBtn.type = "button";
+    saveRenameBtn.title = "Update folder name";
+    saveRenameBtn.setAttribute("aria-label", "Update folder name");
+    saveRenameBtn.hidden = !isEditing;
+    saveRenameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+    const cancelRename = () => {
+      this.editingFolderId = null;
+      this.folderRenameDraft = null;
+      nameInput.value = folder.name;
+      nameInput.readOnly = true;
+      nameInput.hidden = true;
+      nameDisplay.hidden = false;
+      renameBtn.hidden = false;
+      saveRenameBtn.hidden = true;
+    };
+    const saveRename = async () => {
+      const updated = await this.saveFolderName(folder.id, nameInput.value);
+      if (updated) {
+        this.editingFolderId = null;
+        this.folderRenameDraft = null;
+        nameInput.readOnly = true;
+        nameInput.hidden = true;
+        nameDisplay.textContent = folder.name;
+        nameDisplay.hidden = false;
+        renameBtn.hidden = false;
+        saveRenameBtn.hidden = true;
+      }
+    };
+    renameBtn.onclick = (e) => {
+      e.stopPropagation();
+      this.editingFolderId = folder.id;
+      this.folderRenameDraft = folder.name;
+      this.editFolderName(folder.id);
+      nameInput.readOnly = false;
+      nameDisplay.hidden = true;
+      nameInput.hidden = false;
+      renameBtn.hidden = true;
+      saveRenameBtn.hidden = false;
+      nameInput.focus();
+      nameInput.select();
+    };
+    saveRenameBtn.onclick = (e) => {
+      e.stopPropagation();
+      saveRename();
+    };
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "folder-action-btn";
@@ -402,9 +483,12 @@ class SidebarManager {
       this.deleteFolder(folder.id);
     };
 
+    actions.appendChild(renameBtn);
+    actions.appendChild(saveRenameBtn);
     actions.appendChild(deleteBtn);
     header.appendChild(toggle);
     header.appendChild(icon);
+    header.appendChild(nameDisplay);
     header.appendChild(nameInput);
     header.appendChild(actions);
 
@@ -518,7 +602,7 @@ class SidebarManager {
   }
 
   toggleFolder(folderId) {
-    const folder = this.folders.find((f) => f.id === folderId);
+    const folder = this.folders.find((f) => String(f.id) === String(folderId));
     if (folder) {
       folder.isExpanded = !folder.isExpanded;
       this.saveFolders();
@@ -527,7 +611,9 @@ class SidebarManager {
   }
 
   async setActiveFolder(folderId) {
-    await this.saveActiveFolder(folderId);
+    // Set the selection before any async work or render can observe a null folder.
+    this.activeFolder = folderId;
+    this.updateSnippetButtonState();
     this.render();
     if (
       window.dashboard &&
@@ -549,24 +635,37 @@ class SidebarManager {
   }
 
   async createFolder() {
+    if (this.folderCreationInProgress) return;
     if (!["owner", "admin", "editor"].includes(this.workspaceRole)) {
       window.dashboard?.showToast("Viewers cannot create folders.", "error");
       return;
     }
     const doCreate = async (name) => {
+      if (this.folderCreationInProgress) return;
       if (!name || !name.trim()) return;
+      const normalizedName = name.trim().toLowerCase();
+      if (this.folders.some((folder) => String(folder.name || '').trim().toLowerCase() === normalizedName)) {
+        window.dashboard?.showToast("A folder with this name already exists.", "error");
+        return;
+      }
+      this.folderCreationInProgress = true;
       const newFolder = {
         id: "folder_" + Date.now(),
         name: name.trim(),
         isExpanded: true,
+        isLocalOwned: true,
         description: "",
         items: [],
       };
 
-      this.folders.push(newFolder);
-      await StorageHelper.addFolder(newFolder);
-      await this.saveFolders();
-      this.render();
+      try {
+        this.folders.push(newFolder);
+        await StorageHelper.addFolder(newFolder);
+        await this.saveFolders();
+        this.render();
+      } finally {
+        this.folderCreationInProgress = false;
+      }
     };
 
     if (
@@ -596,14 +695,21 @@ class SidebarManager {
   }
 
   editFolderName(folderId) {
+    this.editingFolderId = folderId;
+    const folder = this.folders.find((item) => String(item.id) === String(folderId));
+    this.folderRenameDraft = folder?.name || "";
     const folderEl = document.querySelector(`[data-folder-id="${folderId}"]`);
     if (!folderEl) return;
 
     const input = folderEl.querySelector(".folder-name-input");
     if (input) {
       input.readOnly = false;
+      input.hidden = false;
+      folderEl.querySelector(".folder-name-display")?.setAttribute("hidden", "true");
       input.focus();
       input.select();
+      folderEl.querySelector(".folder-rename-btn")?.setAttribute("hidden", "true");
+      folderEl.querySelector(".folder-save-btn")?.removeAttribute("hidden");
     }
   }
 
@@ -613,7 +719,7 @@ class SidebarManager {
         "You do not have permission to rename this folder.",
         "error",
       );
-      return;
+      return false;
     }
     const folder = this.folders.find((f) => f.id === folderId);
     if (folder && newName.trim()) {
@@ -622,15 +728,20 @@ class SidebarManager {
           name: newName.trim(),
         });
         Object.assign(folder, updatedFolder);
+        this.editingFolderId = null;
+        this.folderRenameDraft = null;
         this.render();
+        return true;
       } catch (error) {
         window.dashboard?.showToast(
           error.message || "Could not rename this folder.",
           "error",
         );
         this.render();
+        return false;
       }
     }
+    return false;
   }
 
   async deleteFolder(folderId) {
@@ -1831,8 +1942,16 @@ class SidebarManager {
 
   // Public method to refresh sidebar when items change
   async refresh() {
+    const selectedFolderId = this.activeFolder;
     await this.loadFolders();
+    if (
+      selectedFolderId &&
+      this.folders.some((folder) => String(folder.id) === String(selectedFolderId))
+    ) {
+      this.activeFolder = selectedFolderId;
+    }
     this.render();
+    window.dashboard?.onActiveFolderChanged(this.activeFolder);
   }
 }
 

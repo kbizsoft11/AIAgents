@@ -316,6 +316,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 // Message handler
+let profileInfoPromise = null;
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'openDynamicFieldWindow') {
     return createDynamicFieldWindow(message, sender, sendResponse);
@@ -401,8 +403,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message.action === 'trashItemRestored') {
+    (async () => {
+      try {
+        const identity = await chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' });
+        if (!identity?.email) return;
+
+        let syncMgr;
+        try {
+          syncMgr = getSyncManager();
+          if (syncMgr.userEmail !== identity.email) throw new Error('Sync account changed');
+        } catch (error) {
+          syncMgr = await initSyncManager(identity.email);
+        }
+
+        const restoredItem = message.item && typeof message.item === 'object'
+          ? { ...message.item, type: message.type, deleted_at: null, deletedAt: null }
+          : null;
+        if (restoredItem?.id) {
+          const key = `${message.type}:${message.id}`;
+          const existing = syncMgr.resources.find((entry) => syncMgr.resourceKey(entry) === key);
+          syncMgr.resources = [
+            ...syncMgr.resources.filter((entry) => syncMgr.resourceKey(entry) !== key),
+            { ...(existing || {}), ...restoredItem }
+          ];
+          await syncMgr.saveCachedResources();
+        }
+        sendResponse({ success: true });
+        // Reconcile with the server without delaying the local restore display.
+        void syncMgr.ready.then(() => syncMgr.forcePullFromSupabase());
+      } catch (error) {
+        console.warn('Could not refresh resources after trash restore:', error.message);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true;
+  }
+
   if (message.action === 'getProfileInfo') {
-    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, async (userInfo) => {
+    if (!profileInfoPromise) profileInfoPromise = (async () => {
+      const userInfo = await new Promise((resolve) => chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, resolve));
       try {
         const email = userInfo?.email || '';
         let firstName = '';
@@ -434,12 +474,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           photoUrl: remote?.photoUrl || remote?.avatarUrl || ''
         };
 
-        sendResponse(profile);
+        return profile;
       } catch (error) {
         console.error('Profile lookup failed:', error);
-        sendResponse({ success: false, error: error.message || 'Profile lookup failed' });
+        return { success: false, error: error.message || 'Profile lookup failed' };
       }
-    });
+    })();
+    profileInfoPromise.then(sendResponse).catch((error) => sendResponse({ success: false, error: error.message || 'Profile lookup failed' }));
     return true;
   }
 

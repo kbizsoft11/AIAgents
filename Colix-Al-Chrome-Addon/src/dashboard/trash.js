@@ -72,6 +72,16 @@ class TrashPage {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.error || 'Trash action failed.');
+      if (!permanent && typeof chrome?.runtime?.sendMessage === 'function') {
+        await new Promise((resolve) => {
+          chrome.runtime.sendMessage({
+            action: 'trashItemRestored',
+            type: button.dataset.type,
+            id: button.dataset.id,
+            item
+          }, () => resolve());
+        });
+      }
       this.showNotice(permanent ? 'Item permanently deleted.' : 'Item restored.', 'success');
       await this.load();
     } catch (error) {

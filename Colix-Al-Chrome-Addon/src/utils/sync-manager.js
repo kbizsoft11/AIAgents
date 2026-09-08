@@ -9,6 +9,9 @@ class SyncManager {
     this.userEmail = null;
     this.userId = null; // Cache user ID
     this.resources = [];
+    this.ready = Promise.resolve();
+    this.onResourcesUpdated = null;
+    this.syncPromise = null;
   }
 
   /**
@@ -18,19 +21,44 @@ class SyncManager {
   async init(userEmail) {
     this.userEmail = userEmail;
 
+    // Hydrate folders and snippets before any network work starts.
+    await this.loadCachedResources();
+
     // Set email on Supabase client for RLS policies
     const client = getSupabaseClient();
     client.setUserEmail(userEmail);
 
-    // Fetch and cache user ID
-    try {
-      await this.fetchAndCacheUserId();
-      await this.fetchAndCacheWorkspaceId();
-    } catch (error) {
-      console.warn('Could not fetch user ID:', error);
-    }
-    // Perform initial sync
-    await this.syncAll();
+    // Continue remote initialization in the background. The dashboard can
+    // render the cached resource tree while this work is in flight.
+    this.ready = (async () => {
+      try {
+        await this.fetchAndCacheUserId();
+        await this.fetchAndCacheWorkspaceId();
+      } catch (error) {
+        console.warn('Could not fetch user ID:', error);
+      }
+      await this.syncAll();
+    })();
+  }
+
+  getResourceCacheKey() {
+    return `colix-resource-cache:${encodeURIComponent(this.userEmail || '')}`;
+  }
+
+  async loadCachedResources() {
+    if (!this.userEmail) return;
+    const result = await new Promise((resolve) => {
+      chrome.storage.local.get([this.getResourceCacheKey()], resolve);
+    });
+    const cached = result[this.getResourceCacheKey()];
+    if (Array.isArray(cached)) this.resources = cached;
+  }
+
+  async saveCachedResources() {
+    if (!this.userEmail) return;
+    await new Promise((resolve) => {
+      chrome.storage.local.set({ [this.getResourceCacheKey()]: this.resources }, resolve);
+    });
   }
 
   async ensureStarterContent() {
@@ -146,6 +174,9 @@ class SyncManager {
 
     // Complete the write before callers refresh their runtime data.
     await this.syncAll();
+    if (this.pendingSyncQueue.some((item) => item.id === syncItem.id)) {
+      await this.syncAll();
+    }
     const failedItem = this.pendingSyncQueue.find((item) => item.id === syncItem.id);
     if (failedItem) {
       throw new Error(failedItem.error || `Could not ${action} ${entityType} in Supabase.`);
@@ -157,31 +188,31 @@ class SyncManager {
    * Sync all pending items
    */
   async syncAll() {
-    if (this.isSyncing || !this.userEmail) return;
+    if (!this.userEmail) return;
+    if (this.isSyncing) return this.syncPromise;
 
-    this.isSyncing = true;
-    // console.log('Starting sync...');
+    this.syncPromise = (async () => {
+      this.isSyncing = true;
+      try {
+        // First, sync pending local changes to Supabase (push)
+        await this.pushToSupabase();
 
-    try {
-      // First, sync pending local changes to Supabase (push)
-      // This ensures deletes are sent before pulling
-      await this.pushToSupabase();
+        // Only pull from Supabase if the cache is stale or writes are pending.
+        const now = Date.now();
+        const shouldRefresh = !this.lastSyncTime || (now - this.lastSyncTime.getTime()) > 30000;
+        if (this.pendingSyncQueue.length > 0 || shouldRefresh) {
+          await this.pullFromSupabase();
+        }
 
-      // Only pull from Supabase if we have pending items OR cache is stale (> 30 seconds)
-      const now = Date.now();
-      const shouldRefresh = !this.lastSyncTime || (now - this.lastSyncTime.getTime()) > 30000;
-      
-      if (this.pendingSyncQueue.length > 0 || shouldRefresh) {
-        await this.pullFromSupabase();
+        this.lastSyncTime = new Date();
+      } catch (error) {
+        console.error('Sync error:', error);
+      } finally {
+        this.isSyncing = false;
+        this.syncPromise = null;
       }
-
-      this.lastSyncTime = new Date();
-      // console.log('Sync completed successfully');
-    } catch (error) {
-      console.error('Sync error:', error);
-    } finally {
-      this.isSyncing = false;
-    }
+    })();
+    return this.syncPromise;
   }
 
   /**
@@ -190,7 +221,33 @@ class SyncManager {
   async pullFromSupabase() {
     try {
       const workspaceResources = await this.getWorkspaceResources();
-      this.resources = workspaceResources;
+      const previousResources = new Map(
+        this.resources.map((item) => [this.resourceKey(item), item]),
+      );
+      const mergedResources = new Map(
+        workspaceResources.map((item) => {
+          const previous = previousResources.get(this.resourceKey(item));
+          return [this.resourceKey(item), previous?.isLocalOwned ? { ...item, isLocalOwned: true } : item];
+        }),
+      );
+
+      // Keep optimistic local changes visible until their write is confirmed.
+      this.pendingSyncQueue.forEach((item) => {
+        const key = `${item.entityType}:${item.entityId}`;
+        if (item.action === 'delete') mergedResources.delete(key);
+        else if (item.data) {
+          const existing = mergedResources.get(key) || {};
+          mergedResources.set(key, {
+            ...existing,
+            ...item.data,
+            type: item.entityType,
+          });
+        }
+      });
+
+      this.resources = Array.from(mergedResources.values());
+      await this.saveCachedResources();
+      this.onResourcesUpdated?.(this.resources);
 
     } catch (error) {
       console.error('Pull from Supabase error:', error);
@@ -244,6 +301,10 @@ class SyncManager {
         ...(type ? { type } : {})
       };
     });
+  }
+
+  resourceKey(item) {
+    return `${this.getResourceType(item)}:${item?.id}`;
   }
 
   /**
@@ -368,6 +429,10 @@ class SyncManager {
     return this.resources.filter((item) => this.getResourceType(item) === 'shortcut');
   }
 
+  async getLocalResources() {
+    return this.resources;
+  }
+
   /**
    * Get local forms
    */
@@ -398,6 +463,7 @@ class SyncManager {
       ...this.resources.filter((item) => this.getResourceType(item) !== 'shortcut'),
       ...shortcuts.map(item => ({ ...item, type: 'shortcut' }))
     ];
+    await this.saveCachedResources();
   }
 
   /**
@@ -408,6 +474,7 @@ class SyncManager {
       ...this.resources.filter((item) => this.getResourceType(item) !== 'form'),
       ...forms.map(item => ({ ...item, type: 'form' }))
     ];
+    await this.saveCachedResources();
   }
 
   async saveLocalFolders(folders) {
@@ -415,6 +482,7 @@ class SyncManager {
       ...this.resources.filter((item) => this.getResourceType(item) !== 'folder'),
       ...folders.map(item => ({ ...item, type: 'folder' }))
     ];
+    await this.saveCachedResources();
   }
 
   normalizeItemKeys(item) {

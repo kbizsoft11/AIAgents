@@ -1,4 +1,4 @@
-(async () => {
+window.colixUserStatusPromise = (async () => {
 
     const userInfo =
         await chrome.identity.getProfileUserInfo();
@@ -9,7 +9,7 @@
                 "dashboard/blocked.html"
             )
         );
-        return;
+        return null;
     }
 
     const response = await fetch(
@@ -27,7 +27,8 @@
                 "dashboard/blocked.html"
             )
         );
-        return;
+        return null;
     }
 
+    return data;
 })();

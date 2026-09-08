@@ -10,7 +10,8 @@ class TextBlitzDashboard {
     this.isYearly = false;
     this.premiumModalReturnSection = null;
     this.premiumModalParent = null;
-    this.membershipSectionEnabled = true;
+    // Hide membership controls until the feature flag explicitly enables them.
+    this.membershipSectionEnabled = false;
     this.isPremiumUser = false;
     // Folder selected when a shortcut is created from the sidebar/folder view.
     this.pendingShortcutFolderId = null;
@@ -40,40 +41,57 @@ class TextBlitzDashboard {
     if (authMgr.isUserAuthenticated()) {
       const userEmail = authMgr.getUserEmail();
       const syncMgr = await initSyncManager(userEmail);
-      await syncMgr.ensureStarterContent();
+      syncMgr.ready.then(() => syncMgr.ensureStarterContent());
       // console.log('✅ Sync manager initialized for:', userEmail);
     }
 
     this.bindElements();
     this.bindEvents();
     
-    // Load independent account metadata together before rendering controls.
-    const [, membershipSectionEnabled] = await Promise.all([
-      StorageHelper.checkUser(),
-      StorageHelper.getMembershipSectionEnabled()
-    ]);
-    this.membershipSectionEnabled = membershipSectionEnabled;
-    this.applyMembershipSectionVisibility();
-    
     // Initialize sidebar manager
     await initSidebarManager();
+    const sidebarMgr = getSidebarManager();
+    const syncMgr = getSyncManager();
+    const refreshFromSync = async () => {
+      await sidebarMgr.refresh();
+      this.shortcuts = sidebarMgr.shortcuts || [];
+      this.forms = sidebarMgr.forms || [];
+      this.render();
+      this.renderForms();
+    };
+    syncMgr.onResourcesUpdated = refreshFromSync;
+    syncMgr.ready.then(refreshFromSync);
+    this.shortcuts = sidebarMgr?.shortcuts || [];
+    this.forms = sidebarMgr?.forms || [];
+    this.render();
+    this.renderForms();
+
+    // Account metadata and sharing permissions are not required to show resources.
+    this.applyMembershipSectionVisibility();
+
     const folderId = new URLSearchParams(window.location.search).get('folder_id');
     if (folderId) {
-      const sidebarMgr = getSidebarManager();
       if (sidebarMgr?.folders.some((folder) => String(folder.id) === String(folderId))) {
         await sidebarMgr.setActiveFolder(folderId);
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
     
-    await this.loadShortcuts();
     this.render();
     this.renderForms();
-    await this.loadProfileData();
-    await this.checkUser(); // This updates premium state and limit displays.
-    this.applyMembershipSectionVisibility();
-    this.render();
-    this.renderForms();
+
+    // These settings are secondary to displaying the user's resources.
+    setTimeout(async () => {
+      await this.loadProfileData();
+      await this.checkUser();
+      this.applyMembershipSectionVisibility();
+      const [, membershipSectionEnabled] = await Promise.all([
+        StorageHelper.checkUser(),
+        StorageHelper.getMembershipSectionEnabled()
+      ]);
+      this.membershipSectionEnabled = membershipSectionEnabled;
+      this.applyMembershipSectionVisibility();
+    }, 0);
   }
 
   bindElements() {
@@ -268,6 +286,11 @@ class TextBlitzDashboard {
     this.welcomeNewFormBtn = document.getElementById('welcomeNewFormBtn');
 
     this.folderViewTitle = document.getElementById('folderViewTitle');
+    this.folderViewTitleDisplay = document.getElementById('folderViewTitleDisplay');
+    this.folderViewRenameBtn = document.getElementById('folderViewRenameBtn');
+    this.folderViewSaveBtn = document.getElementById('folderViewSaveBtn');
+    this.folderViewTitleEditing = false;
+    this.folderViewTitleDraft = '';
     this.folderViewDescription = document.getElementById('folderViewDescription');
     this.folderNewSnippetBtn = document.getElementById('folderNewSnippetBtn');
     this.folderItemsList = document.getElementById('folderItemsList');
@@ -757,11 +780,16 @@ class TextBlitzDashboard {
 
     // Folder view events
     if (this.folderViewTitle) {
-      this.folderViewTitle.addEventListener('blur', () => this.saveCurrentFolderTitle());
+      this.folderViewTitle.addEventListener('input', (event) => {
+        this.folderViewTitleDraft = event.target.value;
+      });
       this.folderViewTitle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+        if (e.key === 'Enter') { e.preventDefault(); this.saveCurrentFolderTitle(); }
+        if (e.key === 'Escape') { e.preventDefault(); this.cancelFolderTitleEdit(); }
       });
     }
+    this.folderViewRenameBtn?.addEventListener('click', () => this.beginFolderTitleEdit());
+    this.folderViewSaveBtn?.addEventListener('click', () => this.saveCurrentFolderTitle());
     if (this.folderViewDescription) {
       this.folderViewDescription.addEventListener('blur', () => this.saveCurrentFolderDescription());
     }
@@ -815,10 +843,14 @@ class TextBlitzDashboard {
     const email = profileUserInfo.email || '';
 
     try {
-      const data = await fetch(`${StorageHelper.API_BASE_URL}/${StorageHelper.API_CHECK_USER}?email=${encodeURIComponent(email)}`);
-      if (!data.ok) throw new Error(`User status request failed: ${data.status}`);
-
-      const response = await data.json();
+      const response = window.colixUserStatusPromise
+        ? await window.colixUserStatusPromise
+        : await (async () => {
+          const data = await fetch(`${StorageHelper.API_BASE_URL}/${StorageHelper.API_CHECK_USER}?email=${encodeURIComponent(email)}`);
+          if (!data.ok) throw new Error(`User status request failed: ${data.status}`);
+          return data.json();
+        })();
+      if (!response) throw new Error('User status request failed.');
       const premiumValue = response.user?.is_premium;
       this.isPremiumUser = response.success && (
         premiumValue === true ||
@@ -1338,14 +1370,16 @@ class TextBlitzDashboard {
   openFolder(folderId) {
     const sidebarMgr = getSidebarManager();
     if (!sidebarMgr?.folders.some((folder) => String(folder.id) === String(folderId))) return;
-    sidebarMgr.setActiveFolder(folderId);
     this.switchSection('shortcuts');
+    void sidebarMgr.setActiveFolder(folderId);
     this.closeMobileSidebar();
   }
 
   async loadShortcuts() {
-    this.shortcuts = await StorageHelper.getAll();
-    this.forms = await StorageHelper.getAllForms();
+    const resources = await StorageHelper.getAllResources();
+    const syncManager = getSyncManager();
+    this.shortcuts = resources.filter((item) => syncManager.getResourceType(item) === 'shortcut');
+    this.forms = resources.filter((item) => syncManager.getResourceType(item) === 'form');
   }
 
   async handleAddNew() {
@@ -1732,10 +1766,40 @@ class TextBlitzDashboard {
   async saveCurrentFolderTitle() {
     const sidebarMgr = getSidebarManager();
     if (!sidebarMgr || !sidebarMgr.activeFolder || sidebarMgr.activeFolder === 'uncategorized') return;
-    const newName = this.folderViewTitle.value.trim();
+    const newName = this.folderViewTitleDraft.trim();
     if (newName) {
-      await sidebarMgr.saveFolderName(sidebarMgr.activeFolder, newName);
+      const updated = await sidebarMgr.saveFolderName(sidebarMgr.activeFolder, newName);
+      if (updated) {
+        this.folderViewTitleEditing = false;
+        this.folderViewTitleDraft = newName;
+        if (this.folderViewTitleDisplay) this.folderViewTitleDisplay.textContent = newName;
+        if (this.folderViewTitle) this.folderViewTitle.value = newName;
+        this.updateFolderTitleEditState();
+      }
     }
+  }
+
+  beginFolderTitleEdit() {
+    if (!this.folderViewTitle || !this.folderViewTitleDisplay) return;
+    this.folderViewTitleEditing = true;
+    this.folderViewTitleDraft = this.folderViewTitleDisplay.textContent || '';
+    this.folderViewTitle.value = this.folderViewTitleDraft;
+    this.updateFolderTitleEditState();
+    this.folderViewTitle.focus();
+    this.folderViewTitle.select();
+  }
+
+  cancelFolderTitleEdit() {
+    this.folderViewTitleEditing = false;
+    this.updateFolderTitleEditState();
+  }
+
+  updateFolderTitleEditState() {
+    const editing = this.folderViewTitleEditing;
+    if (this.folderViewTitle) this.folderViewTitle.hidden = !editing;
+    if (this.folderViewTitleDisplay) this.folderViewTitleDisplay.hidden = editing;
+    if (this.folderViewRenameBtn) this.folderViewRenameBtn.hidden = editing;
+    if (this.folderViewSaveBtn) this.folderViewSaveBtn.hidden = !editing;
   }
 
   async saveCurrentFolderDescription() {
@@ -1788,26 +1852,30 @@ class TextBlitzDashboard {
     // Populate folder header info
     let folderObj = null;
     if (sidebarMgr && sidebarMgr.folders) {
-      folderObj = sidebarMgr.folders.find(f => f.id === activeFolder);
+      folderObj = sidebarMgr.folders.find(f => String(f.id) === String(activeFolder));
     }
 
     if (folderObj) {
-      if (this.folderViewTitle) this.folderViewTitle.value = folderObj.name;
+      if (this.folderViewTitleDisplay) this.folderViewTitleDisplay.textContent = folderObj.name;
+      if (!this.folderViewTitleEditing && this.folderViewTitle) this.folderViewTitle.value = folderObj.name;
       if (this.folderViewDescription) this.folderViewDescription.value = folderObj.description || '';
     } else if (activeFolder === 'uncategorized') {
-      if (this.folderViewTitle) this.folderViewTitle.value = 'Uncategorized';
+      if (this.folderViewTitleDisplay) this.folderViewTitleDisplay.textContent = 'Uncategorized';
+      if (!this.folderViewTitleEditing && this.folderViewTitle) this.folderViewTitle.value = 'Uncategorized';
       if (this.folderViewDescription) this.folderViewDescription.value = 'Items without an assigned folder.';
     } else {
-      if (this.folderViewTitle) this.folderViewTitle.value = 'All Shortcuts';
+      if (this.folderViewTitleDisplay) this.folderViewTitleDisplay.textContent = 'All Shortcuts';
+      if (!this.folderViewTitleEditing && this.folderViewTitle) this.folderViewTitle.value = 'All Shortcuts';
       if (this.folderViewDescription) this.folderViewDescription.value = 'Overview of all shortcuts and forms.';
     }
+    this.updateFolderTitleEditState();
 
     // Filter items for the active folder
     let itemsToRender = [];
     const matchesFolder = (itemFolderId) => {
       if (!activeFolder) return true; // All items if search with no folder selected
       if (activeFolder === 'uncategorized') return !itemFolderId;
-      return itemFolderId === activeFolder;
+      return String(itemFolderId) === String(activeFolder);
     };
 
     this.shortcuts.forEach(s => {

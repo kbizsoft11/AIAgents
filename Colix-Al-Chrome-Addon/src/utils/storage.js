@@ -39,6 +39,10 @@ const StorageHelper = {
     return (await getSyncManager().getLocalShortcuts()).map(s => this.normalizeItem(s));
   },
 
+  async getAllResources() {
+    return (await getSyncManager().getLocalResources()).map(item => this.normalizeItem(item));
+  },
+
   async getAllForms() {
     return (await getSyncManager().getLocalForms()).map(f => this.normalizeItem(f));
   },
@@ -48,6 +52,7 @@ const StorageHelper = {
   },
 
   async saveAllFolders(folders) {
+    await getSyncManager().saveLocalFolders(folders);
     return folders;
   },
 
@@ -107,7 +112,9 @@ const StorageHelper = {
       console.error('Error fetching membership section setting:', error);
     }
 
-    return this.membershipSectionEnabled !== false;
+    // Fail closed so membership controls never flash into view when the
+    // feature-flag request is unavailable.
+    return false;
   },
 
   /**
@@ -121,11 +128,11 @@ const StorageHelper = {
     try {
       // Fetch both user status and free credit token limit in parallel
       const [userResponse, freeLimitToken] = await Promise.all([
-        fetch(`${this.API_BASE_URL}/${this.API_CHECK_USER}?email=${email}`),
+        window.colixUserStatusPromise || fetch(`${this.API_BASE_URL}/${this.API_CHECK_USER}?email=${email}`),
         this.getMaxFreeCreditToken('json')
       ]);
 
-      const userData = await userResponse.json();
+      const userData = userResponse instanceof Response ? await userResponse.json() : userResponse;
 
       const premiumValue = userData.user?.is_premium;
       const isPremium = premiumValue === true || premiumValue === 1 || premiumValue === '1' || premiumValue === 'true';
@@ -154,18 +161,22 @@ const StorageHelper = {
 
   // Save all shortcuts
   async saveAll(shortcuts) {
+    const syncMgr = getSyncManager();
     if (shortcuts.length === 0) {
       const current = await this.getAll();
-      await Promise.all(current.map(shortcut => getSyncManager().queueSync('delete', 'shortcut', shortcut.id, null)));
+      await Promise.all(current.map(shortcut => syncMgr.queueSync('delete', 'shortcut', shortcut.id, null)));
     }
+    await syncMgr.saveLocalShortcuts(shortcuts);
     return shortcuts;
   },
 
   async saveAllForms(forms) {
+    const syncMgr = getSyncManager();
     if (forms.length === 0) {
       const current = await this.getAllForms();
-      await Promise.all(current.map(form => getSyncManager().queueSync('delete', 'form', form.id, null)));
+      await Promise.all(current.map(form => syncMgr.queueSync('delete', 'form', form.id, null)));
     }
+    await syncMgr.saveLocalForms(forms);
     return forms;
   },
 
@@ -219,8 +230,10 @@ const StorageHelper = {
     // Queue and sync to Supabase
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut);
-      // Don't call syncAll here - only queue. Caller will handle sync if needed.
+      // The local snapshot is already updated. Sync remotely without blocking
+      // the sidebar from rendering the new shortcut.
+      void syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut)
+        .catch(error => console.warn('Could not sync shortcut:', error));
     } catch (error) {
       console.warn('Could not queue sync:', error);
     }
@@ -238,18 +251,20 @@ const StorageHelper = {
       ...updates,
       updatedAt: new Date().toISOString()
     };
+    const updatedShortcut = { ...shortcuts[index], ...nextUpdates };
+    await this.saveAll(shortcuts.map((shortcut, itemIndex) => itemIndex === index ? updatedShortcut : shortcut));
 
     // Queue and sync to Supabase
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('update', 'shortcut', id, nextUpdates);
-      // Don't call syncAll here - only queue. Caller will handle sync if needed.
+      void syncMgr.queueSync('update', 'shortcut', id, nextUpdates)
+        .catch(error => console.warn('Could not sync shortcut:', error));
     } catch (error) {
       console.warn('Could not queue sync:', error);
       throw error;
     }
 
-    return { ...shortcuts[index], ...nextUpdates };
+    return updatedShortcut;
   },
 
   async updateForm(id, updates) {
@@ -384,6 +399,7 @@ const StorageHelper = {
       id: folder.id || 'folder_' + Date.now(),
       name: folder.name || 'New Folder',
       isExpanded: folder.isExpanded !== false,
+      isLocalOwned: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -392,8 +408,8 @@ const StorageHelper = {
 
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('create', 'folder', newFolder.id, newFolder);
-      await syncMgr.syncAll();
+      void syncMgr.queueSync('create', 'folder', newFolder.id, newFolder)
+        .catch(error => console.warn('Could not sync folder:', error));
     } catch (error) {
       console.warn('Could not sync folder:', error);
     }
@@ -403,24 +419,26 @@ const StorageHelper = {
 
   async updateFolder(id, updates) {
     const folders = await this.getAllFolders();
-    const index = folders.findIndex(f => f.id === id);
+    const index = folders.findIndex(f => String(f.id) === String(id));
     if (index === -1) return null;
 
     const nextUpdates = {
       ...updates,
       updatedAt: new Date().toISOString()
     };
+    const updatedFolder = { ...folders[index], ...nextUpdates };
+    await this.saveAllFolders(folders.map((folder, itemIndex) => itemIndex === index ? updatedFolder : folder));
 
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('update', 'folder', id, nextUpdates);
-      await syncMgr.syncAll();
+      void syncMgr.queueSync('update', 'folder', id, nextUpdates)
+        .catch(error => console.warn('Could not sync folder update:', error));
     } catch (error) {
       console.warn('Could not sync folder update:', error);
       throw error;
     }
 
-    return { ...folders[index], ...nextUpdates };
+    return updatedFolder;
   },
 
   async deleteFolder(id) {
@@ -431,8 +449,8 @@ const StorageHelper = {
 
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('delete', 'folder', id, folder?.workspace_id ? { workspace_id: folder.workspace_id } : null);
-      await syncMgr.syncAll();
+      void syncMgr.queueSync('delete', 'folder', id, folder?.workspace_id ? { workspace_id: folder.workspace_id } : null)
+        .catch(error => console.warn('Could not sync folder delete:', error));
     } catch (error) {
       console.warn('Could not sync folder delete:', error);
       throw error;
