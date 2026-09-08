@@ -134,7 +134,7 @@ class TransactionsPage {
     }
 
     this.results.innerHTML = this.transactions.map((item) => {
-      const ref = item.razorpay_payment_id || item.razorpay_order_id || '—';
+      const ref = item.paypal_payment_id || item.paypal_subscription_id || item.razorpay_payment_id || item.razorpay_order_id || '—';
       const amount = Number(item.amount || 0);
       const status = this.formatStatus(item.status);
       const statusClass = this.statusClass(item.status);

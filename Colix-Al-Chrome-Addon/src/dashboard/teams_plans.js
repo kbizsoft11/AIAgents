@@ -159,11 +159,10 @@ class TeamsPlansPage {
         return;
       }
 
-      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/razorpay-checkout.html');
+      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/paypal-checkout.html');
       hostedUrl.searchParams.set('workspace_id', workspace.id);
       hostedUrl.searchParams.set('plan_code', planCode);
       hostedUrl.searchParams.set('user_email', identity.email);
-      hostedUrl.searchParams.set('return_url', chrome.runtime.getURL(`dashboard/teams_plans.html?workspace_id=${encodeURIComponent(workspace.id)}`));
 
       await chrome.tabs.create({ url: hostedUrl.toString(), active: true });
     } catch (error) {

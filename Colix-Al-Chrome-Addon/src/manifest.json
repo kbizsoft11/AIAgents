@@ -16,8 +16,6 @@
         "http://localhost/*",
         "https://extensions.kbizsoft.com/*",
         "https://*.supabase.co/*",
-        "https://checkout.razorpay.com/*",
-        "https://api.razorpay.com/*",
         "https://mail.google.com/*"
     ],
     "action": {
