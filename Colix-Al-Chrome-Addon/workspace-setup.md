@@ -138,9 +138,9 @@ cd c:\xampp\htdocs\aiagents\api
 composer install --no-dev
 ```
 
-The Supabase URL, keys, invite acceptance URL, and Gmail SMTP settings are currently hardcoded in `send-invitation.php`. The service-role key and SMTP password must remain server-side. Configure `ALLOWED_ORIGIN` to the extension origin in production instead of `*`.
+The Supabase URL, keys, invite acceptance URL, and SMTP settings are hardcoded in `send-invitation.php`. The service-role key and SMTP password must remain server-side. Configure `ALLOWED_ORIGIN` to the extension origin in production instead of `*`.
 
-The endpoint validates the Chrome Identity email, checks the linked application user and owner/admin role, initializes a missing personal workspace for that user, reserves a seat through `create_workspace_invitation`, stores only a SHA-256 invitation-token hash, and sends a seven-day invitation link through Gmail STARTTLS on port 587. The acceptance page and Edge Function use `accept_workspace_invitation`, so invitation acceptance is also rejected when a workspace is full.
+The endpoint validates the Chrome Identity email, checks the linked application user and owner/admin role, initializes a missing personal workspace for that user, reserves a seat through `create_workspace_invitation`, stores only a SHA-256 invitation-token hash, and sends a seven-day invitation link through the configured SMTP server using STARTTLS on port 587. The acceptance page and Edge Function use `accept_workspace_invitation`, so invitation acceptance is also rejected when a workspace is full.
 
 ## 8. Workspace UI
 

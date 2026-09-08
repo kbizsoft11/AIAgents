@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Upgrade your ColixAI workspace</title>
+  <link rel="stylesheet" href="upgrade.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="https://colixai.com/" aria-label="ColixAI home"><img class="brand-logo" src="assets/icon128.png" alt="ColixAI"></a>
+      <span class="secure-label"><span class="lock">&#128274;</span> Secure checkout</span>
+    </header>
+
+    <main class="checkout-grid">
+      <section class="intro">
+        <p class="eyebrow">Workspace membership</p>
+        <h1>Give your team room to move.</h1>
+        <p class="lede">Unlock shared workflows, more seats, and a calmer way to keep everyone in sync.</p>
+        <div class="benefits">
+          <div class="benefit"><span class="benefit-icon">&#10003;</span><div><strong>Shared workspace</strong><span>Keep snippets, forms, and folders together.</span></div></div>
+          <div class="benefit"><span class="benefit-icon">&#10003;</span><div><strong>Built for growing teams</strong><span>Invite the people who keep work moving.</span></div></div>
+          <div class="benefit"><span class="benefit-icon">&#10003;</span><div><strong>Flexible monthly billing</strong><span>Manage your subscription through PayPal.</span></div></div>
+        </div>
+        <p class="trust-note">Your payment details are handled securely by PayPal. ColixAI never sees your PayPal password.</p>
+      </section>
+
+      <section class="checkout-card" aria-live="polite">
+        <div class="card-heading"><div><p class="card-kicker">Your plan</p><h2 id="plan-name">Preparing checkout</h2></div><span class="plan-pill">MONTHLY</span></div>
+        <div class="price-row"><span id="price">--</span><span id="interval">per month</span></div>
+        <div class="summary"><div><span>Plan</span><strong id="plan-summary">Loading...</strong></div><div><span>Billing</span><strong>Monthly, recurring</strong></div><div><span>Payment</span><strong>PayPal secure checkout</strong></div></div>
+        <p id="message" class="status">Connecting to secure checkout...</p>
+        <div id="paypal-buttons" hidden></div>
+        <button id="retry" class="retry" type="button" hidden>Try again</button>
+        <p class="fine-print">By continuing, you agree to the ColixAI subscription terms. You can manage or cancel recurring billing from PayPal.</p>
+      </section>
+    </main>
+
+    <footer><span>&copy; ColixAI</span><span>Questions? <a href="mailto:info@colixai.com">info@colixai.com</a></span></footer>
+  </div>
+  <script src="upgrade.js"></script>
+</body>
+</html>

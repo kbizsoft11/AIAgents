@@ -12,6 +12,7 @@ class TeamsPlansPage {
     this.workspaces = [];
     this.isLoading = false;
     this.noticeTimer = null;
+    this.lastPaymentRefresh = 0;
     this.selectedWorkspaceId = new URLSearchParams(window.location.search).get('workspace_id') || '';
     
     const callbackParams = new URLSearchParams(window.location.search);
@@ -29,8 +30,25 @@ class TeamsPlansPage {
     this.contactBtn?.addEventListener('click', () => {
       window.location.href = 'mailto:info@kbizsoft.com';
     });
+    window.addEventListener('message', (event) => {
+      if (event.origin === 'https://colixai.com' && event.data?.type === 'COLIX_PAYMENT_SUCCESS') {
+        this.refreshAfterPayment();
+      }
+    });
+    window.addEventListener('focus', () => this.refreshAfterPayment());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') this.refreshAfterPayment();
+    });
     this.showLoadingState();
     this.load();
+  }
+
+  refreshAfterPayment() {
+    const now = Date.now();
+    if (this.isLoading || now - this.lastPaymentRefresh < 1200) return;
+    this.lastPaymentRefresh = now;
+    this.showNotice('Checking your subscription status...', 'success');
+    setTimeout(() => this.load(), 1200);
   }
 
   async load() {
@@ -159,7 +177,7 @@ class TeamsPlansPage {
         return;
       }
 
-      const hostedUrl = new URL('https://extensions.kbizsoft.com/magicaa-extension/paypal-checkout.html');
+      const hostedUrl = new URL('https://colixai.com/membership/upgrade/');
       hostedUrl.searchParams.set('workspace_id', workspace.id);
       hostedUrl.searchParams.set('plan_code', planCode);
       hostedUrl.searchParams.set('user_email', identity.email);
