@@ -6,15 +6,14 @@
   <meta name="color-scheme" content="light">
   <title>ColixAI membership</title>
   <link rel="stylesheet" href="membership.css">
+  <link rel="stylesheet" href="membership-live.css">
 </head>
 <body>
   <div class="shell">
     <header class="topbar">
       <a class="brand" href="https://colixai.com/" aria-label="ColixAI home">
         <img src="upgrade/assets/icon128.png" alt="ColixAI">
-        <span>ColixAI</span>
       </a>
-      <a class="signin" href="https://colixai.com/">Open ColixAI</a>
     </header>
 
     <main>
@@ -25,37 +24,13 @@
       </section>
 
       <section class="membership-grid" aria-label="Membership options">
-        <article class="plan-card plan-card-muted">
-          <p class="plan-kicker">Start here</p>
-          <h2>Free</h2>
-          <p class="plan-description">Build your personal workflow and see how ColixAI fits your day.</p>
-          <ul><li>Personal shortcuts</li><li>Starter forms</li><li>Browser extension access</li></ul>
-          <a class="plan-link" href="https://colixai.com/">Use ColixAI</a>
-        </article>
-        <article class="plan-card plan-card-featured">
-          <span class="popular">For growing teams</span>
-          <p class="plan-kicker">Most useful</p>
-          <h2>Team</h2>
-          <p class="plan-description">Share the workflows your team repeats and keep everyone moving from the same playbook.</p>
-          <ul><li>Shared workspace</li><li>More seats and resources</li><li>Team folders and forms</li></ul>
-          <a class="plan-button" href="https://colixai.com/">Choose in ColixAI</a>
-        </article>
-        <article class="plan-card">
-          <p class="plan-kicker">For larger operations</p>
-          <h2>Business</h2>
-          <p class="plan-description">Bring structure to larger teams with room for more members, shared resources, and repeatable work.</p>
-          <ul><li>Expanded member capacity</li><li>Shared workflows at scale</li><li>Workspace billing controls</li></ul>
-          <a class="plan-link" href="mailto:info@kbizsoft.com?subject=ColixAI%20Business%20plan">Talk to us</a>
-        </article>
+        <div class="membership-loading" id="membershipLoading">Loading current plans...</div>
       </section>
 
-      <section class="next-step">
-        <div><p class="eyebrow">Ready to continue?</p><h2>Choose a workspace before checkout.</h2><p>Open ColixAI to sign in, select an owned workspace, compare live pricing, and start a secure subscription checkout.</p></div>
-        <a class="plan-button" href="https://colixai.com/">Open ColixAI</a>
-      </section>
     </main>
 
     <footer><span>&copy; ColixAI</span><a href="mailto:info@colixai.com">Questions? Contact us</a></footer>
   </div>
+  <script src="membership.js"></script>
 </body>
 </html>

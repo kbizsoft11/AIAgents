@@ -886,13 +886,8 @@ class TextBlitzDashboard {
           return data.json();
         })();
       if (!response) throw new Error('User status request failed.');
-      const premiumValue = response.user?.is_premium;
-      this.isPremiumUser = response.success && (
-        premiumValue === true ||
-        premiumValue === 1 ||
-        premiumValue === '1' ||
-        premiumValue === 'true'
-      );
+      const premiumValue = response.user?.is_premium ?? response.is_premium;
+      this.isPremiumUser = response.success === true && StorageHelper.isEnabledFlag(premiumValue);
 
       this.applyMembershipSectionVisibility();
 

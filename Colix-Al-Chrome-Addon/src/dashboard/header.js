@@ -99,6 +99,7 @@ class HeaderModule {
     this.notificationCount = document.getElementById('headerNotificationCount');
     this.markAllNotificationsBtn = document.getElementById('headerNotificationsMarkAll');
     this.headerSearchButton = document.getElementById('headerSearchButton');
+    this.headerPremiumButton = document.getElementById('headerPremiumBtn');
   }
 
   bindEvents() {
@@ -106,6 +107,9 @@ class HeaderModule {
     if (premiumButton) {
       premiumButton.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('headerPremiumClick'));
+        if (!location.pathname.endsWith('/dashboard.html')) {
+          window.location.assign(chrome.runtime.getURL('dashboard/teams_plans.html'));
+        }
       });
     }
 
@@ -347,10 +351,38 @@ class HeaderModule {
     // Step 4: Load and display profile data
     console.log('👤 Loading profile data...');
     await this.loadProfileData();
+    await this.updatePremiumBadge();
     await this.loadNotifications();
     this.notificationsTimer = window.setInterval(() => this.loadNotifications(), 30000);
     
     console.log('✨ Header initialization complete!');
+  }
+
+  async updatePremiumBadge() {
+    if (!this.headerPremiumButton) return;
+    this.headerPremiumButton.hidden = true;
+    try {
+      const email = this.profileData?.email || '';
+      if (!email) return;
+
+      const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/teams-plans.php', {
+        headers: { 'X-User-Email': email }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) return;
+
+      const hasPaidWorkspace = (Array.isArray(payload.workspaces) ? payload.workspaces : []).some((workspace) => {
+        const subscription = workspace?.subscription || {};
+        const planCode = String(subscription.plan_code || '').trim().toLowerCase();
+        const status = String(subscription.status || '').trim().toLowerCase();
+        return planCode && planCode !== 'free' && ['active', 'trialing'].includes(status);
+      });
+
+      this.headerPremiumButton.hidden = !hasPaidWorkspace;
+    } catch (error) {
+      this.headerPremiumButton.hidden = true;
+      console.warn('Could not determine premium membership:', error);
+    }
   }
 
   async loadNotifications() {

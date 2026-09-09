@@ -9,6 +9,12 @@ const StorageHelper = {
   API_GET_CREDIT_TOKEN: 'api_get_credit_token.php',
   API_GET_MEMBERSHIP_STATUS: 'api_get_membership_status.php',
 
+  isEnabledFlag(value) {
+    if (value === true || value === 1) return true;
+    if (typeof value !== 'string') return false;
+    return ['1', 'true', 't', 'yes', 'on', 'active', 'premium', 'pro'].includes(value.trim().toLowerCase());
+  },
+
   // Helper to normalize keys returned by the workspace API
   normalizeItem(item) {
     if (!item || typeof item !== 'object') return item;
@@ -122,6 +128,7 @@ const StorageHelper = {
    * Fetches both premium status and free credit token limit
    */
   async checkUser() {
+    this.isPremiumUser = false;
     const profileUserInfo = await chrome.identity.getProfileUserInfo();
     const email = profileUserInfo.email || '';
 
@@ -135,8 +142,8 @@ const StorageHelper = {
 
       const userData = userResponse instanceof Response ? await userResponse.json() : userResponse;
 
-      const premiumValue = userData.user?.is_premium;
-      const isPremium = premiumValue === true || premiumValue === 1 || premiumValue === '1' || premiumValue === 'true';
+      const premiumValue = userData.user?.is_premium ?? userData.is_premium;
+      const isPremium = userData.success === true && this.isEnabledFlag(premiumValue);
 
       if (userData.success && isPremium) {
         // Premium users get unlimited shortcuts
@@ -153,6 +160,7 @@ const StorageHelper = {
 
     } catch (e) {
       console.error('Error checking user status:', e);
+      this.isPremiumUser = false;
       this.MAX_SHORTCUTS = this.DEFAULT_FREE_LIMIT;
       console.warn(`⚠️ Using fallback limit: ${this.MAX_SHORTCUTS}`);
     }
