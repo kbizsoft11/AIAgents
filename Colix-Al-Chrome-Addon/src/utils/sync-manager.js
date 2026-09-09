@@ -360,14 +360,23 @@ class SyncManager {
     }
 
     if (['shortcut', 'form', 'folder'].includes(entityType)) {
+      const serverData = { ...(data || {}) };
+      if (serverData.folderId !== undefined && serverData.folder_id === undefined) serverData.folder_id = serverData.folderId;
+      if (serverData.createdAt !== undefined && serverData.created_at === undefined) serverData.created_at = serverData.createdAt;
+      if (serverData.updatedAt !== undefined && serverData.updated_at === undefined) serverData.updated_at = serverData.updatedAt;
+      if (serverData.usageCount !== undefined && serverData.usage_count === undefined) serverData.usage_count = serverData.usageCount;
+      if (serverData.isExpanded !== undefined && serverData.is_expanded === undefined) serverData.is_expanded = serverData.isExpanded;
+      if (serverData.template !== undefined && serverData.template_type === undefined) serverData.template_type = serverData.template;
       const response = await fetch('https://extensions.kbizsoft.com/magicaa-extension/sync-resource.php', {
         method: 'POST',
         headers: { 'X-User-Email': this.userEmail, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity_type: entityType, action, entity_id: entityId, workspace_id: resourceWorkspaceId, data: data || {} })
+        body: JSON.stringify({ entity_type: entityType, action, entity_id: entityId, workspace_id: resourceWorkspaceId, data: serverData })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.success) throw new Error(payload.details || payload.error || `Resource sync failed (${response.status}).`);
-      return payload;
+      if (response.ok && payload.success) return payload;
+      if (![404, 405].includes(response.status)) {
+        throw new Error(payload.details || payload.error || `Resource sync failed (${response.status}).`);
+      }
     }
 
     try {

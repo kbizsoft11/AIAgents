@@ -231,12 +231,10 @@ const StorageHelper = {
     // Queue and sync to Supabase
     try {
       const syncMgr = getSyncManager();
-      // The local snapshot is already updated. Sync remotely without blocking
-      // the sidebar from rendering the new shortcut.
-      void syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut)
-        .catch(error => console.warn('Could not sync shortcut:', error));
+      await syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut);
     } catch (error) {
-      console.warn('Could not queue sync:', error);
+      console.warn('Could not sync shortcut:', error);
+      throw error;
     }
 
     return newShortcut;
@@ -284,6 +282,7 @@ const StorageHelper = {
       // Don't call syncAll here - only queue. Caller will handle sync if needed.
     } catch (error) {
       console.warn('Could not sync:', error);
+      throw error;
       throw error;
     }
 
@@ -409,10 +408,10 @@ const StorageHelper = {
 
     try {
       const syncMgr = getSyncManager();
-      void syncMgr.queueSync('create', 'folder', newFolder.id, newFolder)
-        .catch(error => console.warn('Could not sync folder:', error));
+      await syncMgr.queueSync('create', 'folder', newFolder.id, newFolder);
     } catch (error) {
       console.warn('Could not sync folder:', error);
+      throw error;
     }
 
     return newFolder;

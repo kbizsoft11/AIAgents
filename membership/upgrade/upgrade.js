@@ -58,7 +58,10 @@ async function initialize() {
   message.classList.remove('error');
   message.textContent = 'Connecting to secure checkout...';
   try {
-    if (!workspaceId || !planCode || !userEmail) throw new Error('Missing checkout details. Please restart checkout.');
+    if (!workspaceId || !planCode || !userEmail) {
+      window.location.replace('../');
+      return;
+    }
     const payload = await callApi({ action: 'prepare_subscription', workspace_id: workspaceId, plan_code: planCode, billing_interval: billingInterval });
     title.textContent = payload.plan_name;
     planSummary.textContent = payload.plan_name;

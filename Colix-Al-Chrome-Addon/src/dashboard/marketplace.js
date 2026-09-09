@@ -10,6 +10,7 @@
 
   const notice = document.getElementById('marketplaceNotice');
   const buttons = document.querySelectorAll('.copy-template');
+  let marketplaceReady = Promise.resolve();
 
   function showNotice(message, type) {
     notice.textContent = message;
@@ -39,7 +40,7 @@
         button.disabled = false;
         button.classList.remove('imported');
         button.textContent = 'Import template';
-        button.addEventListener('click', () => copyTemplate(button));
+        button.onclick = () => copyTemplate(button);
       }
     });
   }
@@ -54,7 +55,10 @@
       if (!authManager.isUserAuthenticated()) {
         throw new Error('Please sign in before importing a template.');
       }
-      await initSyncManager(authManager.getUserEmail());
+      const syncManager = await initSyncManager(authManager.getUserEmail());
+      marketplaceReady = syncManager.ready;
+      await updateImportedTemplateButtons();
+      await marketplaceReady;
       await updateImportedTemplateButtons();
     } catch (error) {
       console.error('Marketplace initialization failed:', error);
@@ -69,6 +73,7 @@
     button.classList.add('loading');
     button.textContent = 'Importing...';
     try {
+      await marketplaceReady;
       if (await StorageHelper.triggerExists(template.trigger)) {
         showNotice(`The shortcut ${template.trigger} is already imported.`, 'error');
         markTemplateImported(button);
@@ -79,7 +84,6 @@
       let marketplaceFolder = folders.find(folder => String(folder.name || '').trim().toLowerCase() === MARKETPLACE_FOLDER.toLowerCase());
       if (!marketplaceFolder) {
         marketplaceFolder = await StorageHelper.addFolder({
-          id: 'marketplace',
           name: MARKETPLACE_FOLDER,
           isExpanded: true
         });
