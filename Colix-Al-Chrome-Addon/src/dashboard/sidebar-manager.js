@@ -557,9 +557,23 @@ class SidebarManager {
     triggerSpan.className = "item-trigger";
     triggerSpan.textContent = item.trigger;
 
+    const moreButton = document.createElement("button");
+    moreButton.type = "button";
+    moreButton.className = "item-more-btn";
+    moreButton.title = "More actions";
+    moreButton.setAttribute("aria-label", `More actions for ${item.label || item.trigger}`);
+    moreButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>';
+    moreButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = moreButton.getBoundingClientRect();
+      this.showItemContextMenu(rect.right, rect.bottom + 4, item);
+    });
+
     itemDiv.appendChild(typeIcon);
     itemDiv.appendChild(nameSpan);
     itemDiv.appendChild(triggerSpan);
+    itemDiv.appendChild(moreButton);
 
     // Click to edit
     itemDiv.onclick = () => {

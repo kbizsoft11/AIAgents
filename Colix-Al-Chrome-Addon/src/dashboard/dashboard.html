@@ -353,7 +353,7 @@
                     autocomplete="off"
                   />
                 </div>
-                <div class="editor-command-section">
+                <!-- <div class="editor-command-section">
                   <div class="editor-command-section-title">Profile</div>
                   <button
                     class="editor-command"
@@ -396,58 +396,43 @@
                     <span class="editor-command-icon">@</span
                     ><span><strong>Email</strong><small>{{email}}</small></span>
                   </button>
-                </div>
+                </div> -->
                 <div class="editor-command-section">
-                  <div class="editor-command-section-title">Dynamic values</div>
-                  <button
-                    class="editor-command"
-                    type="button"
-                    data-editor-token="{{clipboard}}"
-                  >
-                    <span class="editor-command-icon">▣</span
-                    ><span><strong>Clipboard</strong></span>
-                  </button>
+                  <div class="editor-command-section-title">Form fields</div>
                   <button
                     class="editor-command editor-date-time-command"
                     type="button"
                   >
                     <span class="editor-command-icon">▣</span
-                    ><span><strong>Date/Time field</strong></span>
+                    ><span><strong>Date/Time field</strong><small>Insert a formatted date or time</small></span>
                   </button>
                   <button
                     class="editor-command editor-text-field-command"
                     type="button"
                   >
                     <span class="editor-command-icon">=</span
-                    ><span><strong>Text field</strong></span>
+                    ><span><strong>Text field</strong><small>Add a short single-line input</small></span>
                   </button>
                   <button
                     class="editor-command editor-paragraph-command"
                     type="button"
                   >
                     <span class="editor-command-icon">≡</span
-                    ><span><strong>Paragraph field</strong></span>
+                    ><span><strong>Paragraph field</strong><small>Add a multi-line text input</small></span>
                   </button>
                   <button
                     class="editor-command editor-dropdown-command"
                     type="button"
                   >
                     <span class="editor-command-icon">⌄</span
-                    ><span><strong>Dropdown</strong></span>
+                    ><span><strong>Dropdown</strong><small>Choose one option from a list</small></span>
                   </button>
                   <button
                     class="editor-command editor-radio-command"
                     type="button"
                   >
                     <span class="editor-command-icon">◉</span
-                    ><span><strong>Radio button</strong></span>
-                  </button>
-                  <button
-                    class="editor-command editor-formula-command"
-                    type="button"
-                  >
-                    <span class="editor-command-icon">∑</span
-                    ><span><strong>Formula</strong></span>
+                    ><span><strong>Radio button</strong><small>Choose one option quickly</small></span>
                   </button>
                   <div
                     class="editor-datetime-picker"
@@ -534,7 +519,80 @@
                   </div>
                 </div>
                 <div class="editor-command-section">
+                  <div class="editor-command-section-title">Dynamic values</div>
+                  <button
+                    class="editor-command"
+                    type="button"
+                    data-editor-token="{{clipboard}}"
+                  >
+                    <span class="editor-command-icon">▣</span
+                    ><span><strong>Clipboard</strong><small>Insert your current clipboard text</small></span>
+                  </button>
+                  <button
+                    class="editor-command editor-if-else-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">⇄</span
+                    ><span><strong>If/Else condition</strong><small>Show content based on a condition</small></span>
+                  </button>
+                  <button
+                    class="editor-command editor-formula-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">∑</span
+                    ><span><strong>Formula</strong><small>Calculate a dynamic value</small></span>
+                  </button>
+                  <button
+                    class="editor-command editor-repeat-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">↔</span
+                    ><span><strong>Repeat</strong><small>Repeat content</small></span>
+                  </button>
+                </div>
+                <div
+                  class="editor-text-field-picker"
+                  id="editorIfElsePicker"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Insert if else condition"
+                >
+                  <div class="editor-text-field-modal">
+                    <div class="editor-datetime-modal-header">
+                      <div>
+                        <strong>Insert dynamic if/else</strong>
+                        <small>Show different content when a condition is true or false.</small>
+                      </div>
+                      <button type="button" class="editor-datetime-close" id="editorIfElseClose" aria-label="Close">&times;</button>
+                    </div>
+                    <label class="editor-modal-label" for="editorIfElseCondition">Condition <span>*</span></label>
+                    <input class="editor-modal-input" id="editorIfElseCondition" type="text" placeholder="100 &gt; 5" required />
+                    <small class="editor-modal-help">The condition to test.</small>
+                    <label class="editor-modal-label" for="editorIfElseYes">If true <span>*</span></label>
+                    <textarea class="editor-modal-input editor-modal-textarea" id="editorIfElseYes" rows="3" placeholder="Content shown when true..." required></textarea>
+                    <small class="editor-modal-help">Shown when the condition evaluates to true.</small>
+                    <label class="editor-modal-label" for="editorIfElseNo">If false <span>(optional)</span></label>
+                    <textarea class="editor-modal-input editor-modal-textarea" id="editorIfElseNo" rows="3" placeholder="Content shown when false..."></textarea>
+                    <small class="editor-modal-help">Shown when the condition evaluates to false.</small>
+                    <div id="editorIfElseError" class="editor-modal-error" role="alert"></div>
+                    <div class="editor-datetime-actions">
+                      <button type="button" class="btn btn-secondary" id="editorIfElseCancel">Cancel</button>
+                      <button type="button" class="btn btn-primary" id="editorIfElseInsert">Insert</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="editor-command-section">
                   <div class="editor-command-section-title">Snippet tools</div>
+                  <button
+                    class="editor-command editor-note-command"
+                    type="button"
+                  >
+                    <span class="editor-command-icon">▤</span
+                    ><span
+                      ><strong>Note</strong
+                      ><small>Add note content</small></span
+                    >
+                  </button>
                   <button
                     class="editor-command editor-import-snippet-command"
                     type="button"
@@ -608,6 +666,124 @@
                 id="editorTextFieldInsert"
               >
                 Insert field
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorNotePicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert note"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert note</strong>
+                <small>Add note content to your shortcut.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorNoteClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorNoteInput"
+              >Note contents <span>*</span></label
+            >
+            <textarea
+              class="editor-modal-input editor-modal-textarea editor-note-input"
+              id="editorNoteInput"
+              rows="5"
+              placeholder="Contents of the note..."
+              required
+            ></textarea>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorNoteCancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="editorNoteInsert"
+              >
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="editor-text-field-picker"
+          id="editorRepeatPicker"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Insert repeat"
+        >
+          <div class="editor-text-field-modal">
+            <div class="editor-datetime-modal-header">
+              <div>
+                <strong>Insert dynamic repeat</strong>
+                <small>Repeat content a chosen number of times.</small>
+              </div>
+              <button
+                type="button"
+                class="editor-datetime-close"
+                id="editorRepeatClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <label class="editor-modal-label" for="editorRepeatTimes"
+              >Times <span>(1–100)</span></label
+            >
+            <input
+              class="editor-modal-input"
+              id="editorRepeatTimes"
+              type="number"
+              min="1"
+              max="100"
+              step="1"
+              value="10"
+            />
+            <small class="editor-modal-help"
+              >How many times to repeat the contents.</small
+            >
+            <label class="editor-modal-label" for="editorRepeatContents"
+              >Contents <span>*</span></label
+            >
+            <textarea
+              class="editor-modal-input editor-modal-textarea"
+              id="editorRepeatContents"
+              rows="4"
+              placeholder="The contents to be repeated..."
+              required
+            ></textarea>
+            <div id="editorRepeatError" class="editor-modal-error" role="alert"></div>
+            <div class="editor-datetime-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="editorRepeatCancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                id="editorRepeatInsert"
+              >
+                Insert
               </button>
             </div>
           </div>

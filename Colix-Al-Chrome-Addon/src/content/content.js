@@ -1033,7 +1033,7 @@
   // =============================================
   function menuInsertInput(el, shortcut) {
     // Always plain text for regular inputs/textareas — strip any HTML tags
-    const plainText = htmlToPlainText(shortcut.expansion);
+    const plainText = htmlToPlainText(resolveSimpleDynamicTokens(shortcut.expansion));
 
     const val = el.value;
     // Use the saved cursor position from when // was typed, not the current one
@@ -1103,7 +1103,7 @@
     sel.addRange(nr);
 
     // Insert the stored HTML (preserves <b>, <i>, <u> and newlines)
-    document.execCommand('insertHTML', false, shortcut.expansion);
+    document.execCommand('insertHTML', false, resolveSimpleDynamicTokens(shortcut.expansion));
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
@@ -1195,7 +1195,7 @@
 
   function directExpandInput(el, shortcut, savedCursor = null) {
     // Always plain text for regular inputs/textareas — strip any HTML tags
-    const plainText = htmlToPlainText(shortcut.expansion);
+    const plainText = htmlToPlainText(resolveSimpleDynamicTokens(shortcut.expansion));
 
     const cursor = Number.isInteger(savedCursor) ? savedCursor : el.selectionStart;
     const val = el.value;
@@ -1257,7 +1257,7 @@
     sel.addRange(nr);
 
     // Insert stored HTML (preserves <b>, <i>, <u> and newlines)
-    document.execCommand('insertHTML', false, shortcut.expansion);
+    document.execCommand('insertHTML', false, resolveSimpleDynamicTokens(shortcut.expansion));
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
@@ -1415,6 +1415,20 @@
   // =============================================
   // TOKEN REPLACEMENT
   // =============================================
+  function resolveSimpleDynamicTokens(text) {
+    let result = String(text || '');
+    result = result.replace(/\{\{if:([^|}]+)\|([^|}]*)\|([^}]*)\}\}/g, (_, condition, yesContent, noContent) => {
+      const outcome = evaluateConditionExpression(condition);
+      return outcome === true ? yesContent : outcome === false ? noContent : '';
+    });
+    result = result.replace(/\{\{note:([\s\S]*?)\}\}/g, (_, note) => note);
+    result = result.replace(/\{\{repeat:\s*(\d+)\s*\|([\s\S]*?)\}\}/g, (_, times, contents) => {
+      const count = Math.min(Math.max(Number.parseInt(times, 10) || 0, 0), 100);
+      return contents.repeat(count);
+    });
+    return result;
+  }
+
   function replaceTokens(text, callback) {
     // Check if text contains any tokens
     if (!text.includes('{{')) {
@@ -1460,6 +1474,7 @@
           const value = evaluateFormulaExpression(expression);
           return value === null ? '' : formatFormulaResult(value, format || '');
         });
+        result = resolveSimpleDynamicTokens(result);
         resolveInputFields(result, callback);
       };
 
@@ -1544,6 +1559,29 @@
 
     const value = parseExpression();
     return index === source.length && Number.isFinite(value) ? value : null;
+  }
+
+  function evaluateConditionExpression(expression) {
+    const match = String(expression || '').trim().match(/^(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)$/);
+    if (!match) return null;
+    const leftRaw = match[1].trim();
+    const rightRaw = match[3].trim();
+    const leftNumber = evaluateNumericExpression(leftRaw);
+    const rightNumber = evaluateNumericExpression(rightRaw);
+    const left = leftNumber !== null ? leftNumber : unquoteFormulaValue(leftRaw);
+    const right = rightNumber !== null ? rightNumber : unquoteFormulaValue(rightRaw);
+    if (typeof left === 'string' && typeof right === 'string' && !leftRaw.match(/^['"]/)) return null;
+    switch (match[2]) {
+      case '===': return typeof left === typeof right && left === right;
+      case '!==': return typeof left !== typeof right || left !== right;
+      case '==': return left == right;
+      case '!=': return left != right;
+      case '>': return left > right;
+      case '<': return left < right;
+      case '>=': return left >= right;
+      case '<=': return left <= right;
+      default: return null;
+    }
   }
 
   function splitFormulaArguments(source) {
@@ -1893,7 +1931,7 @@
 
     replaceTokens(shortcut.expansion, function (expandedText) {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-        const plainText = htmlToPlainText(expandedText);
+        const plainText = htmlToPlainText(resolveSimpleDynamicTokens(expandedText));
         let start, end;
         try {
           start = el.selectionStart ?? el.value.length;
@@ -1939,7 +1977,7 @@
         }
         // Restore the target range before inserting so rich HTML formatting
         // is preserved after the sidebar temporarily owns focus.
-        document.execCommand('insertHTML', false, expandedText);
+        document.execCommand('insertHTML', false, resolveSimpleDynamicTokens(expandedText));
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }
 

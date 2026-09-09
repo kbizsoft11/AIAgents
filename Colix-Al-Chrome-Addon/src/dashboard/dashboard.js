@@ -168,6 +168,29 @@ class TextBlitzDashboard {
     this.editorFormulaClose = document.getElementById('editorFormulaClose');
     this.editorFormulaCancel = document.getElementById('editorFormulaCancel');
     this.editorFormulaInsert = document.getElementById('editorFormulaInsert');
+    this.editorIfElseCommand = document.querySelector('.editor-if-else-command');
+    this.editorIfElsePicker = document.getElementById('editorIfElsePicker');
+    this.editorIfElseCondition = document.getElementById('editorIfElseCondition');
+    this.editorIfElseYes = document.getElementById('editorIfElseYes');
+    this.editorIfElseNo = document.getElementById('editorIfElseNo');
+    this.editorIfElseError = document.getElementById('editorIfElseError');
+    this.editorIfElseClose = document.getElementById('editorIfElseClose');
+    this.editorIfElseCancel = document.getElementById('editorIfElseCancel');
+    this.editorIfElseInsert = document.getElementById('editorIfElseInsert');
+    this.editorNoteCommand = document.querySelector('.editor-note-command');
+    this.editorNotePicker = document.getElementById('editorNotePicker');
+    this.editorNoteInput = document.getElementById('editorNoteInput');
+    this.editorNoteClose = document.getElementById('editorNoteClose');
+    this.editorNoteCancel = document.getElementById('editorNoteCancel');
+    this.editorNoteInsert = document.getElementById('editorNoteInsert');
+    this.editorRepeatCommand = document.querySelector('.editor-repeat-command');
+    this.editorRepeatPicker = document.getElementById('editorRepeatPicker');
+    this.editorRepeatTimes = document.getElementById('editorRepeatTimes');
+    this.editorRepeatContents = document.getElementById('editorRepeatContents');
+    this.editorRepeatError = document.getElementById('editorRepeatError');
+    this.editorRepeatClose = document.getElementById('editorRepeatClose');
+    this.editorRepeatCancel = document.getElementById('editorRepeatCancel');
+    this.editorRepeatInsert = document.getElementById('editorRepeatInsert');
     this.editorImportSnippetCommand = document.querySelector('.editor-import-snippet-command');
     this.editorImportSnippetPicker = document.getElementById('editorImportSnippetPicker');
     this.editorImportSnippetSearch = document.getElementById('editorImportSnippetSearch');
@@ -557,6 +580,86 @@ class TextBlitzDashboard {
       this.insertEditorText(`{{formula:${formula}${format ? `|${format}` : ''}}}`);
       this.editorFormulaPicker?.classList.remove('open');
     });
+    this.editorIfElseCommand?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.editorIfElseCondition.value = '';
+      this.editorIfElseYes.value = '';
+      this.editorIfElseNo.value = '';
+      this.editorIfElseError.textContent = '';
+      this.editorIfElseError.style.display = 'none';
+      this.editorIfElsePicker?.classList.add('open');
+      setTimeout(() => this.editorIfElseCondition?.focus(), 50);
+    });
+    this.editorIfElseClose?.addEventListener('click', () => this.editorIfElsePicker?.classList.remove('open'));
+    this.editorIfElseCancel?.addEventListener('click', () => this.editorIfElsePicker?.classList.remove('open'));
+    this.editorIfElseInsert?.addEventListener('click', () => {
+      const condition = this.editorIfElseCondition.value.trim();
+      const yesContent = this.editorIfElseYes.value.trim();
+      const noContent = this.editorIfElseNo.value.trim();
+      if (!condition) {
+        this.editorIfElseError.textContent = 'Please enter a condition to test.';
+        this.editorIfElseError.style.display = 'block';
+        this.editorIfElseCondition.focus();
+        return;
+      }
+      if (!yesContent) {
+        this.editorIfElseError.textContent = 'Please enter the content to show when true.';
+        this.editorIfElseError.style.display = 'block';
+        this.editorIfElseYes.focus();
+        return;
+      }
+      const ifElseToken = '{{if:' + condition.replace(/\|/g, ' ') + '|' + yesContent.replace(/\}\}/g, '} ') + '|' + noContent.replace(/\}\}/g, '} ') + '}}';
+      this.insertEditorText(ifElseToken);
+      this.editorIfElsePicker?.classList.remove('open');
+    });
+    this.editorNoteCommand?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.editorNoteInput.value = '';
+      this.editorNotePicker?.classList.add('open');
+      setTimeout(() => this.editorNoteInput?.focus(), 50);
+    });
+    this.editorNoteClose?.addEventListener('click', () => this.editorNotePicker?.classList.remove('open'));
+    this.editorNoteCancel?.addEventListener('click', () => this.editorNotePicker?.classList.remove('open'));
+    this.editorNoteInsert?.addEventListener('click', () => {
+      const note = this.editorNoteInput.value.trim();
+      if (!note) {
+        this.editorNoteInput.focus();
+        return;
+      }
+      const noteToken = '{{note:' + note.replace(/\}\}/g, '} ') + '}}';
+      this.insertEditorText(noteToken);
+      this.editorNotePicker?.classList.remove('open');
+    });
+    this.editorRepeatCommand?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.editorRepeatTimes.value = '10';
+      this.editorRepeatContents.value = '';
+      this.editorRepeatError.textContent = '';
+      this.editorRepeatError.style.display = 'none';
+      this.editorRepeatPicker?.classList.add('open');
+      setTimeout(() => this.editorRepeatTimes?.focus(), 50);
+    });
+    this.editorRepeatClose?.addEventListener('click', () => this.editorRepeatPicker?.classList.remove('open'));
+    this.editorRepeatCancel?.addEventListener('click', () => this.editorRepeatPicker?.classList.remove('open'));
+    this.editorRepeatInsert?.addEventListener('click', () => {
+      const times = Number(this.editorRepeatTimes.value);
+      const contents = this.editorRepeatContents.value.trim();
+      if (!Number.isInteger(times) || times < 1 || times > 100) {
+        this.editorRepeatError.textContent = 'Times must be a whole number between 1 and 100.';
+        this.editorRepeatError.style.display = 'block';
+        this.editorRepeatTimes.focus();
+        return;
+      }
+      if (!contents) {
+        this.editorRepeatError.textContent = 'Please enter the contents to repeat.';
+        this.editorRepeatError.style.display = 'block';
+        this.editorRepeatContents.focus();
+        return;
+      }
+      const repeatToken = '{{repeat:' + times + '|' + contents.replace(/\}\}/g, '} ') + '}}';
+      this.insertEditorText(repeatToken);
+      this.editorRepeatPicker?.classList.remove('open');
+    });
     this.editorImportSnippetCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.renderImportSnippetList('');
@@ -602,6 +705,15 @@ class TextBlitzDashboard {
       }
       if (this.editorFormulaPicker && e.target === this.editorFormulaPicker) {
         this.editorFormulaPicker.classList.remove('open');
+      }
+      if (this.editorIfElsePicker && e.target === this.editorIfElsePicker) {
+        this.editorIfElsePicker.classList.remove('open');
+      }
+      if (this.editorNotePicker && e.target === this.editorNotePicker) {
+        this.editorNotePicker.classList.remove('open');
+      }
+      if (this.editorRepeatPicker && e.target === this.editorRepeatPicker) {
+        this.editorRepeatPicker.classList.remove('open');
       }
       [this.editorParagraphPicker, this.editorRadioPicker].forEach(picker => {
         if (picker && e.target === picker) picker.classList.remove('open');
@@ -1051,7 +1163,7 @@ class TextBlitzDashboard {
 
   insertEditorText(text) {
     if (!this.editorExpansionInput) return;
-    const dynamicToken = String(text || '').match(/^\{\{(?:first_name|last_name|email|clipboard|date|time)\}\}$|^\{\{(?:field|textarea|select|radio|date_time|formula):[^}]+\}\}$/);
+    const dynamicToken = String(text || '').match(/^\{\{(?:first_name|last_name|email|clipboard|date|time)\}\}$|^\{\{(?:field|textarea|select|radio|date_time|formula|if|note|repeat):[^}]+\}\}$/);
     if (dynamicToken) {
       this.insertDynamicEditorToken(dynamicToken[0]);
       return;
@@ -1140,7 +1252,8 @@ class TextBlitzDashboard {
       })
       .replace(/\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}/g, (token) => this.renderDynamicEditorToken(token))
       .replace(/\{\{(first_name|last_name|email|clipboard|date|time)\}\}/g, (token) => this.renderDynamicEditorToken(token))
-      .replace(/\{\{(date_time|formula):([^}]+)\}\}/g, (token) => this.renderDynamicEditorToken(token));
+      .replace(/\{\{(date_time|formula|note):([^}]+)\}\}/g, (token) => this.renderDynamicEditorToken(token))
+      .replace(/\{\{(repeat):([^|}]+)\|([^}]*)\}\}/g, (token) => this.renderDynamicEditorToken(token));
   }
 
   serializeEditorContent() {
@@ -1158,11 +1271,13 @@ class TextBlitzDashboard {
     const value = String(token || '');
     const fieldMatch = value.match(/^\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}$/);
     const simpleMatch = value.match(/^\{\{(first_name|last_name|email|clipboard|date|time)\}\}$/);
-    const calculatedMatch = value.match(/^\{\{(date_time|formula):([^}]+)\}\}$/);
-    if (!fieldMatch && !simpleMatch && !calculatedMatch) return this.escapeHtml(token);
+    const calculatedMatch = value.match(/^\{\{(date_time|formula|note):([^}]+)\}\}$/);
+    const ifElseMatch = value.match(/^\{\{if:([^|}]+)\|([^|}]*)\|([^}]*)\}\}$/);
+    const repeatMatch = value.match(/^\{\{repeat:([^|}]+)\|([^}]*)\}\}$/);
+    if (!fieldMatch && !simpleMatch && !calculatedMatch && !ifElseMatch && !repeatMatch) return this.escapeHtml(token);
 
-    const kind = fieldMatch?.[1] || simpleMatch?.[1] || calculatedMatch?.[1];
-    const label = fieldMatch?.[2]?.trim() || calculatedMatch?.[2]?.trim() || ({
+    const kind = fieldMatch?.[1] || simpleMatch?.[1] || calculatedMatch?.[1] || (ifElseMatch ? 'if' : '') || (repeatMatch ? 'repeat' : '');
+    const label = fieldMatch?.[2]?.trim() || calculatedMatch?.[2]?.trim() || (ifElseMatch ? ifElseMatch[1].trim() : '') || (repeatMatch ? `${repeatMatch[1]} times` : '') || ({
       first_name: 'First name',
       last_name: 'Last name',
       email: 'Email',
@@ -1185,13 +1300,25 @@ class TextBlitzDashboard {
       date: 'Date',
       time: 'Time',
       date_time: 'Date/Time',
-      formula: 'Formula'
+      formula: 'Formula',
+      if: 'If/Else',
+      note: 'Note',
+      repeat: 'Repeat'
     }[kind] || 'Field';
+    const repeatContents = repeatMatch?.[2]?.trim() || '';
+    const ifElseContents = ifElseMatch ? `${ifElseMatch[2].trim()} / ${ifElseMatch[3].trim()}` : '';
     const detail = options.length
       ? `${kindLabel}: ${label} (${options.join(', ')})`
-      : `${kindLabel}: ${label}`;
+      : repeatContents
+        ? `${kindLabel}: ${label} (${repeatContents})`
+        : ifElseContents
+          ? `${kindLabel}: ${label} (${ifElseContents})`
+        : `${kindLabel}: ${label}`;
 
-    return `<span class="editor-dynamic-token editor-dynamic-token-${kind}" contenteditable="false" data-dynamic-token="${this.escapeHtml(token)}" title="${this.escapeHtml(detail)}"><span class="editor-dynamic-token-kind">${this.escapeHtml(kindLabel)}</span><span class="editor-dynamic-token-label">${this.escapeHtml(label)}</span>${options.length ? `<span class="editor-dynamic-token-options">${this.escapeHtml(options.join(' / '))}</span>` : ''}</span>`;
+    const extra = options.length
+      ? options.join(' / ')
+      : repeatContents || ifElseContents;
+    return `<span class="editor-dynamic-token editor-dynamic-token-${kind}" contenteditable="false" data-dynamic-token="${this.escapeHtml(token)}" title="${this.escapeHtml(detail)}"><span class="editor-dynamic-token-kind">${this.escapeHtml(kindLabel)}</span><span class="editor-dynamic-token-label">${this.escapeHtml(label)}</span>${extra ? `<span class="editor-dynamic-token-options">${this.escapeHtml(extra)}</span>` : ''}</span>`;
   }
 
   renderImportSnippetList(filter = '') {
@@ -2268,11 +2395,12 @@ class TextBlitzDashboard {
     if (exists) { this.showError(`Trigger "${trigger}" already exists.`); return; }
 
     try {
+      let savedShortcut;
       if (this.editingId) {
-        await StorageHelper.update(this.editingId, { trigger, expansion, label });
+        savedShortcut = await StorageHelper.update(this.editingId, { trigger, expansion, label });
         this.showToast('Shortcut updated!');
       } else {
-        await StorageHelper.add({
+        savedShortcut = await StorageHelper.add({
           trigger,
           expansion,
           label,
@@ -2282,12 +2410,38 @@ class TextBlitzDashboard {
         this.showToast(`Shortcut created! ${rem} slot${rem !== 1 ? 's' : ''} remaining.`);
       }
       this.hideForm();
-      await this.loadShortcuts();
+      // Update both visible lists immediately from the locally saved item.
+      // Remote sync runs in the background and must not replace this with a
+      // stale resources response while the write is still propagating.
+      if (savedShortcut) {
+        const replaceShortcut = (shortcuts) => [
+          ...shortcuts.filter(shortcut => String(shortcut.id) !== String(savedShortcut.id)),
+          savedShortcut,
+        ];
+        this.shortcuts = replaceShortcut(this.shortcuts);
+        const sidebarMgr = getSidebarManager();
+        if (sidebarMgr) {
+          sidebarMgr.shortcuts = replaceShortcut(sidebarMgr.shortcuts || []);
+          sidebarMgr.render();
+        }
+      }
       this.render();
       
       // Refresh sidebar
       const sidebarMgr = getSidebarManager();
-      if (sidebarMgr) await sidebarMgr.refresh();
+      if (sidebarMgr) {
+        await sidebarMgr.refresh();
+        // Keep the just-saved local item if a concurrent remote pull returned
+        // before the server had finished processing the write.
+        const localShortcut = this.shortcuts.find(item => String(item.id) === String(savedShortcut?.id));
+        if (localShortcut) {
+          sidebarMgr.shortcuts = [
+            ...sidebarMgr.shortcuts.filter(item => String(item.id) !== String(localShortcut.id)),
+            localShortcut,
+          ];
+          sidebarMgr.render();
+        }
+      }
     } catch (err) { this.showError(err.message || 'Failed to save.'); }
   }
 

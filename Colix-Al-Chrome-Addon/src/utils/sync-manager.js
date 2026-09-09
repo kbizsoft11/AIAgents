@@ -203,13 +203,16 @@ class SyncManager {
     this.syncPromise = (async () => {
       this.isSyncing = true;
       try {
+        const hadPendingChanges = this.pendingSyncQueue.length > 0;
         // First, sync pending local changes to Supabase (push)
         await this.pushToSupabase();
 
-        // Only pull from Supabase if the cache is stale or writes are pending.
+        // Local writes are already reflected in the cache. Avoid an immediate
+        // full resources request after a successful write; the normal stale
+        // refresh will reconcile remote changes later.
         const now = Date.now();
         const shouldRefresh = !this.lastSyncTime || (now - this.lastSyncTime.getTime()) > 30000;
-        if (this.pendingSyncQueue.length > 0 || shouldRefresh) {
+        if (!hadPendingChanges && shouldRefresh) {
           await this.pullFromSupabase();
         }
 

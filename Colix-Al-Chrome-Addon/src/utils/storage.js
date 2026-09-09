@@ -235,14 +235,16 @@ const StorageHelper = {
     };
     shortcuts.push(newShortcut);
     await this.saveAll(shortcuts);
+    void this.notifyContentScriptsOfUpdate();
 
-    // Queue and sync to Supabase
+    // Queue the remote write in the background so the local shortcut is
+    // available immediately. The sync manager handles retries and errors.
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut);
+      void syncMgr.queueSync('create', 'shortcut', newShortcut.id, newShortcut)
+        .catch(error => console.warn('Could not sync shortcut:', error));
     } catch (error) {
       console.warn('Could not sync shortcut:', error);
-      throw error;
     }
 
     return newShortcut;
@@ -260,6 +262,7 @@ const StorageHelper = {
     };
     const updatedShortcut = { ...shortcuts[index], ...nextUpdates };
     await this.saveAll(shortcuts.map((shortcut, itemIndex) => itemIndex === index ? updatedShortcut : shortcut));
+    void this.notifyContentScriptsOfUpdate();
 
     // Queue and sync to Supabase
     try {

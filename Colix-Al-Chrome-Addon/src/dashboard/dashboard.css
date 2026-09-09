@@ -2757,6 +2757,34 @@ div#format-container {
   white-space: nowrap;
 }
 
+.item-more-btn {
+  display: inline-flex;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -4px 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #8a958d;
+  background: transparent;
+  cursor: pointer;
+  opacity: .72;
+}
+
+.item-more-btn:hover,
+.item-more-btn:focus-visible {
+  color: #1dac4b;
+  background: rgba(29, 172, 75, .1);
+  opacity: 1;
+}
+
+.sidebar-item.selected .item-more-btn {
+  color: var(--ui-green-dark);
+}
+
 .editor-dynamic-token-textarea {
   min-height: 30px;
   border-style: dashed;
@@ -2781,11 +2809,12 @@ div#format-container {
 }
 
 .editor-commands {
-  flex: 0 0 285px;
+  flex: 0 0 330px;
   border-left: 1px solid #e8e8e8;
   background: #fcfcfd;
   overflow-y: auto;
-  padding: 22px 16px;
+  padding: 26px 22px;
+  box-shadow: -8px 0 22px rgba(25, 35, 45, .06);
 }
 
 .editor-commands-header h3 {
@@ -2795,7 +2824,7 @@ div#format-container {
 }
 
 .editor-commands-header p {
-  margin: 0 0 14px;
+  margin: 0 0 18px;
   color: #888;
   font-size: 12px;
   line-height: 1.45;
@@ -2804,7 +2833,7 @@ div#format-container {
 .editor-command-search {
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 10px;
+  padding: 11px 12px;
   border: 1px solid #ddd;
   border-radius: 6px;
   outline: none;
@@ -2819,11 +2848,11 @@ div#format-container {
 }
 
 .editor-command-section {
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .editor-command-section-title {
-  margin: 0 0 8px;
+  margin: 0 0 11px;
   color: #888;
   font-size: 11px;
   font-weight: 700;
@@ -2835,8 +2864,9 @@ div#format-container {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 10px;
-  padding: 9px 7px;
+  gap: 12px;
+  min-height: 44px;
+  padding: 9px 10px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -2851,9 +2881,9 @@ div#format-container {
 
 .editor-command-icon {
   display: inline-flex;
-  flex: 0 0 26px;
-  width: 26px;
-  height: 26px;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
   align-items: center;
   justify-content: center;
   border: 1px solid #ddd;
@@ -3189,6 +3219,20 @@ div#format-container {
 .editor-modal-textarea {
   resize: vertical;
   line-height: 1.5;
+}
+
+.editor-modal-help {
+  display: block;
+  margin-top: 5px;
+  color: #7d8780;
+  font-size: 11px;
+}
+
+.editor-modal-error {
+  display: none;
+  margin-top: 7px;
+  color: #c0392b;
+  font-size: 12px;
 }
 
 .editor-import-modal {
@@ -3567,7 +3611,8 @@ body {
 .editor-commands {
   border-left-color: var(--ui-border);
   background: #ffffff;
-  padding: 28px 18px;
+  padding: 30px 22px;
+  box-shadow: -8px 0 22px rgba(25, 35, 45, .07);
 }
 
 .editor-commands-header h3 {
@@ -3585,7 +3630,7 @@ body {
 }
 
 .editor-command {
-  margin: 2px 0;
+  margin: 4px 0;
   border: 1px solid transparent;
 }
 
@@ -3748,6 +3793,11 @@ body {
   display: block;
   font-size: 14px;
   color: #0f172a;
+}
+
+.sidebar-link span{
+  margin-top: 5px;
+  display: block;
 }
 
 .sidebar-link span {
