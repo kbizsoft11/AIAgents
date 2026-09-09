@@ -11,6 +11,9 @@ class HeaderModule {
     this.notifications = [];
     this.notificationsLoaded = false;
     this.notificationsApiUrl = 'https://extensions.kbizsoft.com/magicaa-extension/notifications.php';
+    this.searchResults = [];
+    this.searchSelectedIndex = 0;
+    this.searchOverlay = null;
   }
 
   // First: Load header HTML file
@@ -95,6 +98,7 @@ class HeaderModule {
     this.notificationsList = document.getElementById('headerNotificationsList');
     this.notificationCount = document.getElementById('headerNotificationCount');
     this.markAllNotificationsBtn = document.getElementById('headerNotificationsMarkAll');
+    this.headerSearchButton = document.getElementById('headerSearchButton');
   }
 
   bindEvents() {
@@ -118,6 +122,15 @@ class HeaderModule {
         window.dispatchEvent(new CustomEvent('headerFormsClick'));
       });
     }
+
+    this.headerSearchButton?.addEventListener('click', () => this.openSearch());
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === '/') {
+        event.preventDefault();
+        this.openSearch();
+      }
+      if (event.key === 'Escape' && this.searchOverlay) this.closeSearch();
+    });
 
     // Profile menu items — dispatched by data-menu-action rather than position,
     // so re-ordering or adding menu items later can't silently break routing.
@@ -188,6 +201,110 @@ class HeaderModule {
         this.headerProfileBtn.focus();
       }
     });
+  }
+
+  async openSearch() {
+    if (this.searchOverlay) {
+      this.searchOverlay.querySelector('.header-search-input')?.focus();
+      return;
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'header-search-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `<div class="header-search-dialog">
+      <div class="header-search-input-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20L16.65 16.65"></path></svg>
+        <input class="header-search-input" type="search" placeholder="Search shortcuts and forms..." autocomplete="off" spellcheck="false" aria-label="Search shortcuts and forms">
+      </div>
+      <div class="header-search-results" role="listbox"></div>
+    </div>`;
+    document.body.appendChild(overlay);
+    this.searchOverlay = overlay;
+    this.searchSelectedIndex = 0;
+    const input = overlay.querySelector('.header-search-input');
+    input.addEventListener('input', () => this.renderSearchResults(input.value));
+    input.addEventListener('keydown', (event) => this.handleSearchKeydown(event));
+    overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) this.closeSearch(); });
+    await this.loadSearchResults();
+    if (this.searchOverlay === overlay) {
+      this.renderSearchResults(input.value);
+      input.focus();
+    }
+  }
+
+  async loadSearchResults() {
+    try {
+      const [shortcuts, forms] = await Promise.all([
+        typeof StorageHelper !== 'undefined' && typeof StorageHelper.getAll === 'function' ? StorageHelper.getAll() : [],
+        typeof StorageHelper !== 'undefined' && typeof StorageHelper.getAllForms === 'function' ? StorageHelper.getAllForms() : []
+      ]);
+      this.searchResults = [
+        ...(Array.isArray(shortcuts) ? shortcuts : []).map(item => ({ ...item, kind: 'shortcut' })),
+        ...(Array.isArray(forms) ? forms : []).map(item => ({ ...item, kind: 'form' }))
+      ];
+    } catch (error) {
+      console.warn('Could not load header search resources:', error);
+      this.searchResults = [];
+    }
+  }
+
+  renderSearchResults(query = '') {
+    if (!this.searchOverlay) return;
+    const normalizedQuery = query.trim().toLowerCase();
+    const matches = this.searchResults.filter(item => {
+      const haystack = [item.trigger, item.label, item.expansion, item.template, ...(item.fields || [])]
+        .filter(Boolean).join(' ').toLowerCase();
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    }).slice(0, 40);
+    const orderedMatches = ['shortcut', 'form'].flatMap(kind => matches.filter(item => item.kind === kind));
+    this.searchResultsVisible = orderedMatches;
+    this.searchSelectedIndex = Math.min(this.searchSelectedIndex, Math.max(orderedMatches.length - 1, 0));
+    const results = this.searchOverlay.querySelector('.header-search-results');
+    if (!orderedMatches.length) {
+      results.innerHTML = '<div class="header-search-empty">No shortcuts or forms found.</div>';
+      return;
+    }
+    const groups = ['shortcut', 'form'].map(kind => ({ kind, items: orderedMatches.filter(item => item.kind === kind) })).filter(group => group.items.length);
+    let resultIndex = 0;
+    results.innerHTML = groups.map(group => `<div class="header-search-group-title">${group.kind === 'shortcut' ? 'Shortcuts' : 'Forms'}</div>${group.items.map(item => {
+      const index = resultIndex++;
+      const preview = item.kind === 'form' ? `${item.template || 'Form'} form${item.fields?.length ? ` • ${item.fields.join(', ')}` : ''}` : this.stripHtml(item.expansion || '');
+      return `<button type="button" class="header-search-result${index === this.searchSelectedIndex ? ' is-active' : ''}" data-search-index="${index}"><span class="header-search-result-main"><span class="header-search-result-title">${this.escapeHtml(item.trigger || item.label || 'Untitled')}</span><span class="header-search-result-preview">${this.escapeHtml(item.label || preview)}</span></span><span class="header-search-result-kind">${item.kind === 'shortcut' ? 'Shortcut' : 'Form'}</span></button>`;
+    }).join('')}`).join('');
+    results.querySelectorAll('[data-search-index]').forEach(button => button.addEventListener('click', () => this.selectSearchResult(Number(button.dataset.searchIndex))));
+  }
+
+  handleSearchKeydown(event) {
+    if (!this.searchResultsVisible?.length) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      this.searchSelectedIndex = (this.searchSelectedIndex + direction + this.searchResultsVisible.length) % this.searchResultsVisible.length;
+      this.renderSearchResults(event.target.value);
+      this.searchOverlay.querySelector(`[data-search-index="${this.searchSelectedIndex}"]`)?.scrollIntoView({ block: 'nearest' });
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      this.selectSearchResult(this.searchSelectedIndex);
+    }
+  }
+
+  selectSearchResult(index) {
+    const item = this.searchResultsVisible?.[index];
+    if (!item) return;
+    this.closeSearch();
+    const dashboardUrl = chrome.runtime.getURL(`dashboard/dashboard.html?action=${item.kind === 'form' ? 'view-form' : 'edit-shortcut'}&resource_id=${encodeURIComponent(item.id)}`);
+    if (location.pathname.endsWith('/dashboard.html')) {
+      window.dispatchEvent(new CustomEvent('headerSearchSelect', { detail: item }));
+    } else {
+      window.location.assign(dashboardUrl);
+    }
+  }
+
+  closeSearch() {
+    this.searchOverlay?.remove();
+    this.searchOverlay = null;
+    this.searchResultsVisible = [];
   }
 
   handleSignOut(item) {
@@ -326,6 +443,7 @@ class HeaderModule {
 
   formatNotificationDate(value) { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : 'Just now'; }
   escapeHtml(value) { const element = document.createElement('span'); element.textContent = value ?? ''; return element.innerHTML; }
+  stripHtml(value) { const element = document.createElement('div'); element.innerHTML = value ?? ''; return element.textContent || ''; }
   escapeAttribute(value) { return this.escapeHtml(value).replace(/"/g, '&quot;'); }
 
   // =============================================

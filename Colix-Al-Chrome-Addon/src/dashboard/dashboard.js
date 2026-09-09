@@ -67,6 +67,7 @@ class TextBlitzDashboard {
     this.forms = sidebarMgr?.forms || [];
     this.render();
     this.renderForms();
+    this.openHeaderSearchTarget();
 
     // Account metadata and sharing permissions are not required to show resources.
     this.applyMembershipSectionVisibility();
@@ -317,6 +318,17 @@ class TextBlitzDashboard {
     window.addEventListener('headerBrandClick', () => {
       this.switchSection('shortcuts');
       this.closeMobileSidebar();
+    });
+    window.addEventListener('headerSearchSelect', (event) => {
+      const resource = event.detail;
+      if (!resource) return;
+      if (resource.kind === 'form') {
+        this.switchSection('forms');
+        this.formsList?.querySelector(`[data-resource-id="${CSS.escape(String(resource.id))}"]`)?.scrollIntoView({ block: 'center' });
+      } else {
+        this.switchSection('shortcuts');
+        this.handleEdit(resource.id);
+      }
     });
     window.addEventListener('openFolder', (event) => {
       const folderId = event.detail?.folderId;
@@ -821,6 +833,24 @@ class TextBlitzDashboard {
       });
     }
 
+  }
+
+  openHeaderSearchTarget() {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    const resourceId = params.get('resource_id');
+    if (!resourceId || !['edit-shortcut', 'view-form'].includes(action)) return;
+    window.history.replaceState({}, '', window.location.pathname);
+    if (action === 'view-form') {
+      this.switchSection('forms');
+      this.formsList?.querySelector(`[data-resource-id="${CSS.escape(resourceId)}"]`)?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    const shortcut = this.shortcuts.find(item => String(item.id) === String(resourceId));
+    if (shortcut) {
+      this.switchSection('shortcuts');
+      this.handleEdit(shortcut.id);
+    }
   }
 
   // =============================================
@@ -1692,6 +1722,7 @@ class TextBlitzDashboard {
     this.formsList.style.display = this.forms.length ? 'grid' : 'none';
     [...this.forms].sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0)).forEach(form => {
       const card = document.createElement('div'); card.className = 'shortcut-card';
+      card.dataset.resourceId = form.id;
       card.innerHTML = `<div class="shortcut-card-header"><div class="shortcut-trigger-wrapper"><span class="shortcut-trigger">${this.escapeHtml(form.trigger)}</span>${form.label ? `<span class="shortcut-label">${this.escapeHtml(form.label)}</span>` : ''}</div><button class="btn btn-danger-outline" data-delete-form="${this.escapeHtml(form.id)}">Delete</button></div><div class="shortcut-expansion"><strong>${this.escapeHtml(form.template)} form</strong><br>${this.escapeHtml((form.fields || []).join(' • '))}</div>`;
       card.querySelector('[data-delete-form]').addEventListener('click', async () => {
         if (confirm(`Delete form "${form.trigger}"?`)) { 

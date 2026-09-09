@@ -155,6 +155,9 @@ body {
 }
 
 .topbar-search {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-family: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -490,3 +493,53 @@ body {
     animation: none;
   }
 }
+
+.header-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 20px 20px;
+  background: rgba(10, 20, 18, 0.42);
+}
+
+.header-search-dialog {
+  width: min(620px, 100%);
+  max-height: min(620px, 76vh);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #dfe6e0;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.header-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0ed;
+}
+
+.header-search-input-wrap svg { flex: 0 0 auto; color: #65736b; }
+
+.header-search-input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #17221c;
+  background: transparent;
+  font: 16px inherit;
+}
+
+.header-search-results { max-height: 510px; overflow-y: auto; padding: 8px; }
+.header-search-group-title { padding: 8px 10px 5px; color: #7a867e; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.header-search-result { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 7px; background: transparent; color: #17221c; cursor: pointer; text-align: left; }
+.header-search-result:hover, .header-search-result.is-active { background: #eef6f0; }
+.header-search-result-main { min-width: 0; flex: 1; }
+.header-search-result-title { display: block; overflow: hidden; color: #17221c; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.header-search-result-preview { display: block; overflow: hidden; margin-top: 3px; color: #758178; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.header-search-result-kind { color: #7b8b81; font-size: 11px; white-space: nowrap; }
+.header-search-empty { padding: 28px 16px; color: #7b877f; font-size: 13px; text-align: center; }

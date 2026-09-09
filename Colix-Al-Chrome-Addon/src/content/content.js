@@ -11,6 +11,7 @@
   let shortcuts = [];
   let forms = [];
   let shortcutsLoaded = false;
+  let pendingInputElement = null;
   const pendingDynamicFields = new Map();
   let sidebarEl = null;
   let sidebarListEl = null;
@@ -456,7 +457,11 @@
           : [];
         forms = Array.isArray(response.forms) ? response.forms : [];
         shortcutsLoaded = true;
-        const activeElement = document.activeElement;
+        const pendingElement = pendingInputElement;
+        pendingInputElement = null;
+        const activeElement = pendingElement && document.contains(pendingElement)
+          ? pendingElement
+          : document.activeElement;
         if (shortcuts.length && activeElement && isEditable(activeElement)) {
           onInput({ target: activeElement });
         }
@@ -469,6 +474,7 @@
     shortcuts = [];
     forms = [];
     shortcutsLoaded = true;
+    pendingInputElement = null;
   }
 
   function incrementShortcutUsage(shortcut) {
@@ -1266,6 +1272,10 @@
     if (menuState.lockInput) return;
     if (isInsideMenu(el)) return;
     if (!isEditable(el)) return;
+    if (!shortcutsLoaded) {
+      pendingInputElement = el;
+      return;
+    }
     if (shortcuts.length === 0) return;
 
     const info = getTextBeforeCursor(el);
