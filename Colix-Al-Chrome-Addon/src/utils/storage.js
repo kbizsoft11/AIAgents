@@ -419,10 +419,12 @@ const StorageHelper = {
 
     try {
       const syncMgr = getSyncManager();
-      await syncMgr.queueSync('create', 'folder', newFolder.id, newFolder);
+      // Keep folder creation responsive; persist the remote write in the
+      // background just like shortcut creation and updates.
+      void syncMgr.queueSync('create', 'folder', newFolder.id, newFolder)
+        .catch(error => console.warn('Could not sync folder:', error));
     } catch (error) {
       console.warn('Could not sync folder:', error);
-      throw error;
     }
 
     return newFolder;
