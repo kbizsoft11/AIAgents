@@ -7,6 +7,7 @@
   <title>ColixAI membership</title>
   <link rel="stylesheet" href="membership.css">
   <link rel="stylesheet" href="membership-live.css">
+  <link rel="stylesheet" href="membership-controls.css">
 </head>
 <body>
   <div class="shell">
@@ -22,6 +23,14 @@
         <h1>Give your team room to move.</h1>
         <p class="lede">Keep shortcuts, forms, and shared workflows together in one calm workspace that grows with your team.</p>
       </section>
+
+      <div class="membership-toolbar">
+        <p id="membershipNotice" role="status" aria-live="polite"></p>
+        <div class="billing-toggle" role="group" aria-label="Billing frequency">
+          <button type="button" class="billing-option is-selected" data-billing="monthly">Monthly</button>
+          <button type="button" class="billing-option" data-billing="annual">Annual <span>Save 5%</span></button>
+        </div>
+      </div>
 
       <section class="membership-grid" aria-label="Membership options">
         <div class="membership-loading" id="membershipLoading">Loading current plans...</div>

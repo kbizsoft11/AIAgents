@@ -108,7 +108,9 @@ class HeaderModule {
       premiumButton.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('headerPremiumClick'));
         if (!location.pathname.endsWith('/dashboard.html')) {
-          window.location.assign(chrome.runtime.getURL('dashboard/teams_plans.html'));
+          const membershipUrl = new URL('https://colixai.com/membership/');
+          if (this.profileData?.email) membershipUrl.searchParams.set('user_email', this.profileData.email);
+          window.location.assign(membershipUrl.toString());
         }
       });
     }
