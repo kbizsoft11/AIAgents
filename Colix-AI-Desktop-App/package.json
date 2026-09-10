@@ -8,11 +8,11 @@
     "email": "details.kbiz@gmail.com"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "node init && vite",
     "bundle:win": "pyinstaller --onefile --noconsole --name listener --distpath python-dist listener.py",
     "bundle:mac": "pyinstaller --onefile --name listener --distpath python-dist listener.py",
     "bundle:linux": "pyinstaller --onefile --noconsole --name listener --distpath python-dist listener.py",
-    "build": "tsc && vite build && electron-builder",
+    "build": "node init && tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
