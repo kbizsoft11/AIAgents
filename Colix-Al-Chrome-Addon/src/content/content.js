@@ -2121,7 +2121,7 @@
       #tb-sb-search:focus { border-color: #1a1a2e; background: #fff; }
       #tb-sb-search::placeholder { color: #b8b8bd; }
       .tb-sb-search-btn{display: flex; justify-content: flex-end; align-items:center; margin-top: 10px; gap: 10px;}
-      .tb-sb-search-btn span {font-family: monospace; font-size: 15px; text-transform: uppercase; font-weight: 600;}
+      .tb-sb-search-btn span {font-family: monospace; font-size: 15px; text-transform: uppercase; font-weight: 600; color: #1a1a2e; cursor: pointer; transition: color 0.15s;}
       #tb-sb-add {
         width: 32px;
         height: 32px;
@@ -2257,7 +2257,6 @@
       </div>
       <div class="tb-sb-tabs" role="tablist">
         <button type="button" class="tb-sb-tab tb-sb-tab-active" data-tab="shortcuts">Shortcuts</button>
-        <button type="button" class="tb-sb-tab" data-tab="forms">Forms</button>
       </div>
       <div class="tb-sb-search-wrap">
         <input type="text" id="tb-sb-search" placeholder="Search shortcuts...">
