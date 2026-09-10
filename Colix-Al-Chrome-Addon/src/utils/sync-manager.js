@@ -74,6 +74,7 @@ class SyncManager {
       id: folderId,
       name: 'Templates',
       isExpanded: true,
+      isDefaultFolder: true,
       createdAt: now,
       updatedAt: now,
       workspace_id: this.workspaceId

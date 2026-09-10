@@ -153,24 +153,10 @@ class SidebarManager {
       });
       this.folders = Array.from(uniqueFolders.values()).map((f) => ({
         ...f,
-        isExpanded:
-          f.isExpanded !== undefined
-            ? f.isExpanded
-            : f.is_expanded !== undefined
-              ? f.is_expanded
-              : true,
+        isExpanded: true,
+        // Mark Templates folder as default if not already marked
+        isDefaultFolder: f.isDefaultFolder || (String(f.name || '').trim().toLowerCase() === 'templates')
       }));
-      const defaultFolderOrder = {
-        'my snippets': 0,
-        templates: 1,
-      };
-      this.folders.sort((a, b) => {
-        const aName = String(a.name || '').trim().toLowerCase();
-        const bName = String(b.name || '').trim().toLowerCase();
-        const aOrder = defaultFolderOrder[aName] ?? 2;
-        const bOrder = defaultFolderOrder[bName] ?? 2;
-        return aOrder - bOrder;
-      });
       this.shortcuts = resources.filter((item) => syncManager.getResourceType(item) === "shortcut").map((s) => ({
         ...s,
         folderId:
@@ -261,8 +247,12 @@ class SidebarManager {
     if (window.dashboard) {
       window.dashboard.shortcuts = this.shortcuts;
       window.dashboard.forms = this.forms;
-      if (window.dashboard.folderDeleteBtn)
-        window.dashboard.folderDeleteBtn.hidden = !this.canManageSharing;
+      if (window.dashboard.folderDeleteBtn) {
+        const folder = this.folders.find((f) => String(f.id) === String(this.activeFolder));
+        const isDefaultFolder = folder?.isDefaultFolder === true;
+        // Hide delete button for default folder, show for others (if user has permission)
+        window.dashboard.folderDeleteBtn.hidden = isDefaultFolder || !this.canManageSharing;
+      }
     }
     this.render();
     window.dashboard?.render();
@@ -282,6 +272,7 @@ class SidebarManager {
   }
 
   async saveFolders() {
+    await StorageHelper.saveAllFolders(this.folders);
     return this.folders;
   }
 
@@ -323,6 +314,18 @@ class SidebarManager {
   canManageFolder(folderId) {
     if (this.workspaceRole === "viewer") return false;
     return this.getFolderPermission(folderId) === "manage";
+  }
+
+  isDefaultFolder(folderId) {
+    const folder = this.folders.find(
+      (item) => String(item.id) === String(folderId),
+    );
+    const name = String(folder?.name || "").trim().toLowerCase();
+    return (
+      folder?.isDefaultFolder === true ||
+      String(folder?.id) === "default" ||
+      ["my snippets", "templates"].includes(name)
+    );
   }
 
   canEditItem(item) {
@@ -387,10 +390,12 @@ class SidebarManager {
 
     const toggle = document.createElement("button");
     toggle.className = "folder-toggle";
+    toggle.type = "button";
+    toggle.disabled = true;
+    toggle.setAttribute("aria-expanded", "true");
     toggle.innerHTML = folder.isExpanded
       ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>'
       : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-    toggle.onclick = () => this.toggleFolder(folder.id);
 
     const icon = document.createElement("span");
     icon.className = "folder-icon";
@@ -486,6 +491,8 @@ class SidebarManager {
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "folder-action-btn";
+    deleteBtn.type = "button";
+    deleteBtn.disabled = this.isDefaultFolder(folder.id) || !this.canManageSharing;
     deleteBtn.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
     deleteBtn.title = "Delete folder";
@@ -506,7 +513,7 @@ class SidebarManager {
     // Folder content
     const content = document.createElement("div");
     content.className = "sidebar-folder-content";
-    content.style.display = folder.isExpanded ? "block" : "none";
+    content.style.display = "block";
 
     // Get items for this folder
     const folderItems = this.getItemsForFolder(folder.id);
@@ -576,7 +583,10 @@ class SidebarManager {
     itemDiv.appendChild(moreButton);
 
     // Click to edit
-    itemDiv.onclick = () => {
+    itemDiv.onclick = async () => {
+      if (this.sharingContextPromise) {
+        await this.sharingContextPromise;
+      }
       if (this.canEditItem(item)) this.editItem(item);
       else
         window.dashboard?.showToast(
@@ -629,7 +639,7 @@ class SidebarManager {
   toggleFolder(folderId) {
     const folder = this.folders.find((f) => String(f.id) === String(folderId));
     if (folder) {
-      folder.isExpanded = !folder.isExpanded;
+      folder.isExpanded = true;
       this.saveFolders();
       this.render();
     }
@@ -661,6 +671,12 @@ class SidebarManager {
 
   async createFolder() {
     if (this.folderCreationInProgress) return;
+    
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
+    
     if (!["owner", "admin", "editor"].includes(this.workspaceRole)) {
       window.dashboard?.showToast("Viewers cannot create folders.", "error");
       return;
@@ -739,6 +755,11 @@ class SidebarManager {
   }
 
   async saveFolderName(folderId, newName) {
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
+    
     if (!this.canEditFolder(folderId)) {
       window.dashboard?.showToast(
         "You do not have permission to rename this folder.",
@@ -770,6 +791,16 @@ class SidebarManager {
   }
 
   async deleteFolder(folderId) {
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
+
+    if (this.isDefaultFolder(folderId)) {
+      window.dashboard?.showToast("Default folders cannot be deleted.", "error");
+      return;
+    }
+    
     if (!["owner", "admin"].includes(this.workspaceRole)) {
       window.dashboard?.showToast(
         "You do not have permission to delete this folder.",
@@ -842,6 +873,11 @@ class SidebarManager {
    */
   async createSnippet(type, targetFolderId = null) {
     if (!window.dashboard) return;
+
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
 
     if (
       !targetFolderId ||
@@ -952,10 +988,10 @@ class SidebarManager {
     this.contextMenu
       .querySelectorAll(".context-menu-item:not(.context-menu-disabled)")
       .forEach((item) => {
-        item.addEventListener("click", (e) => {
+        item.addEventListener("click", async (e) => {
           e.stopPropagation();
           const action = item.dataset.action;
-          this.handleContextMenuAction(action);
+          await this.handleContextMenuAction(action);
         });
       });
   }
@@ -969,11 +1005,34 @@ class SidebarManager {
     }
 
     this.contextMenuTarget = folderId;
+    
+    // Check if this is a default folder
+    const folder = this.folders.find((f) => String(f.id) === String(folderId));
+    const isDefaultFolder = folder?.isDefaultFolder === true;
+    
+    console.log('Context menu for folder:', {
+      folderId,
+      folderName: folder?.name,
+      isDefaultFolder
+    });
+    
     const shareFolder = this.contextMenu.querySelector(
       '[data-action="share-folder"]',
     );
     if (shareFolder)
       shareFolder.style.display = this.canManageSharing ? "flex" : "none";
+    
+    // Hide/disable delete option for default folder
+    const deleteButton = this.contextMenu.querySelector('[data-action="delete"]');
+    if (deleteButton) {
+      if (isDefaultFolder) {
+        deleteButton.style.display = "none";
+        console.log('Delete button hidden for default folder');
+      } else {
+        deleteButton.style.display = "flex";
+      }
+    }
+    
     this.contextMenu.style.display = "block";
 
     // Position the menu
@@ -1001,7 +1060,12 @@ class SidebarManager {
     }
   }
 
-  handleContextMenuAction(action) {
+  async handleContextMenuAction(action) {
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
+    
     const folderId = this.contextMenuTarget;
     if (
       (action === "share-folder" && !this.canManageSharing) ||
@@ -1098,10 +1162,10 @@ class SidebarManager {
     this.contextMenu
       .querySelectorAll(".context-menu-item")
       .forEach((menuItem) => {
-        menuItem.addEventListener("click", (e) => {
+        menuItem.addEventListener("click", async (e) => {
           e.stopPropagation();
           const action = menuItem.dataset.action;
-          this.handleItemContextMenuAction(action, item);
+          await this.handleItemContextMenuAction(action, item);
         });
       });
 
@@ -1123,7 +1187,12 @@ class SidebarManager {
     }
   }
 
-  handleItemContextMenuAction(action, item) {
+  async handleItemContextMenuAction(action, item) {
+    // Ensure sharing context is loaded before checking permissions
+    if (this.sharingContextPromise) {
+      await this.sharingContextPromise;
+    }
+    
     const lacksPermission = ["edit-item", "duplicate-item", "move-to"].includes(
       action,
     )
@@ -1641,34 +1710,6 @@ class SidebarManager {
 
     dropZone.addEventListener("drop", async (e) => {
       await handleSnippetDrop(e);
-    });
-  }
-
-  attachFolderReorderDropEvents(folderDiv, folderId) {
-    folderDiv.addEventListener("dragover", (e) => {
-      if (!this.draggedId || this.draggedType !== "snippet") return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = "move";
-      folderDiv.classList.add("drag-over");
-      const dropZone = folderDiv.querySelector(".folder-drop-zone");
-      if (dropZone) dropZone.hidden = false;
-    });
-
-    folderDiv.addEventListener("dragleave", () => {
-      folderDiv.classList.remove("drag-over");
-    });
-
-    folderDiv.addEventListener("drop", async (e) => {
-      if (!this.draggedId || this.draggedType !== "snippet") return;
-      e.preventDefault();
-      e.stopPropagation();
-      folderDiv.classList.remove("drag-over");
-      const dropZone = folderDiv.querySelector(".folder-drop-zone");
-      if (dropZone) dropZone.hidden = true;
-
-      await this.moveSnippetToFolder(this.draggedId, folderId);
-      this.render();
     });
   }
 

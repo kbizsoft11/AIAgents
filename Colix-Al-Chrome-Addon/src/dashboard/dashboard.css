@@ -1957,6 +1957,7 @@ div#format-container {
   display: flex;
   align-items: center;
   justify-content: center;
+  display: none;
 }
 
 .folder-toggle:hover {

@@ -1882,6 +1882,29 @@ class TextBlitzDashboard {
   }
 
   onActiveFolderChanged(folderId) {
+    // Hide/show delete button based on whether it's a default folder
+    if (this.folderDeleteBtn) {
+      const sidebarMgr = getSidebarManager();
+      if (sidebarMgr && folderId) {
+        const folder = sidebarMgr.folders.find((f) => String(f.id) === String(folderId));
+        const isDefaultFolder = sidebarMgr.isDefaultFolder(folderId);
+        
+        console.log('Active folder changed:', {
+          folderId,
+          folderName: folder?.name,
+          isDefaultFolder,
+          canManageSharing: sidebarMgr.canManageSharing
+        });
+        
+        const shouldHide = !sidebarMgr.canManageSharing;
+        this.folderDeleteBtn.hidden = shouldHide;
+        this.folderDeleteBtn.style.display = shouldHide ? 'none' : '';
+        this.folderDeleteBtn.disabled = isDefaultFolder;
+      } else {
+        this.folderDeleteBtn.hidden = true;
+        this.folderDeleteBtn.style.display = 'none';
+      }
+    }
     this.render();
   }
 
