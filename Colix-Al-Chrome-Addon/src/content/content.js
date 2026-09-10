@@ -46,12 +46,10 @@
         }))
         : shortcuts;
       forms = Array.isArray(message.forms) ? message.forms : forms;
-      // console.log('✅ Shortcuts cache updated from dashboard');
-      // Update the active element's menu to reflect new data
-      const activeElement = document.activeElement;
-      if (shortcuts.length && activeElement && isEditable(activeElement)) {
-        onInput({ target: activeElement });
-      }
+      // Refresh an already-open command menu, but do not replay input on the
+      // webpage. Replaying it can treat an existing trigger as newly typed and
+      // open a dynamic-fields popup during an unrelated dashboard save.
+      if (menuState.visible) renderItems();
       return;
     }
   });

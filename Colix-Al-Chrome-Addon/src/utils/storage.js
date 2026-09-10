@@ -235,7 +235,7 @@ const StorageHelper = {
     };
     shortcuts.push(newShortcut);
     await this.saveAll(shortcuts);
-    void this.notifyContentScriptsOfUpdate();
+    void this.notifyContentScriptsOfUpdate({ shortcut: newShortcut });
 
     // Queue the remote write in the background so the local shortcut is
     // available immediately. The sync manager handles retries and errors.
@@ -262,7 +262,7 @@ const StorageHelper = {
     };
     const updatedShortcut = { ...shortcuts[index], ...nextUpdates };
     await this.saveAll(shortcuts.map((shortcut, itemIndex) => itemIndex === index ? updatedShortcut : shortcut));
-    void this.notifyContentScriptsOfUpdate();
+    void this.notifyContentScriptsOfUpdate({ shortcut: updatedShortcut });
 
     // Queue and sync to Supabase
     try {
@@ -320,10 +320,22 @@ const StorageHelper = {
   },
 
   // Helper to notify all content scripts when shortcuts are updated
-  async notifyContentScriptsOfUpdate() {
+  async notifyContentScriptsOfUpdate(changes = {}) {
     try {
       const shortcuts = await this.getAll();
       const forms = await this.getAllForms();
+
+      // Use the just-saved item in the broadcast so a concurrent cache read or
+      // background sync cannot send the previous expansion to content scripts.
+      if (changes.shortcut?.id) {
+        const index = shortcuts.findIndex(shortcut => String(shortcut.id) === String(changes.shortcut.id));
+        if (index === -1) {
+          shortcuts.push(this.normalizeItem(changes.shortcut));
+        } else {
+          shortcuts[index] = this.normalizeItem({ ...shortcuts[index], ...changes.shortcut });
+        }
+      }
+
       chrome.runtime.sendMessage({
         action: 'shortcutsUpdated',
         shortcuts,

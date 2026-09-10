@@ -131,6 +131,7 @@ class TextBlitzDashboard {
     this.editorDateTimeCancel = document.getElementById('editorDateTimeCancel');
     this.editorDateTimeClose = document.getElementById('editorDateTimeClose');
     this.editorDateTimeInsert = document.getElementById('editorDateTimeInsert');
+    this.editorDateTimeDelete = document.getElementById('editorDateTimeDelete');
     this.editorTextFieldCommand = document.querySelector('.editor-text-field-command');
     this.editorTextFieldPicker = document.getElementById('editorTextFieldPicker');
     this.editorTextFieldLabel = document.getElementById('editorTextFieldLabel');
@@ -138,6 +139,7 @@ class TextBlitzDashboard {
     this.editorTextFieldClose = document.getElementById('editorTextFieldClose');
     this.editorTextFieldCancel = document.getElementById('editorTextFieldCancel');
     this.editorTextFieldInsert = document.getElementById('editorTextFieldInsert');
+    this.editorTextFieldDelete = document.getElementById('editorTextFieldDelete');
     this.editorParagraphCommand = document.querySelector('.editor-paragraph-command');
     this.editorParagraphPicker = document.getElementById('editorParagraphPicker');
     this.editorParagraphLabel = document.getElementById('editorParagraphLabel');
@@ -145,6 +147,7 @@ class TextBlitzDashboard {
     this.editorParagraphClose = document.getElementById('editorParagraphClose');
     this.editorParagraphCancel = document.getElementById('editorParagraphCancel');
     this.editorParagraphInsert = document.getElementById('editorParagraphInsert');
+    this.editorParagraphDelete = document.getElementById('editorParagraphDelete');
     this.editorRadioCommand = document.querySelector('.editor-radio-command');
     this.editorRadioPicker = document.getElementById('editorRadioPicker');
     this.editorRadioLabel = document.getElementById('editorRadioLabel');
@@ -152,6 +155,7 @@ class TextBlitzDashboard {
     this.editorRadioClose = document.getElementById('editorRadioClose');
     this.editorRadioCancel = document.getElementById('editorRadioCancel');
     this.editorRadioInsert = document.getElementById('editorRadioInsert');
+    this.editorRadioDelete = document.getElementById('editorRadioDelete');
     this.editorDropdownCommand = document.querySelector('.editor-dropdown-command');
     this.editorDropdownPicker = document.getElementById('editorDropdownPicker');
     this.editorDropdownLabel = document.getElementById('editorDropdownLabel');
@@ -159,6 +163,7 @@ class TextBlitzDashboard {
     this.editorDropdownClose = document.getElementById('editorDropdownClose');
     this.editorDropdownCancel = document.getElementById('editorDropdownCancel');
     this.editorDropdownInsert = document.getElementById('editorDropdownInsert');
+    this.editorDropdownDelete = document.getElementById('editorDropdownDelete');
     this.editorFormulaCommand = document.querySelector('.editor-formula-command');
     this.editorFormulaPicker = document.getElementById('editorFormulaPicker');
     this.editorFormulaInput = document.getElementById('editorFormulaInput');
@@ -197,6 +202,7 @@ class TextBlitzDashboard {
     this.editorImportSnippetList = document.getElementById('editorImportSnippetList');
     this.editorImportSnippetClose = document.getElementById('editorImportSnippetClose');
     this.editorImportSnippetCancel = document.getElementById('editorImportSnippetCancel');
+    this.editingDynamicElement = null;
     this.editorSavedRange = null;
     this.editorEmojiBtn = document.getElementById('editorEmojiBtn');
     this.editorEmojiPicker = document.getElementById('editorEmojiPicker');
@@ -468,9 +474,17 @@ class TextBlitzDashboard {
         if (command) this.insertEditorText(command.dataset.editorToken);
       });
     }
+    this.editorExpansionInput?.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-dynamic-token]');
+      if (!chip || !this.editorExpansionInput.contains(chip)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.openDynamicTokenEditor(chip);
+    });
     if (this.editorDateTimeCommand) {
       this.editorDateTimeCommand.addEventListener('click', (e) => {
         e.stopPropagation();
+        this.editingDynamicElement = null;
         this.updateEditorDateTimePreview();
         this.editorDateTimePicker?.classList.toggle('open');
       });
@@ -484,11 +498,13 @@ class TextBlitzDashboard {
     });
     this.editorDateTimeInsert?.addEventListener('click', () => {
       const format = this.editorDateTimeFormat?.value || 'YYYY-MM-DD';
-      this.insertEditorText(`{{date_time:${format}}}`);
+      this.commitDynamicToken(`{{date_time:${format}}}`, this.editorDateTimePicker);
       this.editorDateTimePicker?.classList.remove('open');
     });
+    this.editorDateTimeDelete?.addEventListener('click', () => this.deleteEditingDynamicToken(this.editorDateTimePicker));
     this.editorTextFieldCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.editingDynamicElement = null;
       this.editorTextFieldLabel.value = '';
       this.editorTextFieldDefault.value = '';
       this.editorTextFieldPicker?.classList.add('open');
@@ -500,11 +516,13 @@ class TextBlitzDashboard {
       const label = this.editorTextFieldLabel.value.trim() || 'Text field';
       const defaultValue = this.editorTextFieldDefault.value.trim();
       const token = `{{field:${label}${defaultValue ? `|${defaultValue}` : ''}}}`;
-      this.insertEditorText(token);
+      this.commitDynamicToken(token, this.editorTextFieldPicker);
       this.editorTextFieldPicker?.classList.remove('open');
     });
+    this.editorTextFieldDelete?.addEventListener('click', () => this.deleteEditingDynamicToken(this.editorTextFieldPicker));
     this.editorParagraphCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.editingDynamicElement = null;
       this.editorParagraphLabel.value = '';
       this.editorParagraphDefault.value = '';
       this.editorParagraphPicker?.classList.add('open');
@@ -515,11 +533,13 @@ class TextBlitzDashboard {
     this.editorParagraphInsert?.addEventListener('click', () => {
       const label = this.editorParagraphLabel.value.trim() || 'Paragraph field';
       const defaultValue = this.editorParagraphDefault.value.trim();
-      this.insertEditorText(`{{textarea:${label}${defaultValue ? `|${defaultValue}` : ''}}}`);
+      this.commitDynamicToken(`{{textarea:${label}${defaultValue ? `|${defaultValue}` : ''}}}`, this.editorParagraphPicker);
       this.editorParagraphPicker?.classList.remove('open');
     });
+    this.editorParagraphDelete?.addEventListener('click', () => this.deleteEditingDynamicToken(this.editorParagraphPicker));
     this.editorRadioCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.editingDynamicElement = null;
       this.editorRadioLabel.value = '';
       this.editorRadioOptions.value = '';
       this.editorRadioPicker?.classList.add('open');
@@ -534,11 +554,13 @@ class TextBlitzDashboard {
         this.editorRadioOptions.focus();
         return;
       }
-      this.insertEditorText(`{{radio:${label}|${options.join('|')}}}`);
+      this.commitDynamicToken(`{{radio:${label}|${options.join('|')}}}`, this.editorRadioPicker);
       this.editorRadioPicker?.classList.remove('open');
     });
+    this.editorRadioDelete?.addEventListener('click', () => this.deleteEditingDynamicToken(this.editorRadioPicker));
     this.editorDropdownCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.editingDynamicElement = null;
       this.editorDropdownLabel.value = '';
       this.editorDropdownOptions.value = '';
       this.editorDropdownPicker?.classList.add('open');
@@ -554,9 +576,10 @@ class TextBlitzDashboard {
         return;
       }
       const token = `{{select:${label}|${options.join('|')}}}`;
-      this.insertEditorText(token);
+      this.commitDynamicToken(token, this.editorDropdownPicker);
       this.editorDropdownPicker?.classList.remove('open');
     });
+    this.editorDropdownDelete?.addEventListener('click', () => this.deleteEditingDynamicToken(this.editorDropdownPicker));
     this.editorFormulaCommand?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.editorFormulaInput.value = '';
@@ -1159,6 +1182,67 @@ class TextBlitzDashboard {
     if (/^[0-9+\-*/().\s]+$/.test(value) && /[0-9]/.test(value)) return true;
     const allowedFunctions = '(round|ceil|floor|sqrt|abs|isodd|iseven|remainder|max|min|random|ln|datetimeparse|datetimeformat|datetimeadd|datetimediff|today|now)';
     return new RegExp(`^${allowedFunctions}\\([A-Za-z0-9_+\\-*/().,\\s:"']*\\)$`).test(value);
+  }
+
+  openDynamicTokenEditor(chip) {
+    const token = chip?.dataset.dynamicToken || '';
+    const fieldMatch = token.match(/^\{\{(field|textarea|select|radio):([^|}]+)((?:\|[^}]*)*)\}\}$/);
+    const dateTimeMatch = token.match(/^\{\{date_time:([^}]+)\}\}$/);
+    if (!fieldMatch && !dateTimeMatch) return;
+
+    this.editingDynamicElement = chip;
+    if (dateTimeMatch) {
+      this.editorDateTimeFormat.value = dateTimeMatch[1];
+      this.updateEditorDateTimePreview();
+      this.editorDateTimePicker.classList.add('open');
+      return;
+    }
+
+    const [, type, rawLabel, rawOptions] = fieldMatch;
+    const values = rawOptions ? rawOptions.split('|').slice(1) : [];
+    const isChoice = type === 'select' || type === 'radio';
+    const label = rawLabel.trim();
+    if (type === 'field') {
+      this.editorTextFieldLabel.value = label;
+      this.editorTextFieldDefault.value = values.join('|').trim();
+      this.editorTextFieldPicker.classList.add('open');
+      setTimeout(() => this.editorTextFieldLabel.focus(), 50);
+    } else if (type === 'textarea') {
+      this.editorParagraphLabel.value = label;
+      this.editorParagraphDefault.value = values.join('|').trim();
+      this.editorParagraphPicker.classList.add('open');
+      setTimeout(() => this.editorParagraphLabel.focus(), 50);
+    } else if (isChoice) {
+      const picker = type === 'select' ? this.editorDropdownPicker : this.editorRadioPicker;
+      const labelInput = type === 'select' ? this.editorDropdownLabel : this.editorRadioLabel;
+      const optionsInput = type === 'select' ? this.editorDropdownOptions : this.editorRadioOptions;
+      labelInput.value = label;
+      optionsInput.value = values.join('\n');
+      picker.classList.add('open');
+      setTimeout(() => labelInput.focus(), 50);
+    }
+  }
+
+  commitDynamicToken(token, picker) {
+    if (!this.editingDynamicElement) {
+      this.insertEditorText(token);
+      return;
+    }
+    const chip = this.editingDynamicElement;
+    if (chip.isConnected) {
+      chip.insertAdjacentHTML('beforebegin', this.renderDynamicEditorToken(token));
+      chip.remove();
+    }
+    this.editingDynamicElement = null;
+    this.saveEditorSelection();
+    picker?.classList.remove('open');
+  }
+
+  deleteEditingDynamicToken(picker) {
+    if (this.editingDynamicElement?.isConnected) this.editingDynamicElement.remove();
+    this.editingDynamicElement = null;
+    picker?.classList.remove('open');
+    this.saveEditorSelection();
   }
 
   insertEditorText(text) {

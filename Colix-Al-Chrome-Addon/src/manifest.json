@@ -1,12 +1,10 @@
 {
     "manifest_version": 3,
     "name": "Colix: Auto Text Expander & Autofill",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "description": "Instantly expand text shortcuts while you type. Create custom abbreviations and boost your productivity.",
     "permissions": [
         "storage",
-        "activeTab",
-        "scripting",
         "clipboardRead",
         "identity",
         "identity.email"

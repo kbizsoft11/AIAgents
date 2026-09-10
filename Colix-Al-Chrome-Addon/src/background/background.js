@@ -386,16 +386,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'shortcutsUpdated') {
     // Dashboard notifies that shortcuts/forms were updated
     // Relay to all content scripts so they refresh their cache
-    (async () => {
-      try {
-        const identity = await chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' });
-        if (identity?.email) {
-          await notifyShortcutsUpdated(message.shortcuts || [], message.forms || []);
-        }
-      } catch (error) {
-        console.warn('Could not relay shortcuts update:', error.message);
-      }
-    })();
+    // The dashboard has already saved the local data; no additional profile
+    // lookup is needed before delivering this in-memory cache update.
+    notifyShortcutsUpdated(message.shortcuts || [], message.forms || [])
+      .catch(error => console.warn('Could not relay shortcuts update:', error.message));
     return false;
   }
 

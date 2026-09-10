@@ -2719,6 +2719,7 @@ div#format-container {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  cursor: pointer;
   max-width: min(100%, 420px);
   margin: 0 3px;
   padding: 3px 8px;
@@ -2726,11 +2727,15 @@ div#format-container {
   border-radius: 6px;
   background: #eef9fa;
   color: #17636c;
-  cursor: default;
   font-size: 12px;
   line-height: 1.5;
   vertical-align: middle;
   white-space: normal;
+}
+
+.editor-dynamic-token:hover {
+  border-color: #159447;
+  box-shadow: 0 0 0 2px rgba(21, 148, 71, .1);
 }
 
 .editor-dynamic-token-kind {
