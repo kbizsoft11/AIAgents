@@ -1633,10 +1633,112 @@
     return String(format).replace(/YYYY|MMMM|MMM|MM|DD|HH|hh|mm|ss|D|a/g, token => replacements[token]);
   }
 
+  // Resolve function calls embedded in an arithmetic expression, such as
+  // round(1.3) + abs(-2), before passing the numeric expression to the safe
+  // arithmetic parser.
+  function substituteNumericFormulaFunctions(source) {
+    let output = '';
+    let changed = false;
+    let quote = '';
+
+    for (let index = 0; index < source.length;) {
+      const character = source[index];
+      if (quote) {
+        output += character;
+        if (character === quote && source[index - 1] !== '\\') quote = '';
+        index += 1;
+        continue;
+      }
+      if (character === '"' || character === "'") {
+        quote = character;
+        output += character;
+        index += 1;
+        continue;
+      }
+
+      const nameMatch = source.slice(index).match(/^([a-z]+)\s*\(/i);
+      if (!nameMatch) {
+        output += character;
+        index += 1;
+        continue;
+      }
+
+      const openIndex = index + nameMatch[0].lastIndexOf('(');
+      let depth = 0;
+      let closeIndex = -1;
+      let argumentQuote = '';
+      for (let cursor = openIndex; cursor < source.length; cursor += 1) {
+        const part = source[cursor];
+        if (argumentQuote) {
+          if (part === argumentQuote && source[cursor - 1] !== '\\') argumentQuote = '';
+          continue;
+        }
+        if (part === '"' || part === "'") {
+          argumentQuote = part;
+        } else if (part === '(') {
+          depth += 1;
+        } else if (part === ')' && --depth === 0) {
+          closeIndex = cursor;
+          break;
+        }
+      }
+      if (closeIndex === -1) return null;
+
+      const call = source.slice(index, closeIndex + 1);
+      const value = evaluateFormulaExpression(call);
+      if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+      output += String(value);
+      changed = true;
+      index = closeIndex + 1;
+    }
+
+    return changed ? output : source;
+  }
+
+  function splitFormulaPlusTerms(source) {
+    const terms = [];
+    let start = 0;
+    let depth = 0;
+    let quote = '';
+    for (let index = 0; index < source.length; index += 1) {
+      const character = source[index];
+      if (quote) {
+        if (character === quote && source[index - 1] !== '\\') quote = '';
+        continue;
+      }
+      if (character === '"' || character === "'") quote = character;
+      else if (character === '(') depth += 1;
+      else if (character === ')') depth -= 1;
+      else if (character === '+' && depth === 0) {
+        terms.push(source.slice(start, index).trim());
+        start = index + 1;
+      }
+    }
+    if (terms.length === 0) return [source.trim()];
+    terms.push(source.slice(start).trim());
+    return terms;
+  }
+
   function evaluateFormulaExpression(expression) {
     const source = String(expression || '').trim();
-    const match = source.match(/^([a-z]+)\((.*)\)$/i);
-    if (!match) return evaluateNumericExpression(source);
+    const plusTerms = splitFormulaPlusTerms(source);
+    if (plusTerms.length > 1 && plusTerms.every(Boolean)) {
+      const values = plusTerms.map(term => evaluateFormulaExpression(term));
+      if (values.every(value => typeof value === 'number' && Number.isFinite(value))) {
+        return values.reduce((total, value) => total + value, 0);
+      }
+      if (values.every(value => value !== null && value !== undefined)) {
+        return values.map(value => String(value)).join('');
+      }
+      return null;
+    }
+    // Match one complete function call only. A broad greedy match would treat
+    // `round(1.3) + abs(-2)` as one malformed call instead of two functions.
+    const match = source.match(/^([a-z]+)\(([^()]*)\)$/i);
+    if (!match) {
+      const substituted = substituteNumericFormulaFunctions(source);
+      return substituted === null ? null : evaluateNumericExpression(substituted);
+    }
 
     const name = match[1].toLowerCase();
     const args = splitFormulaArguments(match[2]);
