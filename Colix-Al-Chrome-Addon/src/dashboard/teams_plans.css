@@ -100,6 +100,7 @@ h2 { margin-bottom: 8px; font-size: 24px; font-weight: 500; }
 .teams-plan-name { margin-bottom: 8px; font-size: 21px; }
 .teams-plan-price { margin-bottom: 18px; font: 500 34px Georgia, serif; }
 .teams-plan-price small { color: var(--teams-muted); font: 13px Arial, sans-serif; }
+.teams-annual-total { display: block; margin-top: 8px; color: var(--teams-muted); font: 12px Arial, sans-serif; }
 .teams-plan-members { margin-bottom: 22px; color: var(--teams-muted); font: 14px/1.5 Arial, sans-serif; }
 .teams-plan-status { margin-bottom: 16px; color: var(--teams-green-dark); font: 700 12px Arial, sans-serif; }
 

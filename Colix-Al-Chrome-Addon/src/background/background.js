@@ -358,18 +358,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           syncMgr = getSyncManager();
           if (syncMgr.userEmail !== identity.email) throw new Error('Sync account changed');
-          await waitForSyncToFinish(syncMgr);
-          // Force refresh on first content script load or after 30 seconds
-          const now = Date.now();
-          if (!syncMgr.lastSyncTime || (now - syncMgr.lastSyncTime.getTime()) > 30000) {
-            await syncMgr.forcePullFromSupabase();
-          }
-          await syncMgr.syncAll();
-          await waitForSyncToFinish(syncMgr);
         } catch (error) {
           syncMgr = await initSyncManager(identity.email);
-          // Force initial pull for new sync manager
-          await syncMgr.forcePullFromSupabase();
         }
 
         const shortcuts = await syncMgr.getLocalShortcuts();
@@ -378,6 +368,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           success: true,
           shortcuts,
           forms
+        });
+
+        // Refresh the cache after responding so the floating sidebar stays
+        // instant while remote changes continue syncing in the background.
+        void syncMgr.syncAll().catch(error => {
+          console.warn('Background shortcut sync failed:', error.message);
         });
       } catch (error) {
         console.error('Could not load shortcuts for content script:', error);

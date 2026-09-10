@@ -140,7 +140,9 @@ class TeamsPlansPage {
       const isCurrent = plan.plan_code === currentCode;
       const custom = Number(plan.max_members) > 100000000;
       const monthlyPrice = Number(plan.monthly_price);
-      const price = this.billingInterval === 'annual' ? monthlyPrice * 12 * 0.95 : monthlyPrice;
+      const annualMonthlyPrice = monthlyPrice * 0.95;
+      const price = this.billingInterval === 'annual' ? annualMonthlyPrice : monthlyPrice;
+      const annualTotal = annualMonthlyPrice * 12;
       const hasActivePaidPlan = Boolean(currentCode && currentCode !== 'free');
       const canUpgrade = !isCurrent && !custom && monthlyPrice > 0 && this.canManageBilling && !hasActivePaidPlan;
       const isCustomAction = custom && !isCurrent;
@@ -148,7 +150,7 @@ class TeamsPlansPage {
       
       return `<article class="teams-plan-card${isCurrent ? ' is-current' : ''}">
         <h3 class="teams-plan-name">${this.escape(plan.name)}</h3>
-        <div class="teams-plan-price">${custom ? 'Custom' : this.formatPrice(price)}<small>${custom ? '' : this.billingInterval === 'annual' ? ' / year' : ' / month'}</small></div>
+        <div class="teams-plan-price">${custom ? 'Custom' : this.formatPrice(price)}<small>${custom ? '' : ' / month'}</small>${!custom && this.billingInterval === 'annual' ? `<span class="teams-annual-total">${this.formatPrice(annualTotal)} / year</span>` : ''}</div>
         <p class="teams-plan-members">${custom ? 'A member limit tailored to your agreement' : `Up to ${Number(plan.max_members)} members`}</p>
         ${isCurrent ? `<p class="teams-plan-status">${this.formatStatus(workspace.subscription.status || 'active')}${workspace.subscription.current_period_end ? ` · ${this.formatDate(workspace.subscription.current_period_end)}` : ''}</p>` : ''}
         <button class="teams-plan-action" type="button" data-plan-code="${this.escapeAttribute(plan.plan_code)}" data-custom-contact="${isCustomAction ? '1' : '0'}" ${buttonDisabled ? 'disabled' : ''}>${isCurrent ? 'Current plan' : custom ? 'Contact us' : monthlyPrice > 0 ? `Subscribe ${this.billingInterval}` : 'Included'}</button>
