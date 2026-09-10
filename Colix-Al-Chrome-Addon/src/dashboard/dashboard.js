@@ -1171,7 +1171,14 @@ class TextBlitzDashboard {
     this.editorFormulaFunctions.querySelector('[data-formula-back]')?.addEventListener('click', () => this.renderFormulaFunctions());
     this.editorFormulaFunctions.querySelectorAll('[data-formula-example]').forEach(button => {
       button.addEventListener('click', () => {
-        this.editorFormulaInput.value = button.dataset.formulaExample || '';
+        const example = button.dataset.formulaExample || '';
+        const current = this.editorFormulaInput.value.trim();
+        if (!current) {
+          this.editorFormulaInput.value = example;
+        } else {
+          const separator = /[+\-*/]\s*$/.test(current) ? ' ' : ' + ';
+          this.editorFormulaInput.value = `${current}${separator}${example}`;
+        }
         this.editorFormulaInput.focus();
       });
     });
@@ -1181,7 +1188,8 @@ class TextBlitzDashboard {
     const value = String(formula || '').trim();
     if (/^[0-9+\-*/().\s]+$/.test(value) && /[0-9]/.test(value)) return true;
     const allowedFunctions = '(round|ceil|floor|sqrt|abs|isodd|iseven|remainder|max|min|random|ln|datetimeparse|datetimeformat|datetimeadd|datetimediff|today|now)';
-    return new RegExp(`^${allowedFunctions}\\([A-Za-z0-9_+\\-*/().,\\s:"']*\\)$`).test(value);
+    const functionCall = `${allowedFunctions}\\([A-Za-z0-9_+\\-*/().,\\s:"']*\\)`;
+    return new RegExp(`^(?:${functionCall}|[0-9.()\\s]+)(?:\\s*[+\\-*/]\\s*(?:${functionCall}|[0-9.()\\s]+))*$`).test(value);
   }
 
   openDynamicTokenEditor(chip) {

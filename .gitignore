@@ -77,3 +77,6 @@ Colix-AI-Desktop-App/*.lnk
 Colix-AI-Desktop-App/build/listener/
 Colix-AI-Desktop-App/listener.exe
 Colix-AI-Desktop-App/listener
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
